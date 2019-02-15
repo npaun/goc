@@ -17,8 +17,6 @@ let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
   "bool"    , BOOL;
   "if"      , IF;
   "else"    , ELSE;
-  "while"   , WHILE;
-  "read"    , READ;
   "print"   , PRINT;
   "true"    , TRUE;(*BOOLLIT(true);*)
   "false"   , FALSE(*BOOLLIT(false)*)
@@ -32,8 +30,6 @@ let string_of_token = function
     | BOOL          -> "BOOL"
     | IF            -> "IF"
     | ELSE          -> "ELSE"
-    | WHILE         -> "WHILE"
-    | READ          -> "READ"
     | PRINT         -> "PRINT"
     | TRUE          -> "TRUE"
     | FALSE         -> "FALSE"

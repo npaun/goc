@@ -8,7 +8,8 @@ open Lexing
 %token <string> STRINGLIT
 %token <int> INTLIT
 %token <float> FLOATLIT
-%token <bool> BOOLLIT   
+%token <bool> BOOLLIT  
+%token TRUE FALSE 
 
 /* Go keywords, written in the order they are presented in the lang spec */
 %token BREAK DEFAULT FUNC INTERFACE SELECT
@@ -30,6 +31,8 @@ open Lexing
 %token UMINUS
 %token UNDERSCORE /* blank identifier _ */
 
+%token EOF NOP
+
 /* variable declaration */
 %token INT FLOAT BOOL RUNE STRING 
 
@@ -48,7 +51,7 @@ open Lexing
 %nonassoc RPAREN RBLOCK RSQUARE
 
 %start program
-%type <int list> program
+%type <int> program
 %%
 
 /* had to put some grammer rules so menhir would compile */
