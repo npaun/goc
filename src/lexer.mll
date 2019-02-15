@@ -65,10 +65,10 @@ let string_of_token = function
 
 let eol = '\n' | "\r\n"
 
-rule token = parse
-    | [' ' '\t'] { token lexbuf }
+rule lex = parse
+    | [' ' '\t'] { lex lexbuf }
     | "//"      { comment lexbuf }
-    | eol       { line_num := !line_num + 1; token lexbuf }
+    | eol       { line_num := !line_num + 1; lex lexbuf }
     | ';'       { SEMICOLON }
     | ':'       { COLON }
     | '+'       { PLUS }
@@ -102,6 +102,6 @@ rule token = parse
     | _ as c { raise (LexFailure("SyntaxError: invalid character in identifier: " ^ Char.escaped c ^ " at line " ^ string_of_int !line_num)) }
 
 and comment = parse
-    | eol { line_num := !line_num + 1; token lexbuf }
+    | eol { line_num := !line_num + 1; lex lexbuf }
     | _ { comment lexbuf }
 

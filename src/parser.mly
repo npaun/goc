@@ -50,12 +50,12 @@ open Lexing
 %nonassoc LPAREN LBLOCK LSQUARE
 %nonassoc RPAREN RBLOCK RSQUARE
 
-%start program
-%type <int> program
+%start main
+%type <int> main
 %%
 
 /* had to put some grammer rules so menhir would compile */
-program: 
+main: 
     stmt { $1 };
 
 stmt:
