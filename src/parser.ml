@@ -4,49 +4,69 @@ module MenhirBasics = struct
   exception Error
   
   type token = 
+    | XORASSIGN
     | XOR
     | VAR
+    | UNDERSCORE
     | TYPE
+    | TRIPDOT
     | TIMES
+    | TASSIGN
     | SWITCH
     | STRUCT
     | STRINGLIT of (
-# 7 "parser.mly"
+# 8 "parser.mly"
        (string)
-# 17 "parser.ml"
+# 21 "parser.ml"
   )
+    | STRING
+    | SEMICOLON
     | SELECT
+    | RUNE
     | RSQUARE
+    | RSHIFT
+    | RSHASSIGN
     | RPAREN
     | RETURN
     | RBLOCK
     | RANGE
     | PRINTLN
     | PRINT
+    | PLUSPLUS
     | PLUS
+    | PASSIGN
     | PACKAGE
+    | ORASSIGN
     | OR
     | NEQUAL
+    | MODASSIGN
+    | MOD
+    | MINUSMINUS
     | MINUS
+    | MASSIGN
     | MAP
     | LSQUARE
+    | LSHIFT
+    | LSHASSIGN
     | LPAREN
     | LESSER
     | LEQ
     | LEN
+    | LEFTARROW
     | LBLOCK
     | INTLIT of (
-# 8 "parser.mly"
+# 9 "parser.mly"
        (int)
-# 42 "parser.ml"
+# 61 "parser.ml"
   )
     | INTERFACE
+    | INT
     | IMPORT
     | IF
     | IDENT of (
-# 6 "parser.mly"
+# 7 "parser.mly"
        (string)
-# 50 "parser.ml"
+# 70 "parser.ml"
   )
     | GREATER
     | GOTO
@@ -55,32 +75,41 @@ module MenhirBasics = struct
     | FUNC
     | FOR
     | FLOATLIT of (
-# 9 "parser.mly"
+# 10 "parser.mly"
        (float)
-# 61 "parser.ml"
+# 81 "parser.ml"
   )
+    | FLOAT
     | FALLTHROUGH
     | EQUAL
     | ELSE
+    | DOT
     | DIV
     | DEFER
     | DEFAULT
+    | DASSIGN
     | CONTINUE
     | CONST
+    | COMMA
+    | COLON
+    | COLASSIGN
     | CHAN
     | CASE
     | CAP
     | BREAK
     | BOR
     | BOOLLIT of (
-# 10 "parser.mly"
+# 11 "parser.mly"
        (bool)
-# 79 "parser.ml"
+# 105 "parser.ml"
   )
-    | BASSIGN
+    | BOOL
     | BAND
     | ASSIGN
     | APPEND
+    | ANDXORASSIGN
+    | ANDXOR
+    | ANDASSIGN
     | AND
   
 end
@@ -104,7 +133,7 @@ and _menhir_state
 open Parsing
 open Lexing
 
-# 108 "parser.ml"
+# 137 "parser.ml"
 
 let rec _menhir_discard : _menhir_env -> _menhir_env =
   fun _menhir_env ->
@@ -119,9 +148,9 @@ let rec _menhir_discard : _menhir_env -> _menhir_env =
     }
 
 and program : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
-# 39 "parser.mly"
+# 51 "parser.mly"
       (int list)
-# 125 "parser.ml"
+# 154 "parser.ml"
 ) =
   fun lexer lexbuf ->
     let _menhir_env =
@@ -161,9 +190,9 @@ and program : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
                 let _2 = () in
                 let _1 = () in
                 let _v : 'tv_stmt = 
-# 47 "parser.mly"
+# 59 "parser.mly"
                      ( 1 )
-# 167 "parser.ml"
+# 196 "parser.ml"
                  in
                 let (_menhir_env : _menhir_env) = _menhir_env in
                 let (_menhir_stack : 'freshtv11) = _menhir_stack in
@@ -175,38 +204,38 @@ and program : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
                 let (_menhir_stack : 'freshtv7) = Obj.magic _menhir_stack in
                 let ((_1 : 'tv_stmt) : 'tv_stmt) = _v in
                 ((let _v : (
-# 39 "parser.mly"
+# 51 "parser.mly"
       (int list)
-# 181 "parser.ml"
+# 210 "parser.ml"
                 ) = 
-# 44 "parser.mly"
+# 56 "parser.mly"
          ( _1 )
-# 185 "parser.ml"
+# 214 "parser.ml"
                  in
                 let (_menhir_env : _menhir_env) = _menhir_env in
                 let (_menhir_stack : 'freshtv5) = _menhir_stack in
                 let (_v : (
-# 39 "parser.mly"
+# 51 "parser.mly"
       (int list)
-# 192 "parser.ml"
+# 221 "parser.ml"
                 )) = _v in
                 ((let (_menhir_env : _menhir_env) = _menhir_env in
                 let (_menhir_stack : 'freshtv3) = Obj.magic _menhir_stack in
                 let (_v : (
-# 39 "parser.mly"
+# 51 "parser.mly"
       (int list)
-# 199 "parser.ml"
+# 228 "parser.ml"
                 )) = _v in
                 ((let (_menhir_env : _menhir_env) = _menhir_env in
                 let (_menhir_stack : 'freshtv1) = Obj.magic _menhir_stack in
                 let ((_1 : (
-# 39 "parser.mly"
+# 51 "parser.mly"
       (int list)
-# 206 "parser.ml"
+# 235 "parser.ml"
                 )) : (
-# 39 "parser.mly"
+# 51 "parser.mly"
       (int list)
-# 210 "parser.ml"
+# 239 "parser.ml"
                 )) = _v in
                 (Obj.magic _1 : 'freshtv2)) : 'freshtv4)) : 'freshtv6)) : 'freshtv8)) : 'freshtv10)) : 'freshtv12)) : 'freshtv14)) : 'freshtv16)
             | _ ->
@@ -231,4 +260,4 @@ and program : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
 # 233 "/home/michael/.opam/4.06.0/lib/menhir/standard.mly"
   
 
-# 235 "parser.ml"
+# 264 "parser.ml"
