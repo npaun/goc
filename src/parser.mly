@@ -1,6 +1,5 @@
 %{
-open Parsing
-open Lexing
+open Golite
 %}
 
 /* literals  TODO change to fit Golite spec*/
@@ -51,12 +50,15 @@ open Lexing
 %nonassoc RPAREN RBLOCK RSQUARE
 
 %start main
-%type <int> main
+%type <Golite.ast list> main
 %%
 
 /* had to put some grammer rules so menhir would compile */
-main: 
-    stmt { $1 };
+main: stmts { List.rev $1 };
 
+stmts:
+    { [] }
+    | stmts stmt { $2 :: $1 }
+    ;
 stmt:
-    IF LBLOCK RBLOCK { 1 }
+    IF LBLOCK RBLOCK { Hello }
