@@ -8,7 +8,7 @@ open Lexing
 %token <string> STRINGLIT
 %token <int> INTLIT
 %token <float> FLOATLIT
-%token <bool> BOOLLIT
+%token <bool> BOOLLIT   
 
 /* Go keywords, written in the order they are presented in the lang spec */
 %token BREAK DEFAULT FUNC INTERFACE SELECT
@@ -25,9 +25,9 @@ open Lexing
 %token MINUS BOR MASSIGN ORASSIGN OR LESSER LEQ LSQUARE RSQUARE
 %token TIMES XOR TASSIGN XORASSIGN LEFTARROW GREATER GEQ LBLOCK RBLOCK
 %token DIV LSHIFT DASSIGN LSHASSIGN PLUSPLUS ASSIGN COLASSIGN COMMA SEMICOLON
-%token MOD RSHIFT MODASSIGN RSHASSIGN MINUSMINUS TRIPDOT DOT COLON
+%token MOD RSHIFT MODASSIGN RSHASSIGN MINUSMINUS NOT TRIPDOT DOT COLON
 %token ANDXOR ANDXORASSIGN
-
+%token UMINUS
 %token UNDERSCORE /* blank identifier _ */
 
 /* variable declaration */
