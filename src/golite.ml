@@ -8,8 +8,7 @@ type op_assign = [op_arith | `SET]
 type op2 = [op_arith | `EQ | `NEQ | `LT | `LEQ | `GT | `GEQ | `AND | `OR]
 
 (* Go types *)
-type type_name = [`BOOL | `RUNE | `INT | `FLOAT64 | `STRING | `Type of identifier]
-
+type type_name = [`BOOL | `RUNE | `INT | `FLOAT64 | `STRING | `AUTO | `Type of identifier]
 type gotype = [ type_name | `TypeLit of type_lit ]
 and type_lit = 
 	| Slice of gotype
@@ -20,8 +19,17 @@ and struct_member =
 	| Member of signature
 and signature = identifier * gotype
 
+(* Add whatever metadata you want to attach to a statement or expression here *)
+type 'a annotated = {
+	v: 'a;
+	_debug: string;
+	_start: int * int;
+	_end: int * int;
+	_derived: type_name option
+}
+
 (* Program AST *)
-type ast = Program of package * toplevel_declaration list
+type ast = Program of package * toplevel_declaration annotated list
 and package = Package of identifier
 and declaration =
 	| Var of identifier * gotype * expression option 
@@ -30,7 +38,8 @@ and toplevel_declaration =
 	| Global of declaration
 	| Func of identifier * signature list * block
 and block = statement list
-and statement = 
+and statement = statement_node annotated
+and statement_node = 
 	| Decl of declaration
 	| Expr of expression
 	| Block of block
@@ -47,7 +56,7 @@ and statement =
 and case = 
 	| Case of expression * block
 	| Default of block
-and expression = operand * gotype
+and expression = operand annotated
 and operand =
 	| Op1 of op1 * expression
 	| Op2 of op2 * expression * expression
