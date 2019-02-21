@@ -214,7 +214,7 @@ switch_case:
 
 switch_body:
 | statements FALLTHROUGH SEMI*	{($1,FALLTHROUGH)}
-| statements SEMI*		{($1,ENDBREAK)}
+| statements 			{($1,ENDBREAK)}
 
 /**** FOR STATEMENT *****/
 for_stmt:
