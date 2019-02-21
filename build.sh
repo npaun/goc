@@ -3,6 +3,10 @@
 # Build the compiler
 #
 # You MUST replace the following commands with the commands for building your compiler
+cd src/
 
-make clean -C ./src
-make -C ./src
+menhir parser.mly
+ocamllex lexer.mll
+
+ocamlbuild 'goc.native' -no-hygiene
+

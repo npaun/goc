@@ -131,21 +131,21 @@ eat_unimplemented:
 
 stmt:
 	| typed_var_decl	{Decl $1}
-	| block			{Block $1}
+	| block			    {Block $1}
 	| simple_stmt		{$1}
 	| return_stmt		{$1}
-	| if_stmt		{$1}
+	| if_stmt		    {$1}
 	| switch_stmt		{$1}
-	| for_stmt		{$1}
-	| BREAK			{Break}
-	| CONTINUE		{Continue}
+	| for_stmt		    {$1}
+	| BREAK			    {Break}
+	| CONTINUE		    {Continue}
 simple_stmt:
 	| short_var_decl	{Decl $1}
 	| assign_stmt		{$1} 
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
 	| print_stmt		{$1}
-	| expr			{Expr $1}
+	| expr			    {Expr $1}
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
@@ -189,7 +189,6 @@ if_cond:
 | simple_stmt SEMI expr		{($1, [$3])}
 | expr				{(Empty, [$1])}
 
-
 if_tail:
 | ELSE if_head			{$2}
 | ELSE block			{[Default $2]}
@@ -210,7 +209,6 @@ switch_cond:
 switch_case:
 | CASE expr_list COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
 | DEFAULT COLON statements {((Default($3)), ENDBREAK)}
-
 
 switch_body:
 | statements FALLTHROUGH SEMI*	{($1,FALLTHROUGH)}
