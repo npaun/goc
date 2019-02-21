@@ -49,9 +49,6 @@ STILL TO DO:
 /* variable declaration */
 %token INT FLOAT BOOL RUNE STRING 
 
-
-
-
 /* https://golang.org/ref/spec#Operators */
 /* BAND -> bitwise AND (&), etc */
 %right ASSIGN BASSIGN
@@ -67,30 +64,30 @@ STILL TO DO:
 %type <Golite.ast> main
 %%
 
-main: package toplevel* EOF {Program($1,$2)}
+main: package toplevel EOF {Program($1,$2)}
 
 /******* DECLARATIONS *******/
 package: PACKAGE IDENT SEMI {Package $2}
 
 toplevel: 
-    | { [] }
     | toplevel_decl SEMI toplevel { (List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1) @ $3 } 
+    | { [] }
 
 toplevel_decl:
-    | function_decl {[$1]}
-    | var_decl	{List.map (fun dcl -> Global dcl) [$1]}
+    | function_decl {$1}
+    | var_decl	{List.map (fun dcl -> Global dcl) $1}
 	| type_decl	{List.map (fun dcl -> Global dcl) $1}
 
 /*************** TYPES **************/
 
 typ:
-    | type_literal {$1}
-    | IDENT     {`Type($1)} (* user defined *)
     | INT       {`INT}
     | FLOAT     {`FLOAT64}
     | BOOL      {`BOOL}
     | RUNE      {`RUNE}
     | STRING    {`STRING}
+    | IDENT     {`Type($1)} (* user defined *)
+    | type_literal {$1}
     
 type_literal:
     | array_literal {`TypeLit($1)}
@@ -104,29 +101,26 @@ slice_literal:
     | LSQUARE RSQUARE typ {Slice($3)}
     
 struct_literal:
-    | STRUCT LBLOCK struct_members RBLOCK {Struct($3)}
-    
-struct_members:
-    | signature_ids { $1 }
+    | STRUCT LBLOCK signature_ids RBLOCK {Struct($3)}
     
 /****** FUNCTION DECLARATIONS *******/
 
 function_decl:
-	| FUNC IDENT signature block {Func($2, $3, `VOID, $4)}
-	| FUNC IDENT signature typ IDENT block {Func($2, $3, $4, $6)}
+    | FUNC IDENT signature block {[Func($2, $3, `VOID, $4)]}
+    | FUNC IDENT signature typ block {[Func($2, $3, $4, $5)]}
 
 signature:
 	| LPAREN signature_ids RPAREN {$2}
 
 signature_ids: 
+    | identifier_list typ COMMA signature_ids {(List.map (fun id -> (id, $2)) $1) @ $4}
     | { [] }
-    | identifier_list typ COMMA signature_ids {(List.map (fun id -> (id, $2) $1))::$4}
     
 /***** VARIABLE DECLARATIONS *****/
 
 var_decl:
-    | typed_var_decl {$1}
-    | short_var_decl {$1}
+    | typed_var_decl {[$1]}
+    | short_var_decl {[$1]}
 
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
@@ -143,8 +137,8 @@ type_decl:
     | TYPE LPAREN dist_type_decl RPAREN {$3}
     
 dist_type_decl:
+    | IDENT typ dist_type_decl {(Type($1, $2))::$3} 
     | { [] }
-    | IDENT typ dist_type_decl {Type($1, $2)::$3} 
 
 /****** STATEMENTS *********/
 

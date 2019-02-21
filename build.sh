@@ -8,5 +8,4 @@ cd src/
 menhir parser.mly
 ocamllex lexer.mll
 
-ocamlbuild 'goc.native' -no-hygiene
-
+ocamlbuild 'goc.native' -use-ocamlfind -use-menhir -no-hygiene
