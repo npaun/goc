@@ -86,7 +86,11 @@ decl:
 /****** FUNCTION DECLARATIONS *******/
 
 function_decl:
-	| FUNC IDENT block {Func($2, [], $3)}
+	| FUNC IDENT signature block {Func($2, $3, $4)}
+
+signature:
+	(* TODO: Implement signatures for functions, there are two notations *)
+	| LPAREN {[]}
 
 /***** VARIABLE DECLARATIONS *****/
 var_decl:
@@ -94,17 +98,18 @@ var_decl:
 	| short_var_decl {$1}
 
 short_var_decl:
+	(* TODO: Emit the list of variable declarations *)
 	| IDENT COLASSIGN expr {Var("donkey",`AUTO,None)}
 
 typed_var_decl:
-	(* could be "factored" *)
+	(* TODO: Implement this properly *)
 	| VAR IDENT ASSIGN expr {Var("milton",`AUTO,None)}
 
 
 
 /***** TYPE DECLARATIONS *******/
 type_decl:
-	(* could be "factored" *)
+	(*TODO: Implement this properly*)
 	| TYPE IDENT {Type("jarvis",`AUTO)}
 
 
@@ -196,7 +201,7 @@ switch_stmt:
 
 
 switch_cond:
-(* This is a fun lil shift/reduce conflict because expr is also a simple_stmt. Will fix it some other time. *)
+(* TODO: This is a fun lil shift/reduce conflict because expr is also a simple_stmt. Will fix it some other time. *)
 | expr			{(Empty,Some $1)}
 | simple_stmt SEMI expr {($1,Some $3)}
 | simple_stmt		{($1,None)}
@@ -299,10 +304,12 @@ fun_call:
 | IDENT arguments		{Call($1,$2)} 
 
 literal:
-(* todo we need runes *)
+(* TODO: we need runes *)
 | STRINGLIT			{String $1}
 | BOOLLIT			{Bool $1}
 | INTLIT			{Int $1}
 | FLOATLIT			{Float64 $1}
 
 /********* TYPES *********/
+(* TODO: Here we'd want some rules for type names, type literals and the like *)
+
