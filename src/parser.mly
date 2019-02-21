@@ -72,30 +72,61 @@ main: package toplevel* EOF {Program($1,$2)}
 /******* DECLARATIONS *******/
 package: PACKAGE IDENT SEMI {Package $2}
 
-toplevel: toplevel_decl SEMI { annot $1 $startpos($1) $endpos($1) } 
+toplevel: 
+    | { [] }
+    | toplevel_decl SEMI toplevel { (List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1) @ $3 } 
 
 toplevel_decl:
-	| function_decl {$1}
-	| var_decl	{Global $1}
-	| type_decl	{Global $1}
+    | function_decl {[$1]}
+    | var_decl	{List.map (fun dcl -> Global dcl) [$1]}
+	| type_decl	{List.map (fun dcl -> Global dcl) $1}
 
-decl:
-	| var_decl {$1}
-	| type_decl {$1}
+/*************** TYPES **************/
 
+typ:
+    | type_literal {$1}
+    | IDENT     {`Type($1)} (* user defined *)
+    | INT       {`INT}
+    | FLOAT     {`FLOAT64}
+    | BOOL      {`BOOL}
+    | RUNE      {`RUNE}
+    | STRING    {`STRING}
+    
+type_literal:
+    | array_literal {`TypeLit($1)}
+    | slice_literal {`TypeLit($1)}
+    | struct_literal {`TypeLit($1)}
+
+array_literal:
+    | LSQUARE INTLIT RSQUARE typ {Array($2, $4)}
+    
+slice_literal:
+    | LSQUARE RSQUARE typ {Slice($3)}
+    
+struct_literal:
+    | STRUCT LBLOCK struct_members RBLOCK {Struct($3)}
+    
+struct_members:
+    | signature_ids { $1 }
+    
 /****** FUNCTION DECLARATIONS *******/
 
 function_decl:
-	| FUNC IDENT signature block {Func($2, $3, $4)}
+	| FUNC IDENT signature block {Func($2, $3, `VOID, $4)}
+	| FUNC IDENT signature typ IDENT block {Func($2, $3, $4, $6)}
 
 signature:
-	(* TODO: Implement signatures for functions, there are two notations *)
-	| LPAREN {[]}
+	| LPAREN signature_ids RPAREN {$2}
 
+signature_ids: 
+    | { [] }
+    | identifier_list typ COMMA signature_ids {(List.map (fun id -> (id, $2) $1))::$4}
+    
 /***** VARIABLE DECLARATIONS *****/
+
 var_decl:
-	| typed_var_decl {$1}
-	| short_var_decl {$1}
+    | typed_var_decl {$1}
+    | short_var_decl {$1}
 
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
@@ -105,14 +136,15 @@ typed_var_decl:
 	(* TODO: Implement this properly *)
 	| VAR IDENT ASSIGN expr {Var("milton",`AUTO,None)}
 
-
-
 /***** TYPE DECLARATIONS *******/
+
 type_decl:
-	(*TODO: Implement this properly*)
-	| TYPE IDENT {Type("jarvis",`AUTO)}
-
-
+    | TYPE dist_type_decl {$2}
+    | TYPE LPAREN dist_type_decl RPAREN {$3}
+    
+dist_type_decl:
+    | { [] }
+    | IDENT typ dist_type_decl {Type($1, $2)::$3} 
 
 /****** STATEMENTS *********/
 
@@ -165,8 +197,6 @@ assign_op:
 incdec_stmt:
 | IDENT PLUSPLUS {IncDec($1,`INC)}
 | IDENT MINUSMINUS {IncDec($1,`DEC)}
-
-
 
 /***** PRINT ******/
 print_stmt:

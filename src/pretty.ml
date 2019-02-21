@@ -3,7 +3,6 @@ open Parser
 open Golite
 
 let dump_ast = function
-| [Hello] ->  "Hello World!"
 | _ -> "not implemented"
 
 let dump_token = function
