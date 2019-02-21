@@ -7,6 +7,8 @@ type op_arith = [`ADD | `SUB | `MUL | `DIV | `MOD | `BXOR | `BOR | `BAND | `BAND
 type op_assign = [op_arith | `SET]
 type op2 = [op_arith | `EQ | `NEQ | `LT | `LEQ | `GT | `GEQ | `AND | `OR]
 
+type fallthrough_mode = FALLTHROUGH | ENDBREAK
+
 (* Go types *)
 type type_name = [`BOOL | `RUNE | `INT | `FLOAT64 | `STRING | `AUTO | `Type of identifier]
 type gotype = [ type_name | `TypeLit of type_lit ]
@@ -49,21 +51,23 @@ and statement_node =
 	| Print of bool * expression list
 	| Return of expression option
 	| If of case list
-	| Switch of expression option * case list
-	| For of expression option * expression option * expression option
+	| Switch of statement_node * expression option * fallable_case list
+	| For of expression option * expression option * expression option * block
 	| Break
 	| Continue
+	| Empty
+and fallable_case = case * fallthrough_mode
 and case = 
-	| Case of expression * block
+	| Case of statement_node * expression list * block
 	| Default of block
 and expression = operand annotated
 and operand =
-	| Op1 of op1 * expression
-	| Op2 of op2 * expression * expression
-	| Call of identifier * expression list
-	| Cast of gotype * expression 
+	| Op1 of (op1 * expression)
+	| Op2 of (op2 * expression * expression)
+	| Call of (identifier * expression list)
+	| Cast of (gotype * expression)
 	| L of literal
-	| V of identifier 
+	| V of identifier
 and literal =
 	| Bool of bool
 	| Rune of char

@@ -33,7 +33,7 @@ let string_of_token = function
     | PRINT         -> "PRINT"
     | TRUE          -> "TRUE"
     | FALSE         -> "FALSE"
-    | SEMICOLON     -> "SEMICOLON"
+    | SEMI     -> "SEMICOLON"
     | COLON         -> "COLON"
     | PLUS          -> "PLUS"
     | MINUS         -> "MINUS"
@@ -69,7 +69,7 @@ rule lex = parse
     | [' ' '\t'] { lex lexbuf }
     | "//"      { comment lexbuf }
     | eol       { line_num := !line_num + 1; lex lexbuf }
-    | ';'       { SEMICOLON }
+    | ';'       { SEMI }
     | ':'       { COLON }
     | '+'       { PLUS }
     | '-'       { MINUS }
