@@ -95,12 +95,14 @@ let string_of_token = function
     | EOF           -> "eof"
     
 }
-
 let eol = '\n' | "\r\n"
+let decimal_digit = ['0'-'9']
 
+(* TODO: check to make sure float rule does not generate a DOT token: *)
 rule lex = parse
     | [' ' '\t'] { lex lexbuf }
     | "//"      { comment lexbuf }
+    | "/*"      { block_comment lexbuf }
     | eol       { line_num := !line_num + 1; lex lexbuf }
 
     | '+'       { PLUS }
@@ -158,8 +160,10 @@ rule lex = parse
 
     | "_"       { UNDERSCORE }
 
-    | ['1'-'9']['0'-'9']* | '0' as lxm                { INTLIT(int_of_string lxm) }
-    | ['1'-'9']*['0'-'9']['.']['0'-'9']+ as lxm { FLOATLIT(float_of_string lxm) }
+    | ['1'-'9']decimal_digit* as lxm                { INTLIT(int_of_string lxm) }
+    | '0'['0'-'7']* as lxm                      { INTLIT(int_of_string ("0o" ^ lxm)) }
+    | '0'['x' 'X']['0'-'9' 'A'-'F' 'a'-'f']['0'-'9' 'A'-'F' 'a'-'f']* as lxm { INTLIT(int_of_string lxm) }
+    | decimal_digit*'.'decimal_digit* as lxm { FLOATLIT(float_of_string lxm) } 
     | ('"'[^'"''\\']*('\\'_[^'"''\\']*)*'"')  as lxm { STRINGLIT(lxm) }
     | ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '_' '0'-'9']* as tok
      {
@@ -167,10 +171,22 @@ rule lex = parse
            Hashtbl.find keyword_table tok
          with Not_found -> IDENT(tok)
      }
-    | eof { (*EOF*) raise Eof }
     | _ as c { raise (LexFailure("SyntaxError: invalid character in identifier: " ^ Char.escaped c ^ " at line " ^ string_of_int !line_num)) }
 
 and comment = parse
     | eol { line_num := !line_num + 1; lex lexbuf }
     | _ { comment lexbuf }
 
+and block_comment = parse
+    | eol { line_num := !line_num + 1; block_comment lexbuf }
+    | "*/" { lex lexbuf }
+    | _ { block_comment lexbuf }
+
+(*
+(* TODO: make this work with block comments *)
+and inject_semi_if_last = parse
+    | [' ' '\t'] { inject_semi_if_last lexbuf }
+    | "//"      { Buffer.add_string lexbuf ";//" }
+    | eol { Buffer.add_string lexbuf ";\n" }
+    | _ as c { Buffer.add_char lexbuf c }
+*)
