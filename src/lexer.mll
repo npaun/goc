@@ -9,15 +9,48 @@ let line_num = ref 1
 
 let keyword_table = Hashtbl.create 53;;
 let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
-[ "var"     , VAR;
-  "string"  , STRING;
+[ 
+  (* Go keywords *)
+  "default" , DEFAULT;
+  "func"    , FUNC;
+  "interface", INTERFACE;
+  "select"  , SELECT;
+  "case"    , CASE;
+  "defer"   , DEFER;
+  "go"      , DEFER;
+  "map"     , MAP;
+  "struct"  , STRUCT;
+  "chan"    , CHAN;
+  "else"    , ELSE;
+  "goto"    , GOTO;
+  "package" , PACKAGE;
+  "switch"  , SWITCH;
+  "const"   , CONST;
+  "fallthrough", FALLTHROUGH;
+  "if"      , IF;
+  "range"   , RANGE;
+  "type"    , TYPE;
+  "continue", CONTINUE;
+  "for"     , FOR;
+  "import"  , IMPORT;
+  "return"  , RETURN;
+  "var"     , VAR;
+
+  (* additional keywords *)
+  "print"   , PRINT;
+  "println" , PRINTLN;
+  "append"  , APPEND;
+  "len"     , LEN;
+  "cap"     , CAP;
+
+  (* prim types *)
   "int"     , INT;
   "float"   , FLOAT;
-  "boolean" , BOOL;
   "bool"    , BOOL;
-  "if"      , IF;
-  "else"    , ELSE;
-  "print"   , PRINT;
+  "rune"    , RUNE;
+  "string"  , STRING;
+
+  (* bool literals*)
   "true"    , TRUE;(*BOOLLIT(true);*)
   "false"   , FALSE(*BOOLLIT(false)*)
  ];;
@@ -69,26 +102,62 @@ rule lex = parse
     | [' ' '\t'] { lex lexbuf }
     | "//"      { comment lexbuf }
     | eol       { line_num := !line_num + 1; lex lexbuf }
-    | ';'       { SEMI }
-    | ':'       { COLON }
+
     | '+'       { PLUS }
-    | '-'       { MINUS }
-    | '*'       { TIMES }
-    | '/'       { DIV }
+    | '&'       { BAND }
+    | "+="      { PASSIGN }
+    | "&="      { ANDASSIGN }
+    | "&&"      { AND }
     | "=="      { EQUAL }
     | "!="      { NEQUAL }
-    | ">="      { GEQ }
-    | "<="      { LEQ }
-    | '>'       { GREATER }
-    | '<'       { LESSER }
-    | "&&"      { AND }
-    | "||"      { OR }
-    | '!'       { NOT }
     | '('       { LPAREN }
     | ')'       { RPAREN }
+
+    | '-'       { MINUS }
+    | '|'       { BOR }
+    | "-="      { MASSIGN }
+    | "|="      { ORASSIGN }
+    | "||"      { OR }
+    | '<'       { LESSER }
+    | "<="      { LEQ }
+    | '['       { LSQUARE }
+    | ']'       { RSQUARE }
+
+    | '*'       { TIMES }
+    | '^'       { XOR }
+    | "*="      { TASSIGN }
+    | "^="      { XORASSIGN }
+    | "<-"      { LEFTARROW }
+    | '>'       { GREATER }
+    | ">="      { GEQ }
     | '{'       { LBLOCK }
     | '}'       { RBLOCK }
+
+    | '/'       { DIV }
+    | "<<"      { LSHIFT }
+    | "/="      { DASSIGN }
+    | "<<="     { LSHASSIGN }
+    | "++"      { PLUSPLUS }
     | '='       { ASSIGN }
+    | ":="      { COLASSIGN }
+    | ','       { COMMA }
+    | ';'       { SEMI }
+
+    | '%'       { MOD }
+    | ">>"      { RSHIFT }
+    | "%="      { MODASSIGN }
+    | ">>="     { RSHASSIGN }
+    | "--"      { MINUSMINUS }
+    | '!'       { NOT }
+    | "..."     { TRIPDOT }
+    | "."       { DOT }
+    | ':'       { COLON }
+
+    | "&^"      { ANDXOR }
+    | "%^="     { ANDXORASSIGN }
+
+    | "_"       { UNDERSCORE }
+
     | ['1'-'9']['0'-'9']* | '0' as lxm                { INTLIT(int_of_string lxm) }
     | ['1'-'9']*['0'-'9']['.']['0'-'9']+ as lxm { FLOATLIT(float_of_string lxm) }
     | ('"'[^'"''\\']*('\\'_[^'"''\\']*)*'"')  as lxm { STRINGLIT(lxm) }
