@@ -171,6 +171,7 @@ rule lex = parse
            Hashtbl.find keyword_table tok
          with Not_found -> IDENT(tok)
      }
+    | eof { EOF }
     | _ as c { raise (LexFailure("SyntaxError: invalid character in identifier: " ^ Char.escaped c ^ " at line " ^ string_of_int !line_num)) }
 
 and comment = parse
