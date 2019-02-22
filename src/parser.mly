@@ -20,6 +20,7 @@ STILL TO DO:
 %token <string> IDENT
 %token <string> STRINGLIT
 %token <int> INTLIT
+%token <char> RUNELIT
 %token <float> FLOATLIT
 %token <bool> BOOLLIT  
 %token TRUE FALSE 
@@ -303,10 +304,10 @@ fun_call:
 
 literal:
 (* TODO: we need runes *)
-| STRINGLIT			{String $1}
+| STRINGLIT		{String $1}
+| INTLIT 			{Int $1}
 | BOOLLIT			{Bool $1}
-| INTLIT			{Int $1}
-| FLOATLIT			{Float64 $1}
+| FLOATLIT		{Float64 $1}
 
 /********* TYPES *********/
 (* TODO: Here we'd want some rules for type names, type literals and the like *)
