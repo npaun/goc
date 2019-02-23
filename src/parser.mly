@@ -107,15 +107,14 @@ struct_literal:
 /****** FUNCTION DECLARATIONS *******/
 
 function_decl:
-    | FUNC IDENT signature block {[Func($2, $3, `VOID, $4)]}
+    | FUNC IDENT signature block     {[Func($2, $3, `VOID, $4)]}
     | FUNC IDENT signature typ block {[Func($2, $3, $4, $5)]}
 
 signature:
-	| LPAREN signature_ids RPAREN {$2}
+	| LPAREN flatten(separated_list(COMMA, signature_ids)) RPAREN {$2}
 
 signature_ids: 
-    | identifier_list typ COMMA signature_ids {(List.map (fun id -> (id, $2)) $1) @ $4}
-    | { [] }
+    | identifier_list typ {(List.map (fun id -> (id, $2)) $1)}
     
 /***** VARIABLE DECLARATIONS *****/
 
@@ -129,19 +128,23 @@ short_var_decl:
 	| identifier_list COLASSIGN expr_list {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $1 $3}
 
 typed_var_decl:
-	(* TODO: Implement this properly *)
     | VAR identifier_list typ                  {List.map (fun id -> Var(id, $3, None)) $2}
 	| VAR identifier_list typ ASSIGN expr_list {List.map2 (fun id expr -> Var(id, $3, Some expr)) $2 $5}
 	| VAR identifier_list ASSIGN expr_list     {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $2 $4}
+    | VAR LPAREN dist_var_decl RPAREN          {$3}
+    
+dist_var_decl:
+    | identifier_list typ dist_var_decl {(List.map (fun id -> Type(id, $2)) $1) @ $3}
+    | { [] }
 
 /***** TYPE DECLARATIONS *******/
 
 type_decl:
-    | TYPE dist_type_decl {$2}
+    | TYPE IDENT typ {[Type($2, $3)]}
     | TYPE LPAREN dist_type_decl RPAREN {$3}
     
 dist_type_decl:
-    | IDENT typ dist_type_decl {(Type($1, $2))::$3} 
+    | identifier_list typ dist_type_decl {(List.map (fun id -> Type(id, $2)) $1) @ $3} 
     | { [] }
 
 /****** STATEMENTS *********/
@@ -153,14 +156,14 @@ statements:
 	| stmt SEMI statements 	{(annot $1 $startpos($1) $endpos($1))::$3}
 	| eat_unimplemented SEMI statements {$3}
 	| SEMI statements	{$2}
-	| 			{[]}
+	| {[]}
 	
 
 eat_unimplemented:
 	| DEFER {}
 
 stmt:
-	| typed_var_decl	{List.map (fun decl -> Decl decl) $1}
+	| typed_var_decl	{Decl $1}
 	| block			    {Block $1}
 	| simple_stmt		{$1}
 	| return_stmt		{$1}
@@ -170,7 +173,7 @@ stmt:
 	| BREAK			    {Break}
 	| CONTINUE		    {Continue}
 simple_stmt:
-	| short_var_decl	{List.map (fun decl -> Decl decl) $1}
+	| short_var_decl	{Decl $1}
 	| assign_stmt		{$1} 
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
@@ -182,7 +185,7 @@ assign_stmt:
 | identifier_list ASSIGN expr_list {Assign($1,$3)}
 
 identifier_list:
-| separated_nonempty_list(COMMA,IDENT) {$1}
+| lst = separated_nonempty_list(COMMA, IDENT) { lst }
 
 op_assign_stmt:
 | IDENT assign_op expr {OpAssign($1,$2,$3)}
@@ -335,7 +338,3 @@ literal:
 | INTLIT 			{Int $1}
 | BOOLLIT			{Bool $1}
 | FLOATLIT		{Float64 $1}
-
-/********* TYPES *********/
-(* TODO: Here we'd want some rules for type names, type literals and the like *)
-

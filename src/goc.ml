@@ -13,8 +13,7 @@ let with_error_handling fn ok =
 	) with
 	| Golite.SyntaxError message -> (
 		fprintf stderr "Error: %s\n" message;
-		exit 1
-	)
+		exit 1)
 
 let parse lexbuf = Parser.main Lexer.lex lexbuf
 

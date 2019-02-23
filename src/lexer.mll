@@ -64,7 +64,7 @@ rule lex = parse
     | [' ' '\t'] { lex lexbuf }
     | "//"      { comment lexbuf }
     | "/*"      { block_comment lexbuf }
-    | eol       { line_num := !line_num + 1; lex lexbuf }
+    | eol       { line_num := !line_num + 1; Lexing.new_line lexbuf; lex lexbuf }
 
     | '+'       { PLUS }
     | '&'       { BAND }
@@ -136,11 +136,11 @@ rule lex = parse
     | _ as c { raise (LexFailure("SyntaxError: invalid character in identifier: " ^ Char.escaped c ^ " at line " ^ string_of_int !line_num)) }
 
 and comment = parse
-    | eol { line_num := !line_num + 1; lex lexbuf }
+    | eol { line_num := !line_num + 1; Lexing.new_line lexbuf; lex lexbuf }
     | _ { comment lexbuf }
 
 and block_comment = parse
-    | eol { line_num := !line_num + 1; block_comment lexbuf }
+    | eol { line_num := !line_num + 1; Lexing.new_line lexbuf; block_comment lexbuf }
     | "*/" { lex lexbuf }
     | _ { block_comment lexbuf }
 

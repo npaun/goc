@@ -42,7 +42,7 @@ and toplevel_declaration =
 and block = statement list
 and statement = statement_node annotated
 and statement_node = 
-	| Decl of declaration
+	| Decl of declaration list
 	| Expr of expression
 	| Block of block
 	| Assign of identifier list * expression list
