@@ -11,4 +11,6 @@ _build
 *.native
 *.byte
 .*.sw*
-
+*.mli
+parser.ml
+lexer.ml
