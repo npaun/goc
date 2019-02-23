@@ -119,16 +119,19 @@ signature_ids:
 /***** VARIABLE DECLARATIONS *****/
 
 var_decl:
-    | typed_var_decl {[$1]}
-    | short_var_decl {[$1]}
+    | typed_var_decl {$1}
+    | short_var_decl {$1}
 
+(* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-	| IDENT COLASSIGN expr {Var("donkey",`AUTO,None)}
+	| identifier_list COLASSIGN expr_list {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $1 $3}
 
 typed_var_decl:
 	(* TODO: Implement this properly *)
-	| VAR IDENT ASSIGN expr {Var("milton",`AUTO,None)}
+    | VAR identifier_list typ                  {List.map (fun id -> Var(id, $3, None)) $2}
+	| VAR identifier_list typ ASSIGN expr_list {List.map2 (fun id expr -> Var(id, $3, Some expr)) $2 $5}
+	| VAR identifier_list ASSIGN expr_list     {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $2 $4}
 
 /***** TYPE DECLARATIONS *******/
 
@@ -156,7 +159,7 @@ eat_unimplemented:
 	| DEFER {}
 
 stmt:
-	| typed_var_decl	{Decl $1}
+	| typed_var_decl	{List.map (fun decl -> Decl decl) $1}
 	| block			    {Block $1}
 	| simple_stmt		{$1}
 	| return_stmt		{$1}
@@ -166,7 +169,7 @@ stmt:
 	| BREAK			    {Break}
 	| CONTINUE		    {Continue}
 simple_stmt:
-	| short_var_decl	{Decl $1}
+	| short_var_decl	{List.map (fun decl -> Decl decl) $1}
 	| assign_stmt		{$1} 
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
