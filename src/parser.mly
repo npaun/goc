@@ -71,13 +71,13 @@ main: package toplevel EOF {Program($1,$2)}
 package: PACKAGE IDENT SEMI {Package $2}
 
 toplevel: 
-    | toplevel_decl SEMI toplevel { (List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1) @ $3 } 
+    | toplevel_decl SEMI toplevel {$3 @ (List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1)} 
     | { [] }
 
 toplevel_decl:
     | function_decl {$1}
-    | var_decl	{List.map (fun dcl -> Global dcl) $1}
-	| type_decl	{List.map (fun dcl -> Global dcl) $1}
+    | var_decl	{List.rev (List.map (fun dcl -> Global dcl) $1)}
+	| type_decl	{List.rev (List.map (fun dcl -> Global dcl) $1)}
 
 /*************** TYPES **************/
 
@@ -114,7 +114,7 @@ signature:
 	| LPAREN flatten(separated_list(COMMA, signature_ids)) RPAREN {$2}
 
 signature_ids: 
-    | identifier_list typ {(List.map (fun id -> (id, $2)) $1)}
+    | identifier_list typ {List.rev ((List.map (fun id -> (id, $2)) $1))}
     
 /***** VARIABLE DECLARATIONS *****/
 
@@ -128,13 +128,16 @@ short_var_decl:
 	| identifier_list COLASSIGN expr_list {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $1 $3}
 
 typed_var_decl:
-    | VAR identifier_list typ                  {List.map (fun id -> Var(id, $3, None)) $2}
-	| VAR identifier_list typ ASSIGN expr_list {List.map2 (fun id expr -> Var(id, $3, Some expr)) $2 $5}
-	| VAR identifier_list ASSIGN expr_list     {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $2 $4}
-    | VAR LPAREN dist_var_decl RPAREN          {$3}
+    | VAR t_var_decl {$2}
+    
+t_var_decl:
+    | identifier_list typ                  {List.map (fun id -> Var(id, $2, None)) $1}
+	| identifier_list typ ASSIGN expr_list {List.map2 (fun id expr -> Var(id, $2, Some expr)) $1 $4}
+	| identifier_list ASSIGN expr_list     {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $1 $3}
+    | LPAREN dist_var_decl RPAREN          {$2}
     
 dist_var_decl:
-    | identifier_list typ dist_var_decl {(List.map (fun id -> Type(id, $2)) $1) @ $3}
+    | t_var_decl dist_var_decl {$1 @ $2}
     | { [] }
 
 /***** TYPE DECLARATIONS *******/
