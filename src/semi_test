@@ -1,0 +1,5 @@
+"wow_a_string" // this is a line comment
+"another_string" /* this is 
+a block comment
+that extends multiple lines */ "third_string"
+"fourth_string" "fifth_string"
