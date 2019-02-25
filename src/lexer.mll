@@ -67,6 +67,9 @@ let string  = ['a'-'z' 'A'-'Z' '0'-'9'
 	'`' '~' '!' '@' '#' '$' '%' '^'  '&' '*' '(' ')' '-' '_' '=' '+'
 	'[' ']' '{' '}' '|' ';' ':'  '\'' ',' '<' '.' '>' '/' '?' ' ']
 
+let ascii = ['\x00'-'\x7F']
+let escaped_char = '\\' ['a' 'b' 'f' 'n' 'r' 't' 'v' '\\' ''' '"']
+
 
 (* TODO: check to make sure float rule does not generate a DOT token: *)
 rule lex = parse
@@ -147,6 +150,7 @@ rule lex = parse
     | '0'['0'-'7']* as lxm                                                    { insert_semi_up(); INTLIT(int_of_string ("0o" ^ lxm)) }
     | '0'['x' 'X']['0'-'9' 'A'-'F' 'a'-'f']['0'-'9' 'A'-'F' 'a'-'f']* as lxm  { insert_semi_up(); INTLIT(int_of_string lxm) }
     | decimal_digit*'.'decimal_digit* as lxm                                  { insert_semi_up(); FLOATLIT(float_of_string lxm) } 
+    | ''' (ascii | escaped_char) ''' as lxm                                                    { insert_semi_up(); RUNELIT (lxm.[1]) }
     | '"'                                                                     { insert_semi_up(); STRINGLIT(lex_string (Buffer.create 32) lexbuf) }    
     | '''                                                                     { insert_semi_up(); STRINGLIT(lex_string_lit (Buffer.create 32) lexbuf) }
     | ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '_' '0'-'9']* as tok
@@ -174,7 +178,7 @@ and block_comment hit_eol = parse
               | true, true ->
                   insert_semi_down();
                   SEMI
-              | false, _ ->
+              | _, _ ->
                   lex lexbuf }
     | _ { block_comment hit_eol lexbuf }
 
