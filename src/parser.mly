@@ -78,10 +78,10 @@ toplevel:
     | { [] }
 
 toplevel_decl:
-    | function_decl {$1}
-    | var_decl	{List.rev (List.map (fun dcl -> Global dcl) $1)}
-	| type_decl	{List.rev (List.map (fun dcl -> Global dcl) $1)}
-    | error {throw_error "invalid top level declaration" $startpos($1)}
+    | function_decl  {$1}
+    | typed_var_decl {List.rev (List.map (fun dcl -> Global dcl) $1)}
+	| type_decl	     {List.rev (List.map (fun dcl -> Global dcl) $1)}
+    | error          {throw_error "invalid top level declaration" $startpos($1)}
 
 /*************** TYPES **************/
 
@@ -93,6 +93,7 @@ typ:
     | STRING    {`STRING}
     | IDENT     {`Type($1)} (* user defined *)
     | type_literal {$1}
+    | error     {throw_error "Unknown/invalid type" $startpos($1)}
     
 type_literal:
     | array_literal {`TypeLit($1)}
@@ -107,7 +108,6 @@ slice_literal:
     
 struct_literal:
     | STRUCT LBLOCK struct_signatures RBLOCK {Struct($3)}
-    | error {throw_error "invalid struct declaration" $startpos($1)}
     
 struct_signatures:
     | signature_ids SEMI struct_signatures {$1 @ $3}
@@ -126,10 +126,6 @@ signature_ids:
     | identifier_list typ {List.rev ((List.map (fun id -> (id, $2)) $1))}
     
 /***** VARIABLE DECLARATIONS *****/
-
-var_decl:
-    | typed_var_decl {$1}
-    (*| short_var_decl {$1}*) (* Since it isn't allowed in the toplevel, make it it's own thing that is only used in the statement rules *)
 
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
@@ -169,7 +165,6 @@ statements:
 	| eat_unimplemented SEMI statements {$3}
 	| SEMI statements	{$2}
 	| {[]}
-	
 
 eat_unimplemented:
 	| DEFER {}
