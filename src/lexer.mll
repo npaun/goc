@@ -142,7 +142,7 @@ rule lex = parse
     | ':'       { insert_semi_down(); COLON }
 
     | "&^"      { insert_semi_down(); ANDXOR }
-    | "%^="     { insert_semi_down(); ANDXORASSIGN }
+    | "&^="     { insert_semi_down(); ANDXORASSIGN }
 
     | "_"       { insert_semi_down(); UNDERSCORE }
 
@@ -205,7 +205,7 @@ and lex_escape b = parse
 	| '\\'				{ Buffer.add_char b '\\'; lex_string b lexbuf }
 	| 'v'				{ Buffer.add_char b '\011'; lex_string b lexbuf }
 	| eof				{ raise (LexFailure "Lexer - End of file in escape sequence") }
-	| _				{ raise (LexFailure "Lexer - Invalid escape character") }
+    | _	as esc			{ raise (LexFailure ("Lexer - Invalid escape sequence: '\\" ^ String.make 1 esc ^ "'")) }
 
 
 (*
