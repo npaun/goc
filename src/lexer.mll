@@ -207,6 +207,7 @@ and lex_escape b = parse
 	| eof				{ raise (LexFailure "Lexer - End of file in escape sequence") }
 	| _				{ raise (LexFailure "Lexer - Invalid escape character") }
 
+
 (*
 (* TODO: make this work with block comments *)
 and inject_semi_if_last = parse

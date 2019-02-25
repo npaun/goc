@@ -50,9 +50,6 @@ STILL TO DO:
 /* variable declaration */
 %token INT FLOAT BOOL RUNE STRING 
 
-
-
-
 /* https://golang.org/ref/spec#Operators */
 /* BAND -> bitwise AND (&), etc */
 %right ASSIGN BASSIGN
@@ -68,52 +65,90 @@ STILL TO DO:
 %type <Golite.ast> main
 %%
 
-main: package toplevel* EOF {Program($1,$2)}
+main: package toplevel EOF {Program($1,$2)}
 
 /******* DECLARATIONS *******/
 package: PACKAGE IDENT SEMI {Package $2}
 
-toplevel: toplevel_decl SEMI { annot $1 $startpos($1) $endpos($1) } 
+toplevel: 
+    | toplevel_decl SEMI toplevel {$3 @ (List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1)} 
+    | { [] }
 
 toplevel_decl:
-	| function_decl {$1}
-	| var_decl	{Global $1}
-	| type_decl	{Global $1}
+    | function_decl {$1}
+    | var_decl	{List.rev (List.map (fun dcl -> Global dcl) $1)}
+	| type_decl	{List.rev (List.map (fun dcl -> Global dcl) $1)}
 
-decl:
-	| var_decl {$1}
-	| type_decl {$1}
+/*************** TYPES **************/
 
+typ:
+    | INT       {`INT}
+    | FLOAT     {`FLOAT64}
+    | BOOL      {`BOOL}
+    | RUNE      {`RUNE}
+    | STRING    {`STRING}
+    | IDENT     {`Type($1)} (* user defined *)
+    | type_literal {$1}
+    
+type_literal:
+    | array_literal {`TypeLit($1)}
+    | slice_literal {`TypeLit($1)}
+    | struct_literal {`TypeLit($1)}
+
+array_literal:
+    | LSQUARE INTLIT RSQUARE typ {Array($2, $4)}
+    
+slice_literal:
+    | LSQUARE RSQUARE typ {Slice($3)}
+    
+struct_literal:
+    | STRUCT LBLOCK signature_ids RBLOCK {Struct($3)}
+    
 /****** FUNCTION DECLARATIONS *******/
 
 function_decl:
-	| FUNC IDENT signature block {Func($2, $3, $4)}
+    | FUNC IDENT signature block     {[Func($2, $3, `VOID, $4)]}
+    | FUNC IDENT signature typ block {[Func($2, $3, $4, $5)]}
 
 signature:
-	(* TODO: Implement signatures for functions, there are two notations *)
-	| LPAREN {[]}
+	| LPAREN flatten(separated_list(COMMA, signature_ids)) RPAREN {$2}
 
+signature_ids: 
+    | identifier_list typ {List.rev ((List.map (fun id -> (id, $2)) $1))}
+    
 /***** VARIABLE DECLARATIONS *****/
-var_decl:
-	| typed_var_decl {$1}
-	| short_var_decl {$1}
 
+var_decl:
+    | typed_var_decl {$1}
+    | short_var_decl {$1}
+
+(* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-	| IDENT COLASSIGN expr {Var("donkey",`AUTO,None)}
+	| identifier_list COLASSIGN expr_list {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $1 $3}
 
 typed_var_decl:
-	(* TODO: Implement this properly *)
-	| VAR IDENT ASSIGN expr {Var("milton",`AUTO,None)}
-
-
+    | VAR t_var_decl {$2}
+    
+t_var_decl:
+    | identifier_list typ                  {List.map (fun id -> Var(id, $2, None)) $1}
+	| identifier_list typ ASSIGN expr_list {List.map2 (fun id expr -> Var(id, $2, Some expr)) $1 $4}
+	| identifier_list ASSIGN expr_list     {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $1 $3}
+    | LPAREN dist_var_decl RPAREN          {$2}
+    
+dist_var_decl:
+    | t_var_decl dist_var_decl {$1 @ $2}
+    | { [] }
 
 /***** TYPE DECLARATIONS *******/
+
 type_decl:
-	(*TODO: Implement this properly*)
-	| TYPE IDENT {Type("jarvis",`AUTO)}
-
-
+    | TYPE IDENT typ {[Type($2, $3)]}
+    | TYPE LPAREN dist_type_decl RPAREN {$3}
+    
+dist_type_decl:
+    | identifier_list typ dist_type_decl {(List.map (fun id -> Type(id, $2)) $1) @ $3} 
+    | { [] }
 
 /****** STATEMENTS *********/
 
@@ -124,7 +159,7 @@ statements:
 	| stmt SEMI statements 	{(annot $1 $startpos($1) $endpos($1))::$3}
 	| eat_unimplemented SEMI statements {$3}
 	| SEMI statements	{$2}
-	| 			{[]}
+	| {[]}
 	
 
 eat_unimplemented:
@@ -153,7 +188,7 @@ assign_stmt:
 | identifier_list ASSIGN expr_list {Assign($1,$3)}
 
 identifier_list:
-| separated_nonempty_list(COMMA,IDENT) {$1}
+| lst = separated_nonempty_list(COMMA, IDENT) { lst }
 
 op_assign_stmt:
 | IDENT assign_op expr {OpAssign($1,$2,$3)}
@@ -166,8 +201,6 @@ assign_op:
 incdec_stmt:
 | IDENT PLUSPLUS {IncDec($1,`INC)}
 | IDENT MINUSMINUS {IncDec($1,`DEC)}
-
-
 
 /***** PRINT ******/
 print_stmt:
@@ -308,7 +341,3 @@ literal:
 | INTLIT 			{Int $1}
 | BOOLLIT			{Bool $1}
 | FLOATLIT		{Float64 $1}
-
-/********* TYPES *********/
-(* TODO: Here we'd want some rules for type names, type literals and the like *)
-
