@@ -6,6 +6,13 @@ exception Eof
 exception LexFailure of string
 
 let line_num = ref 1
+let insert_semi = ref false
+
+let insert_semi_up () =
+  insert_semi := true
+
+let insert_semi_down () = 
+  insert_semi := false
 
 let keyword_table = Hashtbl.create 53;;
 let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
@@ -26,14 +33,11 @@ let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
   "package" , PACKAGE;
   "switch"  , SWITCH;
   "const"   , CONST;
-  "fallthrough", FALLTHROUGH;
   "if"      , IF;
   "range"   , RANGE;
   "type"    , TYPE;
-  "continue", CONTINUE;
   "for"     , FOR;
   "import"  , IMPORT;
-  "return"  , RETURN;
   "var"     , VAR;
 
   (* additional keywords *)
@@ -56,97 +60,123 @@ let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
  ];;
     
 }
+
 let eol = '\n' | "\r\n"
 let decimal_digit = ['0'-'9']
 let string  = ['a'-'z' 'A'-'Z' '0'-'9'
 	'`' '~' '!' '@' '#' '$' '%' '^'  '&' '*' '(' ')' '-' '_' '=' '+'
 	'[' ']' '{' '}' '|' ';' ':'  '\'' ',' '<' '.' '>' '/' '?' ' ']
 
+
 (* TODO: check to make sure float rule does not generate a DOT token: *)
 rule lex = parse
     | [' ' '\t'] { lex lexbuf }
     | "//"      { comment lexbuf }
-    | "/*"      { block_comment lexbuf }
-    | eol       { line_num := !line_num + 1; lex lexbuf }
+    | "/*"      { block_comment false lexbuf }
+    | eol       { line_num := !line_num + 1; 
+                  match !insert_semi with
+                    | true -> 
+                        insert_semi_down();
+                        SEMI  
+                    | false -> 
+                        lex lexbuf
+                }
 
-    | '+'       { PLUS }
-    | '&'       { BAND }
-    | "+="      { PASSIGN }
-    | "&="      { ANDASSIGN }
-    | "&&"      { AND }
-    | "=="      { EQUAL }
-    | "!="      { NEQUAL }
-    | '('       { LPAREN }
-    | ')'       { RPAREN }
+    (* special keywords that produce a semicolon insertion *)
+    | "break"       { insert_semi_up(); BREAK }
+    | "continue"    { insert_semi_up(); CONTINUE }
+    | "fallthrough" { insert_semi_up(); FALLTHROUGH}
+    | "return"      { insert_semi_up(); RETURN }
 
-    | '-'       { MINUS }
-    | '|'       { BOR }
-    | "-="      { MASSIGN }
-    | "|="      { ORASSIGN }
-    | "||"      { OR }
-    | '<'       { LESSER }
-    | "<="      { LEQ }
-    | '['       { LSQUARE }
-    | ']'       { RSQUARE }
+    | '+'       { insert_semi_down(); PLUS }
+    | '&'       { insert_semi_down(); BAND }
+    | "+="      { insert_semi_down(); PASSIGN }
+    | "&="      { insert_semi_down(); ANDASSIGN }
+    | "&&"      { insert_semi_down(); AND }
+    | "=="      { insert_semi_down(); EQUAL }
+    | "!="      { insert_semi_down(); NEQUAL }
+    | '('       { insert_semi_down(); LPAREN }
+    | ')'       { insert_semi_up(); RPAREN }
 
-    | '*'       { TIMES }
-    | '^'       { XOR }
-    | "*="      { TASSIGN }
-    | "^="      { XORASSIGN }
-    | "<-"      { LEFTARROW }
-    | '>'       { GREATER }
-    | ">="      { GEQ }
-    | '{'       { LBLOCK }
-    | '}'       { RBLOCK }
+    | '-'       { insert_semi_down(); MINUS }
+    | '|'       { insert_semi_down(); BOR }
+    | "-="      { insert_semi_down(); MASSIGN }
+    | "|="      { insert_semi_down(); ORASSIGN }
+    | "||"      { insert_semi_down(); OR }
+    | '<'       { insert_semi_down(); LESSER }
+    | "<="      { insert_semi_down(); LEQ }
+    | '['       { insert_semi_down(); LSQUARE }
+    | ']'       { insert_semi_up(); RSQUARE }
 
-    | '/'       { DIV }
-    | "<<"      { LSHIFT }
-    | "/="      { DASSIGN }
-    | "<<="     { LSHASSIGN }
-    | "++"      { PLUSPLUS }
-    | '='       { ASSIGN }
-    | ":="      { COLASSIGN }
-    | ','       { COMMA }
-    | ';'       { SEMI }
+    | '*'       { insert_semi_down(); TIMES }
+    | '^'       { insert_semi_down(); XOR }
+    | "*="      { insert_semi_down(); TASSIGN }
+    | "^="      { insert_semi_down(); XORASSIGN }
+    | "<-"      { insert_semi_down(); LEFTARROW }
+    | '>'       { insert_semi_down(); GREATER }
+    | ">="      { insert_semi_down(); GEQ }
+    | '{'       { insert_semi_down(); LBLOCK }
+    | '}'       { insert_semi_up(); RBLOCK }
 
-    | '%'       { MOD }
-    | ">>"      { RSHIFT }
-    | "%="      { MODASSIGN }
-    | ">>="     { RSHASSIGN }
-    | "--"      { MINUSMINUS }
-    | '!'       { NOT }
-    | "..."     { TRIPDOT }
-    | "."       { DOT }
-    | ':'       { COLON }
+    | '/'       { insert_semi_down(); DIV }
+    | "<<"      { insert_semi_down(); LSHIFT }
+    | "/="      { insert_semi_down(); DASSIGN }
+    | "<<="     { insert_semi_down(); LSHASSIGN }
+    | "++"      { insert_semi_up(); PLUSPLUS }
+    | '='       { insert_semi_down(); ASSIGN }
+    | ":="      { insert_semi_down(); COLASSIGN }
+    | ','       { insert_semi_down(); COMMA }
+    | ';'       { insert_semi_down(); SEMI }
 
-    | "&^"      { ANDXOR }
-    | "%^="     { ANDXORASSIGN }
+    | '%'       { insert_semi_down(); MOD }
+    | ">>"      { insert_semi_down(); RSHIFT }
+    | "%="      { insert_semi_down(); MODASSIGN }
+    | ">>="     { insert_semi_down(); RSHASSIGN }
+    | "--"      { insert_semi_up(); MINUSMINUS }
+    | '!'       { insert_semi_down(); NOT }
+    | "..."     { insert_semi_down(); TRIPDOT }
+    | "."       { insert_semi_down(); DOT }
+    | ':'       { insert_semi_down(); COLON }
 
-    | "_"       { UNDERSCORE }
+    | "&^"      { insert_semi_down(); ANDXOR }
+    | "%^="     { insert_semi_down(); ANDXORASSIGN }
 
-    | ['1'-'9']decimal_digit* as lxm                                          { INTLIT(int_of_string lxm) }
-    | '0'['0'-'7']* as lxm                                                    { INTLIT(int_of_string ("0o" ^ lxm)) }
-    | '0'['x' 'X']['0'-'9' 'A'-'F' 'a'-'f']['0'-'9' 'A'-'F' 'a'-'f']* as lxm  { INTLIT(int_of_string lxm) }
-    | decimal_digit*'.'decimal_digit* as lxm                                  { FLOATLIT(float_of_string lxm) } 
-    | '"'                                                                     { STRINGLIT(lex_string (Buffer.create 32) lexbuf) }    
-    | '''                                                                     { STRINGLIT(lex_string_lit (Buffer.create 32) lexbuf) }
+    | "_"       { insert_semi_down(); UNDERSCORE }
+
+    | ['1'-'9']decimal_digit* as lxm                                          { insert_semi_up(); INTLIT(int_of_string lxm) }
+    | '0'['0'-'7']* as lxm                                                    { insert_semi_up(); INTLIT(int_of_string ("0o" ^ lxm)) }
+    | '0'['x' 'X']['0'-'9' 'A'-'F' 'a'-'f']['0'-'9' 'A'-'F' 'a'-'f']* as lxm  { insert_semi_up(); INTLIT(int_of_string lxm) }
+    | decimal_digit*'.'decimal_digit* as lxm                                  { insert_semi_up(); FLOATLIT(float_of_string lxm) } 
+    | '"'                                                                     { insert_semi_up(); STRINGLIT(lex_string (Buffer.create 32) lexbuf) }    
+    | '''                                                                     { insert_semi_up(); STRINGLIT(lex_string_lit (Buffer.create 32) lexbuf) }
     | ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '_' '0'-'9']* as tok
      {
          try
            Hashtbl.find keyword_table tok
-         with Not_found -> IDENT(tok)
+         with Not_found -> ( insert_semi_up(); IDENT(tok) )
      }
     | eof { EOF }
     | _ as c { raise (LexFailure("SyntaxError: invalid character in identifier: " ^ Char.escaped c ^ " at line " ^ string_of_int !line_num)) }
 
 and comment = parse
-    | eol { line_num := !line_num + 1; lex lexbuf }
+    | eol { line_num := !line_num + 1;
+            match !insert_semi with
+            | true -> 
+                insert_semi_down();
+                SEMI  
+            | false -> 
+                lex lexbuf }
     | _ { comment lexbuf }
 
-and block_comment = parse
-    | eol { line_num := !line_num + 1; block_comment lexbuf }
-    | "*/" { lex lexbuf }
-    | _ { block_comment lexbuf }
+and block_comment hit_eol = parse
+    | eol { line_num := !line_num + 1; block_comment true lexbuf } 
+    | "*/" { match !insert_semi, hit_eol with
+              | true, true ->
+                  insert_semi_down();
+                  SEMI
+              | false, _ ->
+                  lex lexbuf }
+    | _ { block_comment hit_eol lexbuf }
 
 and lex_string_lit b = parse
   | '''       {Buffer.contents b}
