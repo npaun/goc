@@ -21,7 +21,7 @@
 
 ### Parser
 
-*Note(TODO)*: switch statement (`expr` vs `simple_stmt`) 
+*Note(TODO)*: switch statement default (weeder)
 
 ### AST
 
