@@ -63,15 +63,15 @@ let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
 
 let eol = '\n' | "\r\n"
 let decimal_digit = ['0'-'9']
+let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
 let string  = ['a'-'z' 'A'-'Z' '0'-'9'
 	'`' '~' '!' '@' '#' '$' '%' '^'  '&' '*' '(' ')' '-' '_' '=' '+'
 	'[' ']' '{' '}' '|' ';' ':'  '\'' ',' '<' '.' '>' '/' '?' ' ']
 
 let ascii = ['\x00'-'\x7F']
-let escaped_char = '\\' ['a' 'b' 'f' 'n' 'r' 't' 'v' '\\' ''' '"']
+let escaped_char = '\\' ['a' 'b' 'f' 'n' 'r' 't' 'v' '\\' ''']
 
 
-(* TODO: check to make sure float rule does not generate a DOT token: *)
 rule lex = parse
     | [' ' '\t'] { lex lexbuf }
     | "//"      { comment lexbuf }
@@ -148,7 +148,7 @@ rule lex = parse
 
     | ['1'-'9']decimal_digit* as lxm                                          { insert_semi_up(); INTLIT(int_of_string lxm) }
     | '0'['0'-'7']* as lxm                                                    { insert_semi_up(); INTLIT(int_of_string ("0o" ^ lxm)) }
-    | '0'['x' 'X']['0'-'9' 'A'-'F' 'a'-'f']['0'-'9' 'A'-'F' 'a'-'f']* as lxm  { insert_semi_up(); INTLIT(int_of_string lxm) }
+    | '0'['x' 'X']hex_digit hex_digit* as lxm  { insert_semi_up(); INTLIT(int_of_string lxm) }
     | decimal_digit*'.'decimal_digit* as lxm                                  { insert_semi_up(); FLOATLIT(float_of_string lxm) } 
     | ''' (ascii | escaped_char) ''' as lxm                                                    { insert_semi_up(); RUNELIT (lxm.[1]) }
     | '"'                                                                     { insert_semi_up(); STRINGLIT(lex_string (Buffer.create 32) lexbuf) }    
@@ -206,12 +206,3 @@ and lex_escape b = parse
 	| 'v'				{ Buffer.add_char b '\011'; lex_string b lexbuf }
 	| eof				{ raise (LexFailure "Lexer - End of file in escape sequence") }
 	| _				{ raise (LexFailure "Lexer - Invalid escape character") }
-
-(*
-(* TODO: make this work with block comments *)
-and inject_semi_if_last = parse
-    | [' ' '\t'] { inject_semi_if_last lexbuf }
-    | "//"      { Buffer.add_string lexbuf ";//" }
-    | eol { Buffer.add_string lexbuf ";\n" }
-    | _ as c { Buffer.add_char lexbuf c }
-*)
