@@ -2,8 +2,100 @@ open Lexer
 open Parser
 open Golite
 
-let dump_ast = function
-| _ -> "not implemented"
+(* TODO: finish string_of_stmt *)
+
+let string_of_lst (lst: 'a list) (sep: string) (f: 'a -> string) =
+    List.fold_right (fun x acc -> acc ^ (if acc = "" then "" else sep) ^ f x) lst ""
+
+let rec string_of_ast ast = match ast with 
+    | Program(pkg, toplvl) -> string_of_pkg pkg ^ string_of_toplvl toplvl
+and string_of_pkg pkg = match pkg with 
+    | Package(id) -> "package " ^ id ^ "\n"
+and string_of_toplvl lst = string_of_lst lst "\n" string_of_topdecl
+and string_of_topdecl decl = match decl.v with
+    | Func(id, sigs, typ, body) -> "func " ^ id ^ "(" ^ (string_of_sigs sigs ", ") ^ ") " ^ string_of_typ typ ^ " " ^ string_of_block body 
+    | Global(decl') -> string_of_decl decl'
+and string_of_decl decl = match decl with
+    | Var(id, typ, expr) -> "var " ^ id ^ " " ^ string_of_typ typ ^ (match expr with None -> "" | Some e -> " = " ^ string_of_expr e) 
+    | Type(id, typ)      -> "type " ^ id ^ " " ^ string_of_typ typ
+and string_of_typ typ = match typ with
+    | `BOOL         -> "bool"
+    | `RUNE         -> "char"
+    | `INT          -> "int"
+    | `FLOAT64      -> "float64"
+    | `STRING       -> "string"
+    | `Type(id)     -> id
+    | `AUTO | `VOID -> ""
+    | `TypeLit(t)   -> string_of_typlit t
+and string_of_typlit typlit = match typlit with
+    | Slice(typ)    -> "[]" ^ string_of_typ typ 
+    | Array(i, typ) -> "[" ^ string_of_int i ^ "]" ^ string_of_typ typ
+    | Struct(mems)  -> "struct {\n" ^ (string_of_sigs mems "\n") ^ "\n}"
+and string_of_sigs sigs sep = 
+    let string_of_sig = function
+        | (id, typ) -> id ^ " " ^ string_of_typ typ 
+    in
+    string_of_lst sigs sep string_of_sig
+and string_of_block blck = 
+    "{\n" ^ (string_of_lst blck "\n" string_of_stmt) ^ "\n}"
+and string_of_stmt stmt = match stmt.v with
+    | Decl(decl_lst)                    -> string_of_lst decl_lst "\n" string_of_decl
+    | Expr(expr)                        -> string_of_expr expr
+    | Block(blck)                       -> string_of_block blck
+    | Assign(id_lst, expr_lst)          -> (string_of_lst id_lst ", " (fun x -> x)) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
+    | OpAssign(id, op, expr)            -> ""
+    | IncDec(id, op)                    -> id ^ (match op with `INC -> "++" | `DEC -> "--")
+    | Print(b, expr_lst)                -> ""
+    | Return(expr_opt)                  -> "return " ^ string_of_expr_opt expr_opt
+    | If(c_lst)                         -> ""
+    | Switch(stmt, expr_opt, c_lst)     -> ""
+    | For(e1_opt, e2_opt, e3_opt, blck) -> ""
+    | Break                             -> "break"
+    | Continue                          -> "continue"
+    | Empty                             -> ""
+and string_of_expr expr = match expr.v with
+    | Op1(op, e)      -> string_of_op1 op ^ string_of_expr e
+    | Op2(op, e1, e2) -> string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2
+    | Call(id, e_lst) -> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
+    | Cast(typ, e)    -> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
+    | V(id)           -> id
+    | L(lit)          -> (
+        match lit with
+        | Bool(b) -> string_of_bool b
+        | Rune(r) -> String.make 1 r
+        | Int(i)  -> string_of_int i
+        | Float64(f) -> string_of_float f
+        | String(s) -> s
+    )
+and string_of_expr_opt expr = match expr with
+    | None -> ""
+    | Some e -> string_of_expr e
+and string_of_op1 op = match op with
+    | `POS -> "+"
+    | `NEG -> "-"
+    | `NOT | `BNOT -> "!"
+and string_of_op2 op = match op with
+    | `EQ -> "=="
+    | `NEQ -> "!="
+    | `LT -> "<"
+    | `LEQ -> "<="
+    | `GT -> ">"
+    | `GEQ -> ">="
+    | `AND -> "&&"
+    | `OR -> "||"
+    | `ADD -> "+"
+    | `SUB -> "-"
+    | `MUL -> "*"
+    | `DIV -> "/"
+    | `MOD -> "%"
+    | `BXOR -> "^"
+    | `BOR -> "|"
+    | `BAND -> "&"
+    | `BANDNOT -> "&^"
+    | `SL -> "<<"
+    | `SR -> ">>"
+    
+let dump_ast ast = string_of_ast ast 
 
 let dump_token = function
 	| BREAK					-> "BREAK"

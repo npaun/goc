@@ -76,7 +76,7 @@ rule lex = parse
     | [' ' '\t'] { lex lexbuf }
     | "//"      { comment lexbuf }
     | "/*"      { block_comment false lexbuf }
-    | eol       { line_num := !line_num + 1; 
+    | eol       { line_num := !line_num + 1; Lexing.new_line lexbuf;
                   match !insert_semi with
                     | true -> 
                         insert_semi_down();
@@ -142,7 +142,7 @@ rule lex = parse
     | ':'       { insert_semi_down(); COLON }
 
     | "&^"      { insert_semi_down(); ANDXOR }
-    | "%^="     { insert_semi_down(); ANDXORASSIGN }
+    | "&^="     { insert_semi_down(); ANDXORASSIGN }
 
     | "_"       { insert_semi_down(); UNDERSCORE }
 
@@ -163,7 +163,7 @@ rule lex = parse
     | _ as c { raise (LexFailure("SyntaxError: invalid character in identifier: " ^ Char.escaped c ^ " at line " ^ string_of_int !line_num)) }
 
 and comment = parse
-    | eol { line_num := !line_num + 1;
+    | eol { line_num := !line_num + 1; Lexing.new_line lexbuf;
             match !insert_semi with
             | true -> 
                 insert_semi_down();
@@ -173,7 +173,7 @@ and comment = parse
     | _ { comment lexbuf }
 
 and block_comment hit_eol = parse
-    | eol { line_num := !line_num + 1; block_comment true lexbuf } 
+    | eol { line_num := !line_num + 1; Lexing.new_line lexbuf; block_comment true lexbuf } 
     | "*/" { match !insert_semi, hit_eol with
               | true, true ->
                   insert_semi_down();
@@ -205,4 +205,4 @@ and lex_escape b = parse
 	| '\\'				{ Buffer.add_char b '\\'; lex_string b lexbuf }
 	| 'v'				{ Buffer.add_char b '\011'; lex_string b lexbuf }
 	| eof				{ raise (LexFailure "Lexer - End of file in escape sequence") }
-	| _				{ raise (LexFailure "Lexer - Invalid escape character") }
+  | _	as esc			{ raise (LexFailure ("Lexer - Invalid escape sequence: '\\" ^ String.make 1 esc ^ "'")) }

@@ -10,16 +10,16 @@ type op2 = [op_arith | `EQ | `NEQ | `LT | `LEQ | `GT | `GEQ | `AND | `OR]
 type fallthrough_mode = FALLTHROUGH | ENDBREAK
 
 (* Go types *)
-type type_name = [`BOOL | `RUNE | `INT | `FLOAT64 | `STRING | `AUTO | `Type of identifier]
+type type_name = [`BOOL | `RUNE | `INT | `FLOAT64 | `STRING | `AUTO | `VOID | `Type of identifier]
 type gotype = [ type_name | `TypeLit of type_lit ]
 and type_lit = 
 	| Slice of gotype
 	| Array of int * gotype
-	| Struct of struct_member list
-and struct_member =
+	| Struct of signature list
+and struct_member = (* delete???? *)
 	| Embed of type_name 
 	| Member of signature
-and signature = identifier * gotype
+and signature = identifier * gotype 
 
 (* Add whatever metadata you want to attach to a statement or expression here *)
 type 'a annotated = {
@@ -38,11 +38,11 @@ and declaration =
 	| Type of identifier * gotype
 and toplevel_declaration = 
 	| Global of declaration
-	| Func of identifier * signature list * block
+	| Func of identifier * signature list * gotype * block
 and block = statement list
 and statement = statement_node annotated
 and statement_node = 
-	| Decl of declaration
+	| Decl of declaration list
 	| Expr of expression
 	| Block of block
 	| Assign of identifier list * expression list
