@@ -45,11 +45,11 @@ and string_of_stmt stmt = match stmt.v with
     | Assign(id_lst, expr_lst)          -> (string_of_lst id_lst ", " (fun x -> x)) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
     | OpAssign(id, op, expr)            -> ""
     | IncDec(id, op)                    -> id ^ (match op with `INC -> "++" | `DEC -> "--")
-    | Print(b, expr_lst)                -> ""
+    | Print(b, expr_lst)                -> "PRINT: NotImplemented"
     | Return(expr_opt)                  -> "return " ^ string_of_expr_opt expr_opt
-    | If(c_lst)                         -> ""
-    | Switch(stmt, expr_opt, c_lst)     -> ""
-    | For(e1_opt, e2_opt, e3_opt, blck) -> ""
+    | If(c_lst)                         -> "IF: NotImplemented"
+    | Switch(stmt, expr_opt, c_lst)     -> "SWITCH: NotImplemented"
+    | For(e1_opt, e2_opt, e3_opt, blck) -> "FOR: NotImplemented"
     | Break                             -> "break"
     | Continue                          -> "continue"
     | Empty                             -> ""

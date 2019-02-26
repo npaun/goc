@@ -162,7 +162,7 @@ dist_type_decl:
 block: LBLOCK statements RBLOCK {$2}
 
 statements:
-	| stmt SEMI statements 	{(annot $1 $startpos($1) $endpos($1))::$3}
+	| stmt SEMI statements 	{List.rev ((annot $1 $startpos($1) $endpos($1))::$3)}
 	| eat_unimplemented SEMI statements {$3}
 	| SEMI statements	{$2}
 	| {[]}
