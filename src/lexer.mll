@@ -55,8 +55,6 @@ let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
   "string"  , STRING;
 
   (* bool literals*)
-  "true"    , TRUE;(*BOOLLIT(true);*)
-  "false"   , FALSE(*BOOLLIT(false)*)
  ];;
     
 }
@@ -90,6 +88,8 @@ rule lex = parse
     | "continue"    { insert_semi_up(); CONTINUE }
     | "fallthrough" { insert_semi_up(); FALLTHROUGH}
     | "return"      { insert_semi_up(); RETURN }
+    | "true"        { insert_semi_up(); TRUE } 
+    | "false"       { insert_semi_up(); FALSE }
 
     | '+'       { insert_semi_down(); PLUS }
     | '&'       { insert_semi_down(); BAND }
