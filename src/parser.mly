@@ -81,7 +81,8 @@ toplevel_decl:
     | function_decl  {$1}
     | typed_var_decl {List.rev (List.map (fun dcl -> Global dcl) $1)}
 	| type_decl	     {List.rev (List.map (fun dcl -> Global dcl) $1)}
-    | error          {throw_error "invalid top level declaration" $startpos($1)}
+    (* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
+    | error          {throw_error "invalid top level declaration" $startpos($1)} 
 
 /*************** TYPES **************/
 
