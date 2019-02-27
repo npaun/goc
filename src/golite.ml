@@ -70,7 +70,7 @@ and operand =
 	| V of identifier
 and literal =
 	| Bool of bool
-	| Rune of char
+	| Rune of string
 	| Int of int
 	| Float64 of float
 	| String of string
