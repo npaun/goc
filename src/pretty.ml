@@ -43,13 +43,18 @@ and string_of_stmt stmt = match stmt.v with
     | Expr(expr)                        -> string_of_expr expr
     | Block(blck)                       -> string_of_block blck
     | Assign(id_lst, expr_lst)          -> (string_of_lst id_lst ", " (fun x -> x)) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
-    | OpAssign(id, op, expr)            -> ""
+    | OpAssign(id, op, expr)            -> id ^ (string_of_op_assign op) ^ (string_of_expr expr)
     | IncDec(id, op)                    -> id ^ (match op with `INC -> "++" | `DEC -> "--")
-    | Print(b, expr_lst)                -> "PRINT: NotImplemented"
+    | Print(b, expr_lst)                -> (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")\n"
     | Return(expr_opt)                  -> "return " ^ string_of_expr_opt expr_opt
     | If(c_lst)                         -> "IF: NotImplemented"
     | Switch(stmt, expr_opt, c_lst)     -> "SWITCH: NotImplemented"
-    | For(e1_opt, e2_opt, e3_opt, blck) -> "FOR: NotImplemented"
+    | For(e1_opt, e2_opt, e3_opt, blck) -> "for " ^ (
+			match e1_opt, e2_opt, e3_opt, blck with
+				| None, None, None, _ -> string_of_block blck
+				| None, Some e, None, _ -> (string_of_expr e) ^ (string_of_block blck)
+				| _, _, _, _ -> (string_of_lst [e1_opt;e2_opt;e3_opt] "; " string_of_expr_opt) ^ (string_of_block blck)
+		)
     | Break                             -> "break"
     | Continue                          -> "continue"
     | Empty                             -> ""
@@ -93,7 +98,32 @@ and string_of_op2 op = match op with
     | `BAND -> "&"
     | `BANDNOT -> "&^"
     | `SL -> "<<"
-    | `SR -> ">>"
+		| `SR -> ">>"
+	and string_of_op_arith op = match op with
+		| `ADD -> "+"
+		| `SUB -> "-"
+		| `MUL -> "*"
+		| `DIV -> "/"
+		| `MOD -> "%"
+		| `BXOR -> "^"
+		| `BOR -> "|"
+		| `BAND -> "&"
+		| `BANDNOT -> "&^"
+		| `SL -> "<<"
+		| `SR -> ">>"
+	and string_of_op_assign op = match op with
+		| `SET -> "="
+		| `ADD -> "+="
+		| `SUB -> "-="
+		| `MUL -> "*="
+		| `DIV -> "/="
+		| `MOD -> "%="
+		| `BXOR -> "^="
+		| `BOR -> "|="
+		| `BAND -> "&="
+		| `BANDNOT -> "&^="
+		| `SL -> "<<="
+		| `SR -> ">>="
     
 let dump_ast ast = string_of_ast ast 
 
