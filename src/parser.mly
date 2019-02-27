@@ -81,7 +81,8 @@ toplevel_decl:
     | function_decl  {$1}
     | typed_var_decl {List.rev (List.map (fun dcl -> Global dcl) $1)}
 	| type_decl	     {List.rev (List.map (fun dcl -> Global dcl) $1)}
-    | error          {throw_error "invalid top level declaration" $startpos($1)}
+    (* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
+    | error          {throw_error "invalid top level declaration" $startpos($1)} 
 
 /*************** TYPES **************/
 
@@ -161,7 +162,7 @@ dist_type_decl:
 block: LBLOCK statements RBLOCK {$2}
 
 statements:
-	| stmt SEMI statements 	{(annot $1 $startpos($1) $endpos($1))::$3}
+	| stmt SEMI statements 	{List.rev ((annot $1 $startpos($1) $endpos($1))::$3)}
 	| eat_unimplemented SEMI statements {$3}
 	| SEMI statements	{$2}
 	| {[]}
@@ -170,7 +171,7 @@ eat_unimplemented:
 	| DEFER {}
 
 stmt:
-	| typed_var_decl	{Decl $1}
+    | typed_var_decl	{Decl $1}
 	| block			    {Block $1}
 	| simple_stmt		{$1}
 	| return_stmt		{$1}
@@ -180,8 +181,8 @@ stmt:
 	| BREAK			    {Break}
 	| CONTINUE		    {Continue}
 simple_stmt:
-	| short_var_decl	{Decl $1}
 	| assign_stmt		{$1} 
+	| short_var_decl	{Decl $1}
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
 	| print_stmt		{$1}
@@ -189,40 +190,40 @@ simple_stmt:
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
-| identifier_list ASSIGN expr_list {Assign($1,$3)}
+    | identifier_list ASSIGN expr_list {Assign($1,$3)}
 
 identifier_list:
-| lst = separated_nonempty_list(COMMA, IDENT) { lst }
+    | lst = separated_nonempty_list(COMMA, IDENT) { lst }
 
 op_assign_stmt:
-| IDENT assign_op expr {OpAssign($1,$2,$3)}
+    | IDENT assign_op expr {OpAssign($1,$2,$3)}
 
 assign_op: 
-| PASSIGN {`ADD} 
-| MASSIGN {`SUB} 
-| ANDASSIGN {`BAND}
-| ORASSIGN {`BOR}
-| TASSIGN {`MUL}
-| XORASSIGN {`BXOR}
-| DASSIGN {`DIV}
-| LSHASSIGN {`SL}
-| MODASSIGN {`MOD}
-| RSHASSIGN {`SR}
-| ANDXORASSIGN {`BANDNOT}
+    | PASSIGN {`ADD} 
+    | MASSIGN {`SUB} 
+    | ANDASSIGN {`BAND}
+    | ORASSIGN {`BOR}
+    | TASSIGN {`MUL}
+    | XORASSIGN {`BXOR}
+    | DASSIGN {`DIV}
+    | LSHASSIGN {`SL}
+    | MODASSIGN {`MOD}
+    | RSHASSIGN {`SR}
+    | ANDXORASSIGN {`BANDNOT}
 
 incdec_stmt:
-| IDENT PLUSPLUS {IncDec($1,`INC)}
-| IDENT MINUSMINUS {IncDec($1,`DEC)}
+    | IDENT PLUSPLUS {IncDec($1,`INC)}
+    | IDENT MINUSMINUS {IncDec($1,`DEC)}
 
 /***** PRINT ******/
 print_stmt:
-| PRINT mandatory_arguments {Print(false, $2)}
-| PRINTLN mandatory_arguments {Print(true, $2)}
+    | PRINT mandatory_arguments {Print(false, $2)}
+    | PRINTLN mandatory_arguments {Print(true, $2)}
 
 /**** RETURN ****/
 return_stmt:
-| RETURN {Return None}
-| RETURN expr {Return (Some $2)}
+    | RETURN {Return None}
+    | RETURN expr {Return (Some $2)}
 
 /**** IF STATEMENT *****/
 if_stmt:
@@ -236,18 +237,17 @@ if_cond:
 | expr				{(Empty, [$1])}
 
 if_tail:
-| ELSE if_head			{$2}
-| ELSE block			{[Default $2]}
-| 				{[]}
+| ELSE if_head  {$2}
+| ELSE block	{[Default $2]}
+| {[]}
 
 /**** SWITCH STATEMENT ****/
 switch_stmt:
 | SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,$3)}
 
 switch_cond:
-(*| expr      		{(Empty, Some $1)}*) (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
-| simple_stmt SEMI expr {($1,Some $3)}
-| simple_stmt	    	{($1,None)}
+| expr      		        {(Empty, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
+| simple_stmt SEMI expr?    {($1,$3)}
 | {(Empty,None)}
 
 switch_case:
@@ -346,5 +346,7 @@ literal:
 | STRINGLIT	{String $1}
 | INTLIT 	{Int $1}
 | BOOLLIT	{Bool $1}
+| TRUE      {Bool true}
+| FALSE     {Bool false}
 | FLOATLIT	{Float64 $1}
 | RUNELIT   {Rune $1}
