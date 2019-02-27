@@ -23,7 +23,7 @@ STILL TO DO:
 %token <string> IDENT
 %token <string> STRINGLIT
 %token <int> INTLIT
-%token <char> RUNELIT
+%token <string> RUNELIT
 %token <float> FLOATLIT
 %token <bool> BOOLLIT  
 %token TRUE FALSE 

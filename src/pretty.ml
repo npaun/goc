@@ -62,7 +62,7 @@ and string_of_expr expr = match expr.v with
     | L(lit)          -> (
         match lit with
         | Bool(b) -> string_of_bool b
-        | Rune(r) -> String.make 1 r
+        | Rune(r) -> r
         | Int(i)  -> string_of_int i
         | Float64(f) -> string_of_float f
         | String(s) -> s
@@ -199,7 +199,7 @@ let dump_token = function
 	| IDENT(s)      -> "IDENT(" ^ s ^ ")"
 	| STRINGLIT(s)  -> "STRINGLIT(" ^ s ^ ")"
 	| INTLIT(i)     -> "INTLIT(" ^ string_of_int i ^ ")"
-	| RUNELIT(c)		-> "RUNELIT(" ^ String.make 1 c ^ ")"
+	| RUNELIT(c)		-> "RUNELIT(" ^ c ^ ")"
 	| FLOATLIT(f)   -> "FLOATLIT(" ^ string_of_float f ^ ")"
 	| BOOLLIT(b)    -> "BOOLLIT(" ^ string_of_bool b ^ ")"
 	| TRUE          -> "TRUE"
