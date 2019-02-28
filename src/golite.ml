@@ -34,7 +34,7 @@ type 'a annotated = {
 type ast = Program of package * toplevel_declaration annotated list
 and package = Package of identifier
 and declaration =
-	| Var of identifier * gotype * expression option 
+	| Var of identifier * gotype * expression option * bool
 	| Type of identifier * gotype
 and toplevel_declaration = 
 	| Global of declaration
