@@ -52,7 +52,7 @@ let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
 }
 
 let eol = '\n' | "\r\n"
-let not_eol = [^ '\n' 'r']
+let not_eol = [^ '\n' '\r']
 let decimal_digit = ['0'-'9']
 let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
 

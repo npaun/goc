@@ -4,6 +4,9 @@ open Golite
 
 (* TODO: finish string_of_stmt *)
 
+let crt_stmt stmt_node = 
+	{v = stmt_node;_debug="";_start=(-1,-1);_end=(-1,-1);_derived=None}
+
 let string_of_lst (lst: 'a list) (sep: string) (f: 'a -> string) =
     List.fold_right (fun x acc -> acc ^ (if acc = "" then "" else sep) ^ f x) lst ""
 
@@ -16,8 +19,9 @@ and string_of_topdecl decl = match decl.v with
     | Func(id, sigs, typ, body) -> "func " ^ id ^ "(" ^ (string_of_sigs sigs ", ") ^ ") " ^ string_of_typ typ ^ " " ^ string_of_block body 
     | Global(decl') -> string_of_decl decl'
 and string_of_decl decl = match decl with
-    | Var(id, typ, expr) -> "var " ^ id ^ " " ^ string_of_typ typ ^ (match expr with None -> "" | Some e -> " = " ^ string_of_expr e) 
-    | Type(id, typ)      -> "type " ^ id ^ " " ^ string_of_typ typ
+    | Var(id, typ, expr, false) -> "var " ^ id ^ " " ^ string_of_typ typ ^ (match expr with None -> "" | Some e -> " = " ^ string_of_expr e) 
+		| Var(id, typ, expr, true) -> id ^ " := " ^ (string_of_expr_opt expr)
+		| Type(id, typ)      -> "type " ^ id ^ " " ^ string_of_typ typ
 and string_of_typ typ = match typ with
     | `BOOL         -> "bool"
     | `RUNE         -> "char"
@@ -38,17 +42,23 @@ and string_of_sigs sigs sep =
     string_of_lst sigs sep string_of_sig
 and string_of_block blck = 
     "{\n" ^ (string_of_lst blck "\n" string_of_stmt) ^ "\n}"
+and string_of_switch_case (c,fmt) = match c with
+		| Case(_, expr_lst, blck) ->  "case " ^ (string_of_lst expr_lst ", " string_of_expr) ^ ":\n" ^ (string_of_lst blck "\n" string_of_stmt)
+		| Default(blck) -> "default:\n" ^ (string_of_lst blck "\n" string_of_stmt)
+and string_of_if_case case = match case with
+		| Case(stmt, expr_lst, blck) -> "if " ^ (string_of_stmt (crt_stmt stmt) ^ "; ") ^ (string_of_lst expr_lst ", " string_of_expr) ^ " " ^ (string_of_block blck)
+		| Default(blck) 						 -> string_of_block blck
 and string_of_stmt stmt = match stmt.v with
     | Decl(decl_lst)                    -> string_of_lst decl_lst "\n" string_of_decl
     | Expr(expr)                        -> string_of_expr expr
     | Block(blck)                       -> string_of_block blck
     | Assign(id_lst, expr_lst)          -> (string_of_lst id_lst ", " (fun x -> x)) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
-    | OpAssign(id, op, expr)            -> id ^ (string_of_op_assign op) ^ (string_of_expr expr)
+    | OpAssign(id, op, expr)            -> id ^ (string_of_op_assign op) ^ (string_of_expr expr) ^ "\n"
     | IncDec(id, op)                    -> id ^ (match op with `INC -> "++" | `DEC -> "--")
     | Print(b, expr_lst)                -> (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")\n"
     | Return(expr_opt)                  -> "return " ^ string_of_expr_opt expr_opt
-    | If(c_lst)                         -> "IF: NotImplemented"
-    | Switch(stmt, expr_opt, c_lst)     -> "SWITCH: NotImplemented"
+    | If(c_lst)                         -> string_of_lst c_lst " else " string_of_if_case 
+    | Switch(stm, expr_opt, c_lst)      -> "switch " ^ (string_of_stmt (crt_stmt stm) ^ ";") ^ (string_of_expr_opt expr_opt) ^ " {\n" ^ (string_of_lst c_lst "\n" string_of_switch_case) ^ "\n}" 
     | For(e1_opt, e2_opt, e3_opt, blck) -> "for " ^ (
 			match e1_opt, e2_opt, e3_opt, blck with
 				| None, None, None, _ -> string_of_block blck
@@ -57,7 +67,7 @@ and string_of_stmt stmt = match stmt.v with
 		)
     | Break                             -> "break"
     | Continue                          -> "continue"
-    | Empty                             -> ""
+		| Empty                             -> ""
 and string_of_expr expr = match expr.v with
     | Op1(op, e)      -> string_of_op1 op ^ string_of_expr e
     | Op2(op, e1, e2) -> string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2
@@ -71,7 +81,7 @@ and string_of_expr expr = match expr.v with
         | Int(i)  -> string_of_int i
         | Float64(f) -> string_of_float f
         | String(s) -> s
-    )
+		)
 and string_of_expr_opt expr = match expr with
     | None -> ""
     | Some e -> string_of_expr e

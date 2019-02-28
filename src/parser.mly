@@ -131,15 +131,15 @@ signature_ids:
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-	| identifier_list COLASSIGN expr_list {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $1 $3}
+	| identifier_list COLASSIGN expr_list {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
 
 typed_var_decl:
     | VAR t_var_decl {$2}
     
 t_var_decl:
-    | identifier_list typ                   {List.map (fun id -> Var(id, $2, None)) $1}
-	| identifier_list typ ASSIGN expr_list  {List.map2 (fun id expr -> Var(id, $2, Some expr)) $1 $4}
-	| identifier_list ASSIGN expr_list      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr)) $1 $3}
+    | identifier_list typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
+	| identifier_list typ ASSIGN expr_list  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
+	| identifier_list ASSIGN expr_list      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
     | LPAREN dist_var_decl RPAREN               {$2}
     
 dist_var_decl:
@@ -227,7 +227,7 @@ return_stmt:
 
 /**** IF STATEMENT *****/
 if_stmt:
-| if_head			{If $1}
+| if_head			{If (List.rev $1)}
 
 if_head:
 | IF if_cond block if_tail	{let (c1,c2) = $2 in (Case (c1,c2,$3))::$4}
@@ -243,7 +243,7 @@ if_tail:
 
 /**** SWITCH STATEMENT ****/
 switch_stmt:
-| SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,$3)}
+| SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,List.rev $3)}
 
 switch_cond:
 | expr      		        {(Empty, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
