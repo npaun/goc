@@ -264,7 +264,7 @@ for_stmt:
 
 for_conds:
 | expr? 		{(None,$1,None)}
-| expr? SEMI expr? SEMI expr? {($1,$3,$5)}
+| simple_stmt? SEMI expr? SEMI simple_stmt? {($1,$3,$5)}
 
 /****** EXPRESSIONS ********/
 

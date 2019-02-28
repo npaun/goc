@@ -62,15 +62,18 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Return(expr_opt)                  -> (crt_tab d tb) ^ "return " ^ string_of_expr_opt expr_opt
 		| If(c_lst)                         -> (crt_tab d tb) ^ string_of_lst c_lst " else " (string_of_if_case d) 
 		| Switch(stm, expr_opt, c_lst)      -> (crt_tab d tb) ^ "switch " ^ (string_of_stmt d false (crt_stmt stm) ^ "; ") ^ (string_of_expr_opt expr_opt) ^ " {\n" ^ (string_of_lst c_lst "\n" (string_of_switch_case (d+1))) ^ "\n" ^ (crt_tab d tb) ^ "}" 
-		| For(e1_opt, e2_opt, e3_opt, blck) -> (crt_tab d tb) ^ "for " ^ (
-			match e1_opt, e2_opt, e3_opt, blck with
+		| For(s1_opt, e2_opt, s3_opt, blck) -> (crt_tab d tb) ^ "for " ^ (
+			match s1_opt, e2_opt, s3_opt, blck with
 				| None, None, None, _ -> string_of_block d blck
 				| None, Some e, None, _ -> (string_of_expr e) ^ (string_of_block d blck)
-				| _, _, _, _ -> (string_of_lst [e1_opt;e2_opt;e3_opt] "; " string_of_expr_opt) ^ (string_of_block d blck)
+				| _, _, _, _ ->  (string_of_stmt_opt s1_opt) ^ " ; " ^ (string_of_expr_opt e2_opt) ^ " ; " ^ (string_of_stmt_opt s3_opt) ^ " " ^ (string_of_block d blck)
 		)
 		| Break                             -> "break"
 		| Continue                          -> "continue"
 		| Empty                             -> ""
+and string_of_stmt_opt stmt = match stmt with 
+		| None -> ""
+		| Some s -> string_of_stmt 0 false (crt_stmt s)
 and string_of_expr expr = match expr.v with
     | Op1(op, e)      -> string_of_op1 op ^ string_of_expr e
     | Op2(op, e1, e2) -> string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2
