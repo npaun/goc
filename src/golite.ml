@@ -52,7 +52,7 @@ and statement_node =
 	| Return of expression option
 	| If of case list
 	| Switch of statement_node * expression option * fallable_case list
-	| For of expression option * expression option * expression option * block
+	| For of statement_node option * expression option * statement_node option * block
 	| Break
 	| Continue
 	| Empty
