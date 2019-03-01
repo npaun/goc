@@ -72,7 +72,7 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Expr(expr)                        -> (crt_tab d tb) ^ string_of_expr expr
 		| Block(blck)                       -> string_of_block (d+1) blck
 		| Assign(id_lst, expr_lst)          -> (crt_tab d tb) ^ (string_of_lst id_lst ", " (fun x -> x)) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
-		| OpAssign(id, op, expr)            -> (crt_tab d tb) ^ id ^ (string_of_op_assign op) ^ (string_of_expr expr)
+		| OpAssign(id, op, expr)            -> (crt_tab d tb) ^ id ^ " " ^ (string_of_op_assign op) ^ " " ^ (string_of_expr expr)
 		| IncDec(id, op)                    -> (crt_tab d tb) ^ id ^ (match op with `INC -> "++" | `DEC -> "--")
 		| Print(b, expr_lst)                -> (crt_tab d tb) ^ (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")"
 		| Return(expr_opt)                  -> (crt_tab d tb) ^ "return " ^ string_of_expr_opt expr_opt
@@ -91,8 +91,8 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| None -> ""
 		| Some s -> string_of_stmt 0 false (crt_stmt s)
 		and string_of_expr expr = match expr.v with
-    | Op1(op, e)      		-> string_of_op1 op ^ string_of_expr e
-    | Op2(op, e1, e2) 		-> string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2
+    | Op1(op, e)      		-> "(" ^ string_of_op1 op ^ string_of_expr e ^ ")"
+    | Op2(op, e1, e2) 		-> "(" ^ string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2 ^ ")"
     | Call(id, e_lst) 		-> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
     | Cast(typ, e)    		-> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
     | V(id)           		-> id
