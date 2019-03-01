@@ -184,7 +184,7 @@ simple_stmt:
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
 	| print_stmt		{$1}
-    | expr              {Expr $1}
+    | fun_call          {Expr (annot $1 $startpos($1) $endpos($1))}
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
