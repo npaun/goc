@@ -41,6 +41,9 @@ let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
   (* additional keywords *)
   "print"   , PRINT;
   "println" , PRINTLN;
+  "append"  , APPEND;
+  "len"     , LEN;
+  "cap"     , CAP;
  ];;
     
 }

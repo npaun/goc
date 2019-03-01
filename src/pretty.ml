@@ -247,7 +247,9 @@ let dump_token = function
 	| ANDXORASSIGN	-> "ANDXORASSIGN"
 	| UNDERSCORE		-> "UNDERSCORE"
 
-
+   | APPEND                                -> "APPEND"
+       | LEN                                           -> "LEN"
+       | CAP                                           -> "CAP"
 	| INT           -> "INT"
 	| FLOAT         -> "FLOAT"
 	| BOOL          -> "BOOL"

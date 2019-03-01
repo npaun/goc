@@ -81,6 +81,7 @@ and operand =
 	| Op2 of (op2 * expression * expression)
 	| Call of (identifier * expression list)
 	| Cast of (gotype * expression)
+	| Selector of (expression * identifier)
 	| L of literal
 	| V of identifier
 [@@deriving sexp]
