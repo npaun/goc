@@ -129,7 +129,7 @@ signature_ids:
 /***** VARIABLE DECLARATIONS *****/
 
 identp:
-| IDENT		{`Id $1}
+| IDENT		{`V $1}
 | UNDERSCORE	{`Blank}
 
 (* TODO: validate that id_list and expr_list have same length? *)    
@@ -280,15 +280,15 @@ arguments:
 expr: expr1 {$1}
 
 expr1: 
-| expr1 OR expr2 {annot (Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
+| expr1 OR expr2 {annot (`Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
 | expr2		 {$1}
 
 expr2:
-| expr2 AND expr3 	{annot (Op2(`AND,$1,$3)) $startpos($1) $endpos($3)}
+| expr2 AND expr3 	{annot (`Op2(`AND,$1,$3)) $startpos($1) $endpos($3)}
 | expr3			{$1}
 
 expr3:
-| expr3 op_rel expr4	{annot (Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+| expr3 op_rel expr4	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
 | expr4			{$1}
 
 op_rel:
@@ -300,7 +300,7 @@ op_rel:
 | GEQ			{`GEQ} 
 
 expr4:
-| expr4 op_add expr5	{annot (Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+| expr4 op_add expr5	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
 | expr5			{$1}
 
 op_add:
@@ -310,7 +310,7 @@ op_add:
 | XOR			{`BXOR} 
 
 expr5:
-| expr5 op_mul expr_unary	{annot (Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+| expr5 op_mul expr_unary	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
 | expr_unary			{$1}
 
 op_mul:
@@ -323,7 +323,7 @@ op_mul:
 | ANDXOR		{`BANDNOT} 
 
 expr_unary:
-| op_unary expr_sub		{annot (Op1($1,$2)) $startpos($1) $endpos($2)}
+| op_unary expr_sub		{annot (`Op1($1,$2)) $startpos($1) $endpos($2)}
 | expr_sub			{$1}
 
 op_unary:
@@ -337,13 +337,13 @@ expr_sub:
 | annot(expr_operand)			{$1}
 
 expr_operand:
-| IDENT				{V $1}
-| literal			{L $1}
+| IDENT				{`V $1}
+| literal			{`L $1}
 | fun_call			{$1}
-| annot(expr_operand) DOT IDENT	{Selector($1,$3)}
+| annot(expr_operand) DOT IDENT	{`Selector($1,$3)}
 
 fun_call:
-| function_name  arguments		{Call($1,$2)} 
+| function_name  arguments		{`Call($1,$2)} 
 
 function_name:
 | IDENT 				{$1}

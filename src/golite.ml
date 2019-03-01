@@ -1,7 +1,7 @@
 open Sexplib.Conv
 
 type identifier = string [@@deriving sexp]
-type identifier' = [`Id of identifier | `Blank] [@@deriving sexp]
+type identifier' = [`V of identifier | `Blank] [@@deriving sexp]
 (* Various classes of operators *)
 type op_incdec = [`INC | `DEC] [@@deriving sexp]
 type op1 = [`POS | `NEG | `NOT | `BNOT] [@@deriving sexp]
@@ -78,14 +78,14 @@ and lvalue = expression (* No further inspection for now *)
 [@@deriving sexp]
 and expression = operand annotated
 [@@deriving sexp]
-and operand =
-	| Op1 of (op1 * expression)
-	| Op2 of (op2 * expression * expression)
-	| Call of (identifier * expression list)
-	| Cast of (gotype * expression)
-	| Selector of (expression * identifier)
-	| L of literal
-	| V of identifier
+and operand = [
+	| `Op1 of (op1 * expression)
+	| `Op2 of (op2 * expression * expression)
+	| `Call of (identifier * expression list)
+	| `Cast of (gotype * expression)
+	| `Selector of (expression * identifier)
+	| `L of literal
+	|  identifier' ]
 [@@deriving sexp]
 and literal =
 	| Bool of bool

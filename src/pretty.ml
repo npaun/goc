@@ -41,7 +41,7 @@ and string_of_type_decl decl =
 		let Type(id,typ) = decl in 
 		"type " ^ (string_of_id id) ^ " " ^ string_of_typ typ
 and string_of_id = function
-| `Id i	-> i
+| `V i	-> i
 | `Blank -> "_"
 and string_of_typ typ = match typ with
     | `BOOL         -> "bool"
@@ -93,13 +93,13 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| None -> ""
 		| Some s -> string_of_stmt 0 false (crt_stmt s)
 		and string_of_expr expr = match expr.v with
-    | Op1(op, e)      		-> "(" ^ string_of_op1 op ^ string_of_expr e ^ ")"
-    | Op2(op, e1, e2) 		-> "(" ^ string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2 ^ ")"
-    | Call(id, e_lst) 		-> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
-    | Cast(typ, e)    		-> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
-    | V(id)           		-> id
-		| Selector(expr, id)	-> (string_of_expr expr) ^ "." ^ id
-    | L(lit)          		-> (
+    | `Op1(op, e)      		-> "(" ^ string_of_op1 op ^ string_of_expr e ^ ")"
+    | `Op2(op, e1, e2) 		-> "(" ^ string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2 ^ ")"
+    | `Call(id, e_lst) 		-> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
+    | `Cast(typ, e)    		-> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
+    | `V(id)           		-> id
+    | `Selector(expr, id)	-> (string_of_expr expr) ^ "." ^ id
+    | `L(lit)          		-> (
         match lit with
         | Bool(b) -> string_of_bool b
         | Rune(r) -> r
