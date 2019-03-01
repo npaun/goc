@@ -74,7 +74,7 @@ main: package toplevel EOF {Program($1,$2)}
 package: PACKAGE IDENT SEMI {Package $2}
 
 toplevel: 
-    | toplevel_decl SEMI toplevel {(List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1) @ $3} 
+    | mapannot(toplevel_decl) SEMI toplevel {$1 @ $3} 
     | { [] }
 
 toplevel_decl:
@@ -121,26 +121,26 @@ function_decl:
     | FUNC IDENT signature typ block {[Func($2, $3, $4, $5)]}
 
 signature:
-	| LPAREN flatten(separated_list(COMMA, signature_ids)) RPAREN {$2}
+	| goargs(flatten(separated_list(COMMA,signature_ids))) {$1}
 
 signature_ids: 
-    | identifier_list typ {List.map (fun id -> (id, $2)) $1}
+    | golist(IDENT) typ {List.map (fun id -> (id, $2)) $1}
     
 /***** VARIABLE DECLARATIONS *****/
 
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-	| identifier_list COLASSIGN expr_list {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
+	| golist(IDENT) COLASSIGN golist(expr) {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
 
 typed_var_decl:
     | VAR t_var_decl {$2}
     
 t_var_decl:
-    | identifier_list typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
-	| identifier_list typ ASSIGN expr_list  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
-	| identifier_list ASSIGN expr_list      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
-    | LPAREN dist_var_decl RPAREN               {$2}
+    	| golist(IDENT) typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
+	| golist(IDENT) typ ASSIGN golist(expr)  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
+	| golist(IDENT) ASSIGN golist(expr)      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
+    	| goargs(dist_var_decl)               {$1}
     
 dist_var_decl:
     | t_var_decl SEMI dist_var_decl {$1 @ $3}
@@ -150,7 +150,7 @@ dist_var_decl:
 
 type_decl:
     | TYPE IDENT typ {[Type($2, $3)]}
-    | TYPE LPAREN dist_type_decl RPAREN {$3}
+    | TYPE goargs(dist_type_decl) {$2}
     
 dist_type_decl:
     | IDENT typ SEMI dist_type_decl {Type($1, $2)::$4} 
@@ -162,7 +162,7 @@ dist_type_decl:
 block: LBLOCK statements RBLOCK {$2}
 
 statements:
-	| stmt SEMI statements 	{(annot $1 $startpos($1) $endpos($1))::$3}
+	| annot(stmt) SEMI statements 	{$1::$3}
 	| SEMI statements	{$2}
 	| {[]}
     	| error { throw_error "invalid statement" $startpos($1) }
@@ -188,10 +188,8 @@ simple_stmt:
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
-    | identifier_list ASSIGN expr_list {Assign($1,$3)}
+    | golist(IDENT) ASSIGN golist(expr) {Assign($1,$3)}
 
-identifier_list:
-    | lst = separated_nonempty_list(COMMA, IDENT) { lst }
 
 op_assign_stmt:
     | IDENT assign_op expr {OpAssign($1,$2,$3)}
@@ -249,7 +247,7 @@ switch_cond:
 | {(Empty,None)}
 
 switch_case:
-| CASE expr_list COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
+| CASE golist(expr) COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
 | DEFAULT COLON statements {((Default($3)), ENDBREAK)}
 
 switch_body:
@@ -266,11 +264,10 @@ for_conds:
 
 /****** EXPRESSIONS ********/
 
-mandatory_arguments: delimited(LPAREN,expr_list,RPAREN) {$1}
+mandatory_arguments: goargs(golist(expr)) {$1}
 arguments:
 	| mandatory_arguments {$1}
 	| LPAREN RPAREN		{[]}
-expr_list: separated_nonempty_list(COMMA,expr) {$1}
 
 (* follows the go precedence system *)
 expr: expr1 {$1}
@@ -329,14 +326,14 @@ op_unary:
 | NOT			{`NOT}
 
 expr_sub:
-| LPAREN expr RPAREN		{$2}
-| expr_operand			{annot $1 $startpos($1) $endpos($1)}
+| goargs(expr)				{$1}
+| annot(expr_operand)			{$1}
 
 expr_operand:
 | IDENT				{V $1}
 | literal			{L $1}
 | fun_call			{$1}
-| expr_operand DOT IDENT	{Selector((annot $1 $startpos($1) $endpos($1)),$3)}
+| annot(expr_operand) DOT IDENT	{Selector($1,$3)}
 
 fun_call:
 | function_name  arguments		{Call($1,$2)} 
