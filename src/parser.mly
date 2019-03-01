@@ -117,8 +117,8 @@ struct_signatures:
 /****** FUNCTION DECLARATIONS *******/
 
 function_decl:
-    | FUNC IDENT signature block     {[Func($2, $3, `VOID, $4)]}
-    | FUNC IDENT signature typ block {[Func($2, $3, $4, $5)]}
+    | FUNC identp signature block     {[Func($2, $3, `VOID, $4)]}
+    | FUNC identp signature typ block {[Func($2, $3, $4, $5)]}
 
 signature:
 	| goargs(flatten(separated_list(COMMA,signature_ids))) {$1}
@@ -128,18 +128,22 @@ signature_ids:
     
 /***** VARIABLE DECLARATIONS *****/
 
+identp:
+| IDENT		{`Id $1}
+| UNDERSCORE	{`Blank}
+
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-	| golist(IDENT) COLASSIGN golist(expr) {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
+	| golist(identp) COLASSIGN golist(expr) {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
 
 typed_var_decl:
     | VAR t_var_decl {$2}
     
 t_var_decl:
-    	| golist(IDENT) typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
-	| golist(IDENT) typ ASSIGN golist(expr)  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
-	| golist(IDENT) ASSIGN golist(expr)      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
+    	| golist(identp) typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
+	| golist(identp) typ ASSIGN golist(expr)  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
+	| golist(identp) ASSIGN golist(expr)      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
     	| goargs(dist_var_decl)               {$1}
     
 dist_var_decl:
@@ -149,11 +153,11 @@ dist_var_decl:
 /***** TYPE DECLARATIONS *******/
 
 type_decl:
-    | TYPE IDENT typ {[Type($2, $3)]}
+    | TYPE identp typ {[Type($2, $3)]}
     | TYPE goargs(dist_type_decl) {$2}
     
 dist_type_decl:
-    | IDENT typ SEMI dist_type_decl {Type($1, $2)::$4} 
+    | identp typ SEMI dist_type_decl {Type($1, $2)::$4} 
     | { [] }
 
 /****** STATEMENTS *********/
@@ -192,7 +196,10 @@ assign_stmt:
 
 
 op_assign_stmt:
-    | IDENT assign_op expr {OpAssign($1,$2,$3)}
+    | lvalue assign_op expr {OpAssign($1,$2,$3)}
+
+lvalue:
+| expr		{$1}
 
 assign_op: 
     | PASSIGN {`ADD} 

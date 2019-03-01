@@ -25,21 +25,24 @@ and string_of_pkg pkg = match pkg with
     | Package(id) -> "package " ^ id ^ "\n"
 and string_of_toplvl lst = string_of_lst lst "\n" string_of_topdecl
 and string_of_topdecl decl = match decl.v with
-    | Func(id, sigs, typ, body) -> "func " ^ id ^ "(" ^ (string_of_sigs sigs ", ") ^ ") " ^ string_of_typ typ ^ " " ^ string_of_block 0 body 
+    | Func(id, sigs, typ, body) -> "func " ^ (string_of_id id) ^ "(" ^ (string_of_sigs sigs ", ") ^ ") " ^ string_of_typ typ ^ " " ^ string_of_block 0 body 
     | Global(decl') -> string_of_decl_list 0 [decl']
 and string_of_decl_list d decl_list = match decl_list with
 		| h::t -> (match h with
 							| Var(id, typ, expr, is_short) -> (
 								let (id_lst, expr_lst) = split_var_decl_list [] [] decl_list in
-								if is_short then (string_of_lst id_lst ", " (fun x -> x)) ^ " := " ^ (string_of_lst expr_lst ", " string_of_expr_opt)
-								else "var " ^ (string_of_lst id_lst ", " (fun x -> x)) ^ " " ^ (string_of_typ typ) ^ (match expr with None -> "" | Some e -> " = " ^ (string_of_lst expr_lst ", " string_of_expr_opt))
+								if is_short then (string_of_lst id_lst ", " (string_of_id)) ^ " := " ^ (string_of_lst expr_lst ", " string_of_expr_opt)
+								else "var " ^ (string_of_lst id_lst ", " (string_of_id)) ^ " " ^ (string_of_typ typ) ^ (match expr with None -> "" | Some e -> " = " ^ (string_of_lst expr_lst ", " string_of_expr_opt))
 							)
 							| Type(id, typ) -> string_of_lst decl_list ("\n" ^ (crt_tab d true)) string_of_type_decl
 							)
 		| _ -> ""
 and string_of_type_decl decl = 
 		let Type(id,typ) = decl in 
-		"type " ^ id ^ " " ^ string_of_typ typ
+		"type " ^ (string_of_id id) ^ " " ^ string_of_typ typ
+and string_of_id = function
+| `Id i	-> i
+| `Blank -> "_"
 and string_of_typ typ = match typ with
     | `BOOL         -> "bool"
     | `RUNE         -> "char"
@@ -71,7 +74,7 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Expr(expr)                        -> (crt_tab d tb) ^ string_of_expr expr
 		| Block(blck)                       -> string_of_block (d+1) blck
 		| Assign(id_lst, expr_lst)          -> (crt_tab d tb) ^ (string_of_lst id_lst ", " (fun x -> x)) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
-		| OpAssign(id, op, expr)            -> (crt_tab d tb) ^ id ^ " " ^ (string_of_op_assign op) ^ " " ^ (string_of_expr expr)
+		| OpAssign(id, op, expr)            -> (crt_tab d tb) ^ (string_of_expr id) ^ " " ^ (string_of_op_assign op) ^ " " ^ (string_of_expr expr)
 		| IncDec(id, op)                    -> (crt_tab d tb) ^ id ^ (match op with `INC -> "++" | `DEC -> "--")
 		| Print(b, expr_lst)                -> (crt_tab d tb) ^ (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")"
 		| Return(expr_opt)                  -> (crt_tab d tb) ^ "return " ^ string_of_expr_opt expr_opt
@@ -273,3 +276,5 @@ let dump_tokens lexfun buf =
 		| EOF -> List.rev acc
 		| t -> collect ((dump_token t)::acc)
 	in String.concat "\n" (collect [])
+
+

@@ -1,7 +1,7 @@
 open Sexplib.Conv
 
 type identifier = string [@@deriving sexp]
-
+type identifier' = [`Id of identifier | `Blank] [@@deriving sexp]
 (* Various classes of operators *)
 type op_incdec = [`INC | `DEC] [@@deriving sexp]
 type op1 = [`POS | `NEG | `NOT | `BNOT] [@@deriving sexp]
@@ -41,12 +41,12 @@ type 'a annotated = {
 type ast = Program of package * toplevel_declaration annotated list [@@deriving sexp]
 and package = Package of identifier [@@deriving sexp]
 and declaration =
-	| Var of identifier * gotype * expression option * bool
-	| Type of identifier * gotype
+	| Var of identifier' * gotype * expression option * bool
+	| Type of identifier' * gotype
 [@@deriving sexp]
 and toplevel_declaration = 
 	| Global of declaration
-	| Func of identifier * signature list * gotype * block
+	| Func of identifier' * signature list * gotype * block
 [@@deriving sexp]
 and block = statement list
 [@@deriving sexp]
@@ -57,7 +57,7 @@ and statement_node =
 	| Expr of expression
 	| Block of block
 	| Assign of identifier list * expression list
-	| OpAssign of identifier * op_assign * expression
+	| OpAssign of lvalue * op_assign * expression
 	| IncDec of identifier * op_incdec
 	| Print of bool * expression list
 	| Return of expression option
@@ -73,6 +73,8 @@ and fallable_case = case * fallthrough_mode
 and case = 
 	| Case of statement_node * expression list * block
 	| Default of block
+[@@deriving sexp]
+and lvalue = expression (* No further inspection for now *)
 [@@deriving sexp]
 and expression = operand annotated
 [@@deriving sexp]
