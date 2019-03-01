@@ -2,8 +2,6 @@
 {
 open Parser
 open Printf
-exception Eof
-exception LexFailure of string
 
 let line_num = ref 1
 let insert_semi = ref false
@@ -153,7 +151,7 @@ rule lex = parse
          with Not_found -> ( insert_semi_up(); IDENT(tok) )
      }
     | eof { EOF }
-    | _ as c { raise (LexFailure("SyntaxError: invalid character in identifier: " ^ Char.escaped c ^ " at line " ^ string_of_int !line_num)) }
+    | _ as c { raise (Golite.LexFailure("SyntaxError: invalid character in identifier: " ^ Char.escaped c ^ " at line " ^ string_of_int !line_num)) }
 
 and block_comment hit_eol = parse
     | eol { line_num := !line_num + 1; Lexing.new_line lexbuf; block_comment true lexbuf } 

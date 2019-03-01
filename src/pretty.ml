@@ -1,6 +1,7 @@
 open Lexer
 open Parser
 open Golite
+open Sexplib
 
 (* TODO: finish string_of_stmt *)
 
@@ -11,7 +12,7 @@ let crt_tab d b =
 	if b then (String.make d '\t') else ""
 
 let string_of_lst (lst: 'a list) (sep: string) (f: 'a -> string) =
-    List.fold_right (fun x acc -> acc ^ (if acc = "" then "" else sep) ^ f x) lst ""
+	String.concat sep (List.map f lst)
 
 let rec string_of_ast ast = match ast with 
     | Program(pkg, toplvl) -> string_of_pkg pkg ^ string_of_toplvl toplvl
@@ -261,3 +262,6 @@ let dump_tokens lexfun buf =
 		| t -> collect ((dump_token t)::acc)
 	in String.concat "\n" (collect [])
 
+(* Do not ask why this is here - it won't build if it's in goc.ml for no fucking reason *)
+let raw_ast ast =
+	Golite.sexp_of_ast ast |> Sexp.to_string_hum

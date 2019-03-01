@@ -1,46 +1,57 @@
-type identifier = string
+open Sexplib.Conv
+
+type identifier = string [@@deriving sexp]
 
 (* Various classes of operators *)
-type op_incdec = [`INC | `DEC]
-type op1 = [`POS | `NEG | `NOT | `BNOT]
-type op_arith = [`ADD | `SUB | `MUL | `DIV | `MOD | `BXOR | `BOR | `BAND | `BANDNOT | `SL | `SR]
-type op_assign = [op_arith | `SET]
-type op2 = [op_arith | `EQ | `NEQ | `LT | `LEQ | `GT | `GEQ | `AND | `OR]
+type op_incdec = [`INC | `DEC] [@@deriving sexp]
+type op1 = [`POS | `NEG | `NOT | `BNOT] [@@deriving sexp]
+type op_arith = [`ADD | `SUB | `MUL | `DIV | `MOD | `BXOR | `BOR | `BAND | `BANDNOT | `SL | `SR] [@@deriving sexp]
+type op_assign = [op_arith | `SET] [@@deriving sexp]
+type op2 = [op_arith | `EQ | `NEQ | `LT | `LEQ | `GT | `GEQ | `AND | `OR] [@@deriving sexp]
 
-type fallthrough_mode = FALLTHROUGH | ENDBREAK
+type fallthrough_mode = FALLTHROUGH | ENDBREAK [@@deriving sexp]
 
 (* Go types *)
 type type_name = [`BOOL | `RUNE | `INT | `FLOAT64 | `STRING | `AUTO | `VOID | `Type of identifier]
+[@@deriving sexp]
 type gotype = [ type_name | `TypeLit of type_lit ]
+[@@deriving sexp]
 and type_lit = 
 	| Slice of gotype
 	| Array of int * gotype
 	| Struct of signature list
+[@@deriving sexp]
 and struct_member = (* delete???? *)
 	| Embed of type_name 
 	| Member of signature
+[@@deriving sexp]
 and signature = identifier * gotype 
+[@@deriving sexp]
 
 (* Add whatever metadata you want to attach to a statement or expression here *)
 type 'a annotated = {
 	v: 'a;
-	_debug: string;
-	_start: int * int;
-	_end: int * int;
-	_derived: type_name option
-}
+	_debug: string [@sexp_drop_if fun x -> x = "Hi!"];
+	_start: (int * int) [@sexp_drop_if fun x -> true];
+	_end: (int * int) [@sexp_drop_if fun x -> true];
+	_derived: (type_name option sexp_opaque) [@sexp_drop_if fun x -> x = None]
+} [@@deriving sexp]
 
 (* Program AST *)
-type ast = Program of package * toplevel_declaration annotated list
-and package = Package of identifier
+type ast = Program of package * toplevel_declaration annotated list [@@deriving sexp]
+and package = Package of identifier [@@deriving sexp]
 and declaration =
 	| Var of identifier * gotype * expression option * bool
 	| Type of identifier * gotype
+[@@deriving sexp]
 and toplevel_declaration = 
 	| Global of declaration
 	| Func of identifier * signature list * gotype * block
+[@@deriving sexp]
 and block = statement list
+[@@deriving sexp]
 and statement = statement_node annotated
+[@@deriving sexp]
 and statement_node = 
 	| Decl of declaration list
 	| Expr of expression
@@ -56,11 +67,15 @@ and statement_node =
 	| Break
 	| Continue
 	| Empty
+[@@deriving sexp]
 and fallable_case = case * fallthrough_mode
+[@@deriving sexp]
 and case = 
 	| Case of statement_node * expression list * block
 	| Default of block
+[@@deriving sexp]
 and expression = operand annotated
+[@@deriving sexp]
 and operand =
 	| Op1 of (op1 * expression)
 	| Op2 of (op2 * expression * expression)
@@ -68,11 +83,14 @@ and operand =
 	| Cast of (gotype * expression)
 	| L of literal
 	| V of identifier
+[@@deriving sexp]
 and literal =
 	| Bool of bool
 	| Rune of string
 	| Int of int
 	| Float64 of float
 	| String of string
+[@@deriving sexp]
 
+exception LexFailure of string
 exception SyntaxError of string
