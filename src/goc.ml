@@ -19,6 +19,10 @@ let with_error_handling fn ok =
         fprintf stderr "Error: %s\n" message;
         exit 1
     )
+    | _ -> (
+        fprintf stderr "Error: unhandled error\n";
+        exit 1
+    )
 
 let parse lexbuf = Parser.main Lexer.lex lexbuf
 
