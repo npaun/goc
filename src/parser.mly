@@ -163,13 +163,10 @@ block: LBLOCK statements RBLOCK {$2}
 
 statements:
 	| stmt SEMI statements 	{(annot $1 $startpos($1) $endpos($1))::$3}
-	| eat_unimplemented SEMI statements {$3}
 	| SEMI statements	{$2}
 	| {[]}
-    | error { throw_error "invalid statement" $startpos($1) }
+    	| error { throw_error "invalid statement" $startpos($1) }
 
-eat_unimplemented:
-	| DEFER {}
 
 stmt:
     | typed_var_decl	{Decl $1}
