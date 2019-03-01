@@ -7,7 +7,8 @@ var (
 )
 
 type (
-    num, numnum int
+    num int
+    numnum int
 )
 
 type bar struct {

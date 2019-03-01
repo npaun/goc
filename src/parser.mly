@@ -153,7 +153,7 @@ type_decl:
     | TYPE LPAREN dist_type_decl RPAREN {$3}
     
 dist_type_decl:
-    | identifier_list typ SEMI dist_type_decl {(List.map (fun id -> Type(id, $2)) $1) @ $4} 
+    | IDENT typ SEMI dist_type_decl {Type($1, $2)::$4} 
     | { [] }
 
 /****** STATEMENTS *********/
@@ -166,6 +166,7 @@ statements:
 	| eat_unimplemented SEMI statements {$3}
 	| SEMI statements	{$2}
 	| {[]}
+    | error { throw_error "invalid statement" $startpos($1) }
 
 eat_unimplemented:
 	| DEFER {}
