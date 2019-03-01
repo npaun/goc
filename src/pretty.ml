@@ -177,9 +177,6 @@ let dump_token = function
 
 	| PRINT         -> "PRINT"
 	| PRINTLN				-> "PRINTLN"
-	| APPEND				-> "APPEND"
-	| LEN						-> "LEN"
-	| CAP						-> "CAP"
 
 	| PLUS          -> "PLUS"
 	| BAND					-> "BAND"
@@ -233,7 +230,6 @@ let dump_token = function
 
 	| ANDXOR				-> "ANDXOR"
 	| ANDXORASSIGN	-> "ANDXORASSIGN"
-	| UMINUS 				-> "UMINUS"
 	| UNDERSCORE		-> "UNDERSCORE"
 
 
@@ -253,7 +249,6 @@ let dump_token = function
 	| FALSE         -> "FALSE"
 	
 	| EOF 					-> "EOF"
-	| NOP           -> ""
 
 let dump_tokens lexfun buf =
 	let rec collect acc =

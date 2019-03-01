@@ -36,7 +36,7 @@ STILL TO DO:
 %token CONTINUE FOR IMPORT RETURN VAR
 
 /* additional keywords */
-%token PRINT PRINTLN APPEND LEN CAP
+%token PRINT PRINTLN
 
 /* operators, written in the order they are presented in the lang spec */
 %token PLUS BAND PASSIGN ANDASSIGN AND EQUAL NEQUAL LPAREN RPAREN
@@ -45,15 +45,14 @@ STILL TO DO:
 %token DIV LSHIFT DASSIGN LSHASSIGN PLUSPLUS ASSIGN COLASSIGN COMMA SEMI
 %token MOD RSHIFT MODASSIGN RSHASSIGN MINUSMINUS NOT TRIPDOT DOT COLON
 %token ANDXOR ANDXORASSIGN
-%token UMINUS
 %token UNDERSCORE /* blank identifier _ */
 
-%token EOF NOP
+%token EOF
 
 /* variable declaration */
 %token INT FLOAT BOOL RUNE STRING 
 
-/* https://golang.org/ref/spec#Operators */
+(*/* https://golang.org/ref/spec#Operators */
 /* BAND -> bitwise AND (&), etc */
 %right ASSIGN BASSIGN
 %left OR
@@ -63,6 +62,7 @@ STILL TO DO:
 %left TIMES DIV BAND
 %nonassoc LPAREN LBLOCK LSQUARE
 %nonassoc RPAREN RBLOCK RSQUARE
+*)
 
 %start main
 %type <Golite.ast> main
@@ -74,15 +74,15 @@ main: package toplevel EOF {Program($1,$2)}
 package: PACKAGE IDENT SEMI {Package $2}
 
 toplevel: 
-    | toplevel_decl SEMI toplevel {$3 @ (List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1)} 
+    | toplevel_decl SEMI toplevel {(List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1) @ $3} 
     | { [] }
 
 toplevel_decl:
-    | function_decl  {$1}
-    | typed_var_decl {List.rev (List.map (fun dcl -> Global dcl) $1)}
-	| type_decl	     {List.rev (List.map (fun dcl -> Global dcl) $1)}
-    (* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
-    | error          {throw_error "invalid top level declaration" $startpos($1)} 
+    	| function_decl  	{$1}
+    	| typed_var_decl 	{List.map (fun dcl -> Global dcl) $1}
+	| type_decl		{List.map (fun dcl -> Global dcl) $1}
+    	(* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
+	| error          	{throw_error "invalid top level declaration" $startpos($1)} 
 
 /*************** TYPES **************/
 
@@ -124,7 +124,7 @@ signature:
 	| LPAREN flatten(separated_list(COMMA, signature_ids)) RPAREN {$2}
 
 signature_ids: 
-    | identifier_list typ {List.rev ((List.map (fun id -> (id, $2)) $1))}
+    | identifier_list typ {List.map (fun id -> (id, $2)) $1}
     
 /***** VARIABLE DECLARATIONS *****/
 
@@ -162,7 +162,7 @@ dist_type_decl:
 block: LBLOCK statements RBLOCK {$2}
 
 statements:
-	| stmt SEMI statements 	{List.rev ((annot $1 $startpos($1) $endpos($1))::$3)}
+	| stmt SEMI statements 	{(annot $1 $startpos($1) $endpos($1))::$3}
 	| eat_unimplemented SEMI statements {$3}
 	| SEMI statements	{$2}
 	| {[]}
@@ -228,7 +228,7 @@ return_stmt:
 
 /**** IF STATEMENT *****/
 if_stmt:
-| if_head			{If (List.rev $1)}
+| if_head			{If  $1}
 
 if_head:
 | IF if_cond block if_tail	{let (c1,c2) = $2 in (Case (c1,c2,$3))::$4}
@@ -244,7 +244,7 @@ if_tail:
 
 /**** SWITCH STATEMENT ****/
 switch_stmt:
-| SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,List.rev $3)}
+| SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,$3)}
 
 switch_cond:
 | expr      		        {(Empty, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
