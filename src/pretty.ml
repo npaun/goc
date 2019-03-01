@@ -1,7 +1,6 @@
 open Lexer
 open Parser
 open Golite
-open Sexplib
 
 (* TODO: finish string_of_stmt *)
 
@@ -274,7 +273,3 @@ let dump_tokens lexfun buf =
 		| EOF -> List.rev acc
 		| t -> collect ((dump_token t)::acc)
 	in String.concat "\n" (collect [])
-
-(* Do not ask why this is here - it won't build if it's in goc.ml for no fucking reason *)
-let raw_ast ast =
-	Golite.sexp_of_ast ast |> Sexp.to_string_hum
