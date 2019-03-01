@@ -73,7 +73,7 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Decl(decl_lst)                    -> (crt_tab d tb) ^ (string_of_decl_list d decl_lst)
 		| Expr(expr)                        -> (crt_tab d tb) ^ string_of_expr expr
 		| Block(blck)                       -> string_of_block (d+1) blck
-		| Assign(id_lst, expr_lst)          -> (crt_tab d tb) ^ (string_of_lst id_lst ", " (fun x -> x)) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
+		| Assign(id_lst, expr_lst)          -> (crt_tab d tb) ^ (string_of_lst id_lst ", " (string_of_lvalue')) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
 		| OpAssign(id, op, expr)            -> (crt_tab d tb) ^ (string_of_expr id) ^ " " ^ (string_of_op_assign op) ^ " " ^ (string_of_expr expr)
 		| IncDec(id, op)                    -> (crt_tab d tb) ^ id ^ (match op with `INC -> "++" | `DEC -> "--")
 		| Print(b, expr_lst)                -> (crt_tab d tb) ^ (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")"
@@ -107,6 +107,9 @@ and string_of_stmt d tb stmt = match stmt.v with
         | Float64(f) -> string_of_float f
         | String(s) -> s
 		)
+and string_of_lvalue' e = match e.v with
+| `Blank -> "_"
+|  #operand as x ->  string_of_expr (crt_stmt x)
 and string_of_expr_opt expr = match expr with
     | None -> ""
     | Some e -> string_of_expr e

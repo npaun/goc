@@ -192,8 +192,12 @@ simple_stmt:
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
-    | golist(IDENT) ASSIGN golist(expr) {Assign($1,$3)}
+    | golist(lvaluep) ASSIGN golist(expr) {Assign($1,$3)}
 
+
+lvaluep:
+| lvalue	{$1:lvalue :> lvalue'}
+| UNDERSCORE	{annot `Blank $startpos($1) $endpos($1)}
 
 op_assign_stmt:
     | lvalue assign_op expr {OpAssign($1,$2,$3)}
