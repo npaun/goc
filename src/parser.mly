@@ -135,15 +135,15 @@ identp:
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-	| golist(identp) COLASSIGN golist(expr) {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
+	| golist(lvaluep) COLASSIGN golist(expr) {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
 
 typed_var_decl:
     | VAR t_var_decl {$2}
     
 t_var_decl:
-    	| golist(identp) typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
-	| golist(identp) typ ASSIGN golist(expr)  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
-	| golist(identp) ASSIGN golist(expr)      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
+    	| golist(lvaluep) typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
+	| golist(lvaluep) typ ASSIGN golist(expr)  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
+	| golist(lvaluep) ASSIGN golist(expr)      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
     	| goargs(dist_var_decl)               {$1}
     
 dist_var_decl:

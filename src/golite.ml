@@ -69,7 +69,7 @@ and lvalue' = [operand | identifier'] annotated
 type ast = Program of package * toplevel_declaration annotated list [@@deriving sexp]
 and package = Package of identifier [@@deriving sexp]
 and declaration =
-	| Var of identifier' * gotype * expression option * bool
+	| Var of lvalue' * gotype * expression option * bool
 	| Type of identifier' * gotype
 [@@deriving sexp]
 and toplevel_declaration = 

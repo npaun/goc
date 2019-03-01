@@ -31,8 +31,8 @@ and string_of_decl_list d decl_list = match decl_list with
 		| h::t -> (match h with
 							| Var(id, typ, expr, is_short) -> (
 								let (id_lst, expr_lst) = split_var_decl_list [] [] decl_list in
-								if is_short then (string_of_lst id_lst ", " (string_of_id)) ^ " := " ^ (string_of_lst expr_lst ", " string_of_expr_opt)
-								else "var " ^ (string_of_lst id_lst ", " (string_of_id)) ^ " " ^ (string_of_typ typ) ^ (match expr with None -> "" | Some e -> " = " ^ (string_of_lst expr_lst ", " string_of_expr_opt))
+								if is_short then (string_of_lst id_lst ", " (string_of_lvalue')) ^ " := " ^ (string_of_lst expr_lst ", " string_of_expr_opt)
+								else "var " ^ (string_of_lst id_lst ", " (string_of_lvalue')) ^ " " ^ (string_of_typ typ) ^ (match expr with None -> "" | Some e -> " = " ^ (string_of_lst expr_lst ", " string_of_expr_opt))
 							)
 							| Type(id, typ) -> string_of_lst decl_list ("\n" ^ (crt_tab d true)) string_of_type_decl
 							)
