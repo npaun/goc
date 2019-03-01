@@ -36,7 +36,7 @@ STILL TO DO:
 %token CONTINUE FOR IMPORT RETURN VAR
 
 /* additional keywords */
-%token PRINT PRINTLN
+%token PRINT PRINTLN APPEND LEN CAP
 
 /* operators, written in the order they are presented in the lang spec */
 %token PLUS BAND PASSIGN ANDASSIGN AND EQUAL NEQUAL LPAREN RPAREN
@@ -336,9 +336,16 @@ expr_operand:
 | IDENT				{V $1}
 | literal			{L $1}
 | fun_call			{$1}
+| expr_operand DOT IDENT	{Selector((annot $1 $startpos($1) $endpos($1)),$3)}
 
 fun_call:
-| IDENT arguments		{Call($1,$2)} 
+| function_name  arguments		{Call($1,$2)} 
+
+function_name:
+| IDENT 				{$1}
+| APPEND				{"append"}
+| LEN					{"len"}
+| CAP					{"cap"}
 
 literal:
 | STRINGLIT	{String $1}
