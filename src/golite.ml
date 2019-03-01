@@ -94,12 +94,5 @@ and literal =
 
 exception LexFailure of string
 exception SyntaxError of string
-
-open Lexing
-
-let print_position outx lexbuf =
-  let pos = lexbuf.lex_curr_p in
-  fprintf outx "%s:%d:%d" pos.pos_fname
-    pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
     
     

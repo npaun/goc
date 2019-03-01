@@ -7,13 +7,14 @@ let annot node startpos endpos =
 		(pos.pos_lnum, pos.pos_cnum - pos.pos_bol)
 	in
 	{ v = node; _start = pos_tuple startpos; _end = pos_tuple endpos; _debug = "Hi!"; _derived = None}  
+
     
 let throw_error msg s = 
     raise (SyntaxError ("Parser - " ^ msg ^ ", at line " ^ string_of_int s.pos_lnum ^ ", char " ^ string_of_int (s.pos_cnum - s.pos_bol + 1)))    
     
-(*let new_throw_error msg actual expected stmt pos = 
-    raise (SyntaxError ("Parser - " ^ msg ^ "\nUnexpected " ^ "" ^ " at line " ^ string_of_int s.pos_lnum ^ ", char " ^ string_of_int (s.pos_cnum - s.pos_bol + 1) ^ "\n"
-                        ^ "expected: " ^ "TODO" ^ " in " ^ "TODO"))*)
+let throw_error_expected msg actual expected s = 
+    raise (SyntaxError ("Parser - " ^ msg ^ "\nUnexpected " ^ actual ^ " at line " ^ string_of_int s.pos_lnum ^ ", char " ^ string_of_int (s.pos_cnum - s.pos_bol + 1) ^ "\n"
+                        ^ "expected: " ^ expected))
 %}
 
 (*****
@@ -73,10 +74,11 @@ STILL TO DO:
 %%
 
 main: package toplevel EOF {Program($1,$2)}
+    | toplevel EOF { raise (SyntaxError "Parser - Missing package declaration at top of file.") }
 
 /******* DECLARATIONS *******/
 package: PACKAGE IDENT SEMI {Package $2}
-
+    
 toplevel: 
     | toplevel_decl SEMI toplevel {$3 @ (List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1)} 
     | { [] }
@@ -86,7 +88,7 @@ toplevel_decl:
     | typed_var_decl {List.rev (List.map (fun dcl -> Global dcl) $1)}
 	| type_decl	     {List.rev (List.map (fun dcl -> Global dcl) $1)}
     (* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
-    | error          {new_throw_error "invalid top level declaration" "" "" "" $startpos($1)} 
+    | error          {throw_error "invalid top level declaration" $startpos($1)} 
 
 /*************** TYPES **************/
 
@@ -104,6 +106,8 @@ type_literal:
     | array_literal {`TypeLit($1)}
     | slice_literal {`TypeLit($1)}
     | struct_literal {`TypeLit($1)}
+    | error     {throw_error "Invalid type litteral, 
+        supported litterals are: [<int>]<name> for array, []<name> for slice, and <name> struct { <members> } for structs." $startpos($1)}
 
 array_literal:
     | LSQUARE INTLIT RSQUARE typ {Array($2, $4)}
@@ -139,6 +143,7 @@ short_var_decl:
 
 typed_var_decl:
     | VAR t_var_decl {$2}
+    | t_var_decl {throw_error_expected "ill-formed variable declaration." "identifier" "var" $startpos($1)}
     
 t_var_decl:
     | identifier_list typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
