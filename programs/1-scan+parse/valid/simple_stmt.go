@@ -2,7 +2,7 @@ package main
 
 func main() {
 	x,y,z = 1,2,3
-	f,z := "wow", "another"
+	f,z,_ := "wow", "another", "and_another"
 
 	x += 5
 	x -= 5
