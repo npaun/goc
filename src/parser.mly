@@ -55,7 +55,6 @@ STILL TO DO:
 %token DIV LSHIFT DASSIGN LSHASSIGN PLUSPLUS ASSIGN COLASSIGN COMMA SEMI
 %token MOD RSHIFT MODASSIGN RSHASSIGN MINUSMINUS NOT TRIPDOT DOT COLON
 %token ANDXOR ANDXORASSIGN
-%token UMINUS
 %token UNDERSCORE /* blank identifier _ */
 
 %token EOF
@@ -180,9 +179,6 @@ statements:
 	| SEMI statements	{$2}
 	| {[]}
     | error { throw_error "invalid statement" $startpos($1) }
-
-eat_unimplemented:
-	| DEFER {}
 
 stmt:
     | typed_var_decl	{Decl $1}
