@@ -15,7 +15,7 @@
 * Parser generator: Menhir
 * Other: Opam (package manager for Ocaml), ocamlbuild (build system)
 
-*TODO*: explain choices
+We selected Ocaml as the implementation language for two important reasons. Firstly, the ML family is particularly suited to the implementation of programming languages as its support for variant types and pattern matching allow abstract syntax trees to be manipulated with ease. The strong type systems also help to reduce errors in the design of the parser and inconsistencies between components imlemented by different team members. Another advantage of Ocaml is that it provides excellent lexer and parser generating libraries which are not dissimilar to lex and yacc, making these tools easy to learn. At this stage, there have been few frustrations with Ocaml, except that its error messages are appallingly poor and occasionally misleading especially when combined with a parser generator. 
 
 ### Scanner
 The scanner was generated using Ocamllex. Each significant word in the GoLite language was represented with its own regular expression (regex) which it would match and return its corresponding token. The majority of these regex expressions are trivial, but a brief description of some notably interesting regex expressions/scanner features are provided below. These include: **line numbers, semicolon insertion, block comments, and int literal types**.
@@ -34,16 +34,16 @@ The parser was implemented using Menhir, a drop-in replacement for ocamlyacc whi
 
 Errors are handled using Menhir's 'old' API, which upon a syntax error shifts a synthetic token called 'error' which rules can incorporate in order to target messages to the appropriate circumstances. We also considered using Menhir's 'messages files' in which samples of invalid programs are paired with a generated message. Once the parsing stage has been completed without syntactic issues, error messages can also use the pretty printer to illustrate the fault.
 
-We chose to enforce certain syntactic rules with a set of weeding passes, each of which is responsible for enforcing a few closely related rules. `Terminal` ensures that `break` and `continue` are used only within loops, and that functions which must return a value in fact do so (the latter aspect is disabled in milestone 1). `Lvalue` currently does nothing useful, but will eventually check that expressions used on the left-hand side are appropriate. `Switch` ensures that `switch` statements have either 0 or 1 default cases (the default case is not always last in Go, therefore doing it in the parser would be unpleasant.)
+We chose to enforce certain syntactic rules with a set of weeding passes, each of which is responsible for enforcing a few closely related rules. `Terminal` ensures that `break` and `continue` are used only within loops, and that functions which must return a value in fact do so (the latter aspect is disabled in milestone 1). `Lvalue` currently does nothing useful, but will eventually check that expressions used on the left-hand side are appropriate. `Switch` ensures that `switch` statements have either 0 or 1 default cases (the default case is not always last in Go, making detecting these issues in the parser \unpleasant.)
 
 ### AST
 
-Variant types make the ML family particularly well suited to working with ASTs and other tree structures. The design of the AST is largely conventional, and much of the terminology used was chosen in accordance with the Go specification. Broadly, a program is structured as a list of top-level declarations, which may introduce types, variables and functions. The body of a function is a block, modelled as a list of statements. Some statements may contain expressions, declarations, and blocks. In order to attach line number and debugging information to various nodes in the AST, we created a polymorphic type named `annotated`, which is currently used to mark statements and expression operands. This type also holds a field named `_derived` which will allow expressions to be annotated with types by the symbol table generator and the type checker. 
+The design of the AST is largely conventional, and much of the terminology used was chosen in accordance with the Go specification. Broadly, a program is structured as a list of top-level declarations, which may introduce types, variables and functions. The body of a function is a block, modelled as a list of statements. Some statements may contain expressions, declarations, and blocks. In order to attach line number and debugging information to various nodes in the AST, we created a polymorphic type named `annotated`, which is currently used to mark statements and expression operands. This type also holds a field named `_derived` which will allow expressions to be annotated with types by the symbol table generator and the type checker. 
 A few more unusual aspects of our AST design are worth noting. For this project, we decided to make the AST as flat as possible, in order to reduce cognitive load due to levels of nesting. This leads to using polymorphic types in cases where some node types maybe subsets of another type, rather than chaining variant tags. The correct use of the blank identifier is enforced at the Ocaml type system level by distinguishing between a group of polymorphic variants: `identifier'` (blank or named identifier), `lvalue` (only assignable expressions) and `lvalue'` (assignable expressions and the blank identifier).
  
 ### Pretty-Printer
 
-*TODO*: explain recursive traversal of AST
+Implementing a basic pretty printer is trivial in Ocaml. We simply implemented a group of mutually recursive functions which traverse the AST. The current indent level is passed as a parameter and increased as required.
 
 ## Team Organization
 
@@ -72,8 +72,9 @@ A few more unusual aspects of our AST design are worth noting. For this project,
     * Core program
     * Build scripts
     * Weeding passes (Terminal)
+    * Interpretation of the Go specification
 * Justin
     * Parser
     * AST
     * Pretty-Printer
-    * Weeding passes
+    * Weeding passes (Switch)
