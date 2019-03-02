@@ -26,7 +26,6 @@ STILL TO DO:
 %token <string> RUNELIT
 %token <float> FLOATLIT
 %token <bool> BOOLLIT  
-%token TRUE FALSE 
 
 /* Go keywords, written in the order they are presented in the lang spec */
 %token BREAK DEFAULT FUNC INTERFACE SELECT
@@ -48,9 +47,6 @@ STILL TO DO:
 %token UNDERSCORE /* blank identifier _ */
 
 %token EOF
-
-/* variable declaration */
-%token INT FLOAT BOOL RUNE STRING 
 
 (*/* https://golang.org/ref/spec#Operators */
 /* BAND -> bitwise AND (&), etc */
@@ -87,11 +83,6 @@ toplevel_decl:
 /*************** TYPES **************/
 
 typ:
-    | INT       {`INT}
-    | FLOAT     {`FLOAT64}
-    | BOOL      {`BOOL}
-    | RUNE      {`RUNE}
-    | STRING    {`STRING}
     | IDENT     {`Type($1)} (* user defined *)
     | type_literal {$1}
     | error     {throw_error "Unknown/invalid type" $startpos($1)}
@@ -359,7 +350,5 @@ literal:
 | STRINGLIT	{String $1}
 | INTLIT 	{Int $1}
 | BOOLLIT	{Bool $1}
-| TRUE      {Bool true}
-| FALSE     {Bool false}
 | FLOATLIT	{Float64 $1}
 | RUNELIT   {Rune $1}

@@ -256,11 +256,6 @@ let dump_token = function
    | APPEND                                -> "APPEND"
        | LEN                                           -> "LEN"
        | CAP                                           -> "CAP"
-	| INT           -> "INT"
-	| FLOAT         -> "FLOAT"
-	| BOOL          -> "BOOL"
-	| RUNE 					-> "RUNE"
-	| STRING        -> "STRING"
 	
 	| IDENT(s)      -> "IDENT(" ^ s ^ ")"
 	| STRINGLIT(s)  -> "STRINGLIT(" ^ s ^ ")"
@@ -268,8 +263,6 @@ let dump_token = function
 	| RUNELIT(c)		-> "RUNELIT(" ^ c ^ ")"
 	| FLOATLIT(f)   -> "FLOATLIT(" ^ string_of_float f ^ ")"
 	| BOOLLIT(b)    -> "BOOLLIT(" ^ string_of_bool b ^ ")"
-	| TRUE          -> "TRUE"
-	| FALSE         -> "FALSE"
 	
 	| EOF 					-> "EOF"
 
