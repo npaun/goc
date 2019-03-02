@@ -17,7 +17,7 @@ let with_error_handling fn ok =
 		exit 1
     )
 
-let parse lexbuf = Parser.main Lexer.lex lexbuf
+let parse lexbuf = Parser.main Lexer.lex lexbuf |> Terminal.pass
 
 let main () = 
 	let lexbuf = load_text() in
