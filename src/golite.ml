@@ -39,7 +39,6 @@ type 'a annotated = {
 	_derived: type_name option [@sexp_drop_if fun x -> x = None]
 } [@@deriving sexp]
 
-
 (* Expressions *)
 type expression = operand annotated
 [@@deriving sexp]
@@ -50,6 +49,7 @@ and operand = [
 	| `Cast of (gotype * expression)
 	| `Selector of (expression * identifier)
 	| `L of literal
+    | `Indexing of (identifier * expression)
 	|  tagged_identifier ]
 [@@deriving sexp]
 and literal =
@@ -62,7 +62,8 @@ and literal =
 
 type lvalue = expression (* No further inspection for now *)
 [@@deriving sexp]
-and lvalue' = [operand | identifier'] annotated 
+and ident'' = identifier' annotated
+and lvalue' = [operand | identifier'] annotated
 [@@deriving sexp]
 
 (* Program AST *)
@@ -84,9 +85,9 @@ and statement_node =
 	| Decl of declaration list
 	| Expr of expression
 	| Block of block
-	| Assign of lvalue' list * expression list
+	| Assign of (lvalue' * expression) list
 	| OpAssign of lvalue * op_assign * expression
-	| IncDec of identifier * op_incdec
+	| IncDec of expression * op_incdec
 	| Print of bool * expression list
 	| Return of expression option
 	| If of case list

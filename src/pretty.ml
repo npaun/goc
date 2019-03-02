@@ -73,9 +73,9 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Decl(decl_lst)                    -> (crt_tab d tb) ^ (string_of_decl_list d decl_lst)
 		| Expr(expr)                        -> (crt_tab d tb) ^ string_of_expr expr
 		| Block(blck)                       -> string_of_block (d+1) blck
-		| Assign(id_lst, expr_lst)          -> (crt_tab d tb) ^ (string_of_lst id_lst ", " (string_of_lvalue')) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
-		| OpAssign(id, op, expr)            -> (crt_tab d tb) ^ (string_of_expr id) ^ " " ^ (string_of_op_assign op) ^ " " ^ (string_of_expr expr)
-		| IncDec(id, op)                    -> (crt_tab d tb) ^ id ^ (match op with `INC -> "++" | `DEC -> "--")
+		| Assign(assn_lst)                  -> (crt_tab d tb) ^ string_of_lst assn_lst ("\n" ^ (crt_tab d tb)) (fun assn -> let lval, expr = assn in string_of_lvalue' lval ^ " = " ^ string_of_expr expr)
+        | OpAssign(id, op, expr)            -> (crt_tab d tb) ^ (string_of_expr id) ^ " " ^ (string_of_op_assign op) ^ " " ^ (string_of_expr expr)
+		| IncDec(expr, op)                  -> (crt_tab d tb) ^ string_of_expr expr ^ (match op with `INC -> "++" | `DEC -> "--")
 		| Print(b, expr_lst)                -> (crt_tab d tb) ^ (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")"
 		| Return(expr_opt)                  -> (crt_tab d tb) ^ "return " ^ string_of_expr_opt expr_opt
 		| If(c_lst)                         -> (crt_tab d tb) ^ string_of_lst c_lst " else " (string_of_if_case d) 
@@ -90,23 +90,24 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Continue                          -> "continue"
 		| Empty                             -> ""
 		and string_of_stmt_opt stmt = match stmt with 
-		| None -> ""
-		| Some s -> string_of_stmt 0 false (crt_stmt s)
+            | None -> ""
+            | Some s -> string_of_stmt 0 false (crt_stmt s)
 		and string_of_expr expr = match expr.v with
-    | `Op1(op, e)      		-> "(" ^ string_of_op1 op ^ string_of_expr e ^ ")"
-    | `Op2(op, e1, e2) 		-> "(" ^ string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2 ^ ")"
-    | `Call(id, e_lst) 		-> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
-    | `Cast(typ, e)    		-> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
-    | `V(id)           		-> id
-    | `Selector(expr, id)	-> (string_of_expr expr) ^ "." ^ id
-    | `L(lit)          		-> (
-        match lit with
-        | Bool(b) -> string_of_bool b
-        | Rune(r) -> r
-        | Int(i)  -> string_of_int i
-        | Float64(f) -> string_of_float f
-        | String(s) -> s
-		)
+            | `Op1(op, e)      		-> "(" ^ string_of_op1 op ^ string_of_expr e ^ ")"
+            | `Op2(op, e1, e2) 		-> "(" ^ string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2 ^ ")"
+            | `Call(id, e_lst) 		-> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
+            | `Cast(typ, e)    		-> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
+            | `V(id)           		-> id
+            | `Selector(expr, id)	-> (string_of_expr expr) ^ "." ^ id
+            | `Indexing(id, expr)   -> id ^ "[" ^ string_of_expr expr ^ "]"
+            | `L(lit)          		-> (
+                match lit with
+                | Bool(b) -> string_of_bool b
+                | Rune(r) -> r
+                | Int(i)  -> string_of_int i
+                | Float64(f) -> string_of_float f
+                | String(s) -> s
+                )
 and string_of_lvalue' e = match e.v with
 | `Blank -> "_"
 |  #operand as x ->  string_of_expr (crt_stmt x)
@@ -217,7 +218,7 @@ let dump_token = function
 	| LESSER        -> "LESSER"
 	| LEQ           -> "LEQ"
 	| LSQUARE				-> "LSQUARE"
-	| RSQUARE				-> "RSQAURE"
+	| RSQUARE				-> "RSQUARE"
 
 	| TIMES         -> "TIMES"
 	| XOR						-> "XOR"
