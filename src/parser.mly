@@ -88,8 +88,8 @@ toplevel:
 
 toplevel_decl:
     | function_decl  {$1}
-    | typed_var_decl {List.rev (List.map (fun dcl -> Global dcl) $1)}
-	| type_decl	     {List.rev (List.map (fun dcl -> Global dcl) $1)} 
+    | typed_var_decl {List.map (fun dcl -> Global dcl) $1}
+	| type_decl	     {List.map (fun dcl -> Global dcl) $1)} 
     (* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
     | error          {throw_error "invalid top level declaration" $startpos($1)} 
 
@@ -243,7 +243,7 @@ return_stmt:
 
 /**** IF STATEMENT *****/
 if_stmt:
-    | if_head			{If (List.rev $1)}
+    | if_head			{If $1}
 
 if_head:
     | IF if_cond block if_tail	{let (c1,c2) = $2 in (Case (c1,c2,$3))::$4}
@@ -259,7 +259,7 @@ if_tail:
 
 /**** SWITCH STATEMENT ****/
 switch_stmt:
-    | SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,List.rev $3)}
+    | SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,$3)}
 
 switch_cond:
     | expr      		        {(Empty, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
