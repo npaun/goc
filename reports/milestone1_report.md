@@ -46,6 +46,21 @@ TODO: Things that we need to weed: (invalid break/continue stmts, expression in 
     * Scanner
     * Token printing
     * Pretty-Printer
+    * Tests:
+        * "Interesting" valid:
+            * rev_string.go
+            * is_palindrome.go
+        * invalid:
+            * simple_stmt_invinv.go
+            * simple_stmt_opassign.go
+            * simple_stmt_short_no_id.go
+            * invalid_break.go
+            * invalid_continue.go
+            * invalid_continue2.go
+            * var_block_comment.go
+            * blank_selector.go
+            * int_selector.go
+            * simple_stmt.go
 * Nicholas
     * Parser
     * AST
