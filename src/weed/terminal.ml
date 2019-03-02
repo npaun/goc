@@ -33,7 +33,6 @@ and pass_statement (mustreturn,maybreak,maycontinue) = function
 | Switch(stmt, expr, fallcases) -> Switch(stmt,expr, List.map (pass_fallablecase (false,true,false)) fallcases)
 | For(stmt1,expr,stmt2,block) -> For(stmt1,expr,stmt2, pass_block (false,true,true) block)
 | Block blk -> Block (pass_block (false,maybreak,maycontinue) blk)
-| Return _ when not disablereturn -> raise (SyntaxError "Unexpected return - this is not the terminal statement")
 | any -> any
 and pass_case mode = function
 | Case(stmt,expr,block) -> Case(stmt,expr, pass_block mode block)
