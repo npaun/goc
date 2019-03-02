@@ -1,7 +1,6 @@
 open Lexer
 open Parser
 open Golite
-open Sexplib
 
 (* TODO: finish string_of_stmt *)
 
@@ -14,18 +13,36 @@ let crt_tab d b =
 let string_of_lst (lst: 'a list) (sep: string) (f: 'a -> string) =
 	String.concat sep (List.map f lst)
 
+let rec split_var_decl_list id_acc expr_acc decl_lst = match decl_lst with
+		| h::t -> (
+			let Var(id,typ, expr_opt, isshort) = h in
+			split_var_decl_list (id::id_acc) (expr_opt::expr_acc) t 
+		)
+		| [] -> (id_acc, expr_acc)
 let rec string_of_ast ast = match ast with 
     | Program(pkg, toplvl) -> string_of_pkg pkg ^ string_of_toplvl toplvl
 and string_of_pkg pkg = match pkg with 
     | Package(id) -> "package " ^ id ^ "\n"
 and string_of_toplvl lst = string_of_lst lst "\n" string_of_topdecl
 and string_of_topdecl decl = match decl.v with
-    | Func(id, sigs, typ, body) -> "func " ^ id ^ "(" ^ (string_of_sigs sigs ", ") ^ ") " ^ string_of_typ typ ^ " " ^ string_of_block 0 body 
-    | Global(decl') -> string_of_decl decl'
-and string_of_decl decl = match decl with
-    | Var(id, typ, expr, false) -> "var " ^ id ^ " " ^ string_of_typ typ ^ (match expr with None -> "" | Some e -> " = " ^ string_of_expr e) 
-		| Var(id, typ, expr, true) -> id ^ " := " ^ (string_of_expr_opt expr)
-		| Type(id, typ)      -> "type " ^ id ^ " " ^ string_of_typ typ
+    | Func(id, sigs, typ, body) -> "func " ^ (string_of_id id) ^ "(" ^ (string_of_sigs sigs ", ") ^ ") " ^ string_of_typ typ ^ " " ^ string_of_block 0 body 
+    | Global(decl') -> string_of_decl_list 0 [decl']
+and string_of_decl_list d decl_list = match decl_list with
+		| h::t -> (match h with
+							| Var(id, typ, expr, is_short) -> (
+								let (id_lst, expr_lst) = split_var_decl_list [] [] decl_list in
+								if is_short then (string_of_lst id_lst ", " (string_of_lvalue')) ^ " := " ^ (string_of_lst expr_lst ", " string_of_expr_opt)
+								else "var " ^ (string_of_lst id_lst ", " (string_of_lvalue')) ^ " " ^ (string_of_typ typ) ^ (match expr with None -> "" | Some e -> " = " ^ (string_of_lst expr_lst ", " string_of_expr_opt))
+							)
+							| Type(id, typ) -> string_of_lst decl_list ("\n" ^ (crt_tab d true)) string_of_type_decl
+							)
+		| _ -> ""
+and string_of_type_decl decl = 
+		let Type(id,typ) = decl in 
+		"type " ^ (string_of_id id) ^ " " ^ string_of_typ typ
+and string_of_id = function
+| `V i	-> i
+| `Blank -> "_"
 and string_of_typ typ = match typ with
     | `BOOL         -> "bool"
     | `RUNE         -> "char"
@@ -53,13 +70,13 @@ and string_of_if_case d case = match case with
 		| Case(stmt, expr_lst, blck) -> "if " ^ (string_of_stmt d false (crt_stmt stmt) ^ "; ") ^ (string_of_lst expr_lst ", " string_of_expr) ^ " " ^ (string_of_block d blck)
 		| Default(blck) 						 -> string_of_block d blck
 and string_of_stmt d tb stmt = match stmt.v with
-		| Decl(decl_lst)                    -> (crt_tab d tb) ^ string_of_lst decl_lst ("\n" ^ (crt_tab d tb)) string_of_decl
+		| Decl(decl_lst)                    -> (crt_tab d tb) ^ (string_of_decl_list d decl_lst)
 		| Expr(expr)                        -> (crt_tab d tb) ^ string_of_expr expr
 		| Block(blck)                       -> string_of_block (d+1) blck
-		| Assign(id_lst, expr_lst)          -> (crt_tab d tb) ^ (string_of_lst id_lst ", " (fun x -> x)) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
-		| OpAssign(id, op, expr)            -> (crt_tab d tb) ^ id ^ (string_of_op_assign op) ^ (string_of_expr expr) ^ "\n"
+		| Assign(id_lst, expr_lst)          -> (crt_tab d tb) ^ (string_of_lst id_lst ", " (string_of_lvalue')) ^ " = " ^ (string_of_lst expr_lst ", " string_of_expr)
+		| OpAssign(id, op, expr)            -> (crt_tab d tb) ^ (string_of_expr id) ^ " " ^ (string_of_op_assign op) ^ " " ^ (string_of_expr expr)
 		| IncDec(id, op)                    -> (crt_tab d tb) ^ id ^ (match op with `INC -> "++" | `DEC -> "--")
-		| Print(b, expr_lst)                -> (crt_tab d tb) ^ (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")\n"
+		| Print(b, expr_lst)                -> (crt_tab d tb) ^ (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")"
 		| Return(expr_opt)                  -> (crt_tab d tb) ^ "return " ^ string_of_expr_opt expr_opt
 		| If(c_lst)                         -> (crt_tab d tb) ^ string_of_lst c_lst " else " (string_of_if_case d) 
 		| Switch(stm, expr_opt, c_lst)      -> (crt_tab d tb) ^ "switch " ^ (string_of_stmt d false (crt_stmt stm) ^ "; ") ^ (string_of_expr_opt expr_opt) ^ " {\n" ^ (string_of_lst c_lst "\n" (string_of_switch_case (d+1))) ^ "\n" ^ (crt_tab d tb) ^ "}" 
@@ -72,16 +89,17 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Break                             -> "break"
 		| Continue                          -> "continue"
 		| Empty                             -> ""
-and string_of_stmt_opt stmt = match stmt with 
+		and string_of_stmt_opt stmt = match stmt with 
 		| None -> ""
 		| Some s -> string_of_stmt 0 false (crt_stmt s)
-and string_of_expr expr = match expr.v with
-    | Op1(op, e)      -> string_of_op1 op ^ string_of_expr e
-    | Op2(op, e1, e2) -> string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2
-    | Call(id, e_lst) -> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
-    | Cast(typ, e)    -> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
-    | V(id)           -> id
-    | L(lit)          -> (
+		and string_of_expr expr = match expr.v with
+    | `Op1(op, e)      		-> "(" ^ string_of_op1 op ^ string_of_expr e ^ ")"
+    | `Op2(op, e1, e2) 		-> "(" ^ string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2 ^ ")"
+    | `Call(id, e_lst) 		-> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
+    | `Cast(typ, e)    		-> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
+    | `V(id)           		-> id
+    | `Selector(expr, id)	-> (string_of_expr expr) ^ "." ^ id
+    | `L(lit)          		-> (
         match lit with
         | Bool(b) -> string_of_bool b
         | Rune(r) -> r
@@ -89,6 +107,9 @@ and string_of_expr expr = match expr.v with
         | Float64(f) -> string_of_float f
         | String(s) -> s
 		)
+and string_of_lvalue' e = match e.v with
+| `Blank -> "_"
+|  #operand as x ->  string_of_expr (crt_stmt x)
 and string_of_expr_opt expr = match expr with
     | None -> ""
     | Some e -> string_of_expr e
@@ -232,12 +253,9 @@ let dump_token = function
 	| ANDXORASSIGN	-> "ANDXORASSIGN"
 	| UNDERSCORE		-> "UNDERSCORE"
 
-
-	| INT           -> "INT"
-	| FLOAT         -> "FLOAT"
-	| BOOL          -> "BOOL"
-	| RUNE 					-> "RUNE"
-	| STRING        -> "STRING"
+   | APPEND                                -> "APPEND"
+       | LEN                                           -> "LEN"
+       | CAP                                           -> "CAP"
 	
 	| IDENT(s)      -> "IDENT(" ^ s ^ ")"
 	| STRINGLIT(s)  -> "STRINGLIT(" ^ s ^ ")"
@@ -245,8 +263,6 @@ let dump_token = function
 	| RUNELIT(c)		-> "RUNELIT(" ^ c ^ ")"
 	| FLOATLIT(f)   -> "FLOATLIT(" ^ string_of_float f ^ ")"
 	| BOOLLIT(b)    -> "BOOLLIT(" ^ string_of_bool b ^ ")"
-	| TRUE          -> "TRUE"
-	| FALSE         -> "FALSE"
 	
 	| EOF 					-> "EOF"
 
@@ -257,6 +273,4 @@ let dump_tokens lexfun buf =
 		| t -> collect ((dump_token t)::acc)
 	in String.concat "\n" (collect [])
 
-(* Do not ask why this is here - it won't build if it's in goc.ml for no fucking reason *)
-let raw_ast ast =
-	Golite.sexp_of_ast ast |> Sexp.to_string_hum
+

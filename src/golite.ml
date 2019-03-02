@@ -1,6 +1,8 @@
 open Sexplib.Conv
 
 type identifier = string [@@deriving sexp]
+type tagged_identifier = [`V of identifier] [@@deriving sexp]
+type identifier' = [tagged_identifier | `Blank] [@@deriving sexp]
 
 (* Various classes of operators *)
 type op_incdec = [`INC | `DEC] [@@deriving sexp]
@@ -34,19 +36,45 @@ type 'a annotated = {
 	_debug: string [@sexp_drop_if fun x -> x = "Hi!"];
 	_start: (int * int) [@sexp_drop_if fun x -> true];
 	_end: (int * int) [@sexp_drop_if fun x -> true];
-	_derived: (type_name option sexp_opaque) [@sexp_drop_if fun x -> x = None]
+	_derived: type_name option [@sexp_drop_if fun x -> x = None]
 } [@@deriving sexp]
+
+
+(* Expressions *)
+type expression = operand annotated
+[@@deriving sexp]
+and operand = [
+	| `Op1 of (op1 * expression)
+	| `Op2 of (op2 * expression * expression)
+	| `Call of (identifier * expression list)
+	| `Cast of (gotype * expression)
+	| `Selector of (expression * identifier)
+	| `L of literal
+	|  tagged_identifier ]
+[@@deriving sexp]
+and literal =
+	| Bool of bool
+	| Rune of string
+	| Int of int
+	| Float64 of float
+	| String of string
+[@@deriving sexp]
+
+type lvalue = expression (* No further inspection for now *)
+[@@deriving sexp]
+and lvalue' = [operand | identifier'] annotated 
+[@@deriving sexp]
 
 (* Program AST *)
 type ast = Program of package * toplevel_declaration annotated list [@@deriving sexp]
 and package = Package of identifier [@@deriving sexp]
 and declaration =
-	| Var of identifier * gotype * expression option * bool
-	| Type of identifier * gotype
+	| Var of lvalue' * gotype * expression option * bool
+	| Type of identifier' * gotype
 [@@deriving sexp]
 and toplevel_declaration = 
 	| Global of declaration
-	| Func of identifier * signature list * gotype * block
+	| Func of identifier' * signature list * gotype * block
 [@@deriving sexp]
 and block = statement list
 [@@deriving sexp]
@@ -56,8 +84,8 @@ and statement_node =
 	| Decl of declaration list
 	| Expr of expression
 	| Block of block
-	| Assign of identifier list * expression list
-	| OpAssign of identifier * op_assign * expression
+	| Assign of lvalue' list * expression list
+	| OpAssign of lvalue * op_assign * expression
 	| IncDec of identifier * op_incdec
 	| Print of bool * expression list
 	| Return of expression option
@@ -74,23 +102,7 @@ and case =
 	| Case of statement_node * expression list * block
 	| Default of block
 [@@deriving sexp]
-and expression = operand annotated
-[@@deriving sexp]
-and operand =
-	| Op1 of (op1 * expression)
-	| Op2 of (op2 * expression * expression)
-	| Call of (identifier * expression list)
-	| Cast of (gotype * expression)
-	| L of literal
-	| V of identifier
-[@@deriving sexp]
-and literal =
-	| Bool of bool
-	| Rune of string
-	| Int of int
-	| Float64 of float
-	| String of string
-[@@deriving sexp]
+
 
 exception LexFailure of string
 exception SyntaxError of string

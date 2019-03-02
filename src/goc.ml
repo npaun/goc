@@ -17,7 +17,7 @@ let with_error_handling fn ok =
 		exit 1
     )
 
-let parse lexbuf = Parser.main Lexer.lex lexbuf
+let parse lexbuf = Parser.main Lexer.lex lexbuf |> Terminal.pass |> Lvalue.pass
 
 let main () = 
 	let lexbuf = load_text() in
@@ -26,7 +26,7 @@ let main () =
 		| "tokens" -> with_error_handling (fun () -> printf "%s\n" (Pretty.dump_tokens Lexer.lex lexbuf)) false
 		| "parse" -> with_error_handling (fun () -> parse lexbuf) true 
 		| "pretty" -> with_error_handling (fun () -> parse lexbuf |> Pretty.dump_ast |> printf "%s\n") false
-		| "dumpast" -> with_error_handling (fun () -> parse lexbuf |> Pretty.raw_ast |> printf "%s\n") false
+		| "dumpast" -> with_error_handling (fun () -> parse lexbuf |> Dumpast.dump |> printf "%s\n") false
 		| _ -> printf "Go away\n"
 
 let _ = main ()

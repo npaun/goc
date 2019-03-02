@@ -31,7 +31,6 @@ STILL TO DO:
 %token <string> RUNELIT
 %token <float> FLOATLIT
 %token <bool> BOOLLIT  
-%token TRUE FALSE 
 
 /* Go keywords, written in the order they are presented in the lang spec */
 %token BREAK DEFAULT FUNC INTERFACE SELECT
@@ -53,12 +52,9 @@ STILL TO DO:
 %token UMINUS
 %token UNDERSCORE /* blank identifier _ */
 
-%token EOF NOP
+%token EOF
 
-/* variable declaration */
-%token INT FLOAT BOOL RUNE STRING 
-
-/* https://golang.org/ref/spec#Operators */
+(*/* https://golang.org/ref/spec#Operators */
 /* BAND -> bitwise AND (&), etc */
 %right ASSIGN BASSIGN
 %left OR
@@ -68,6 +64,7 @@ STILL TO DO:
 %left TIMES DIV BAND
 %nonassoc LPAREN LBLOCK LSQUARE
 %nonassoc RPAREN RBLOCK RSQUARE
+*)
 
 %start main
 %type <Golite.ast> main
@@ -78,9 +75,10 @@ main: package toplevel EOF {Program($1,$2)}
 
 /******* DECLARATIONS *******/
 package: PACKAGE IDENT SEMI {Package $2}
+    | PACKAGE SEMI {throw_error "Parser - missing package name. Expected identifier." $startpos($2)}
     
 toplevel: 
-    | toplevel_decl SEMI toplevel {$3 @ (List.map (fun dcl -> annot dcl $startpos($1) $endpos($1)) $1)} 
+    | mapannot(toplevel_decl) SEMI toplevel {$1 @ $3} 
     | { [] }
 
 toplevel_decl:
@@ -93,11 +91,6 @@ toplevel_decl:
 /*************** TYPES **************/
 
 typ:
-    | INT       {`INT}
-    | FLOAT     {`FLOAT64}
-    | BOOL      {`BOOL}
-    | RUNE      {`RUNE}
-    | STRING    {`STRING}
     | IDENT     {`Type($1)} (* user defined *)
     | type_literal {$1}
     | error     {throw_error "Unknown/invalid type" $startpos($1)}
@@ -125,31 +118,35 @@ struct_signatures:
 /****** FUNCTION DECLARATIONS *******/
 
 function_decl:
-    | FUNC IDENT signature block     {[Func($2, $3, `VOID, $4)]}
-    | FUNC IDENT signature typ block {[Func($2, $3, $4, $5)]}
+    | FUNC identp signature block     {[Func($2, $3, `VOID, $4)]}
+    | FUNC identp signature typ block {[Func($2, $3, $4, $5)]}
 
 signature:
-	| LPAREN flatten(separated_list(COMMA, signature_ids)) RPAREN {$2}
+	| goargs(flatten(separated_list(COMMA,signature_ids))) {$1}
 
 signature_ids: 
-    | identifier_list typ {List.rev ((List.map (fun id -> (id, $2)) $1))}
+    | golist(IDENT) typ {List.map (fun id -> (id, $2)) $1}
     
 /***** VARIABLE DECLARATIONS *****/
+
+identp:
+| IDENT		{`V $1}
+| UNDERSCORE	{`Blank}
 
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-	| identifier_list COLASSIGN expr_list {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
+	| golist(lvaluep) COLASSIGN golist(expr) {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
 
 typed_var_decl:
     | VAR t_var_decl {$2}
     | t_var_decl {throw_error_expected "ill-formed variable declaration." "identifier" "var" $startpos($1)}
     
 t_var_decl:
-    | identifier_list typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
-	| identifier_list typ ASSIGN expr_list  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
-	| identifier_list ASSIGN expr_list      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
-    | LPAREN dist_var_decl RPAREN               {$2}
+    	| golist(lvaluep) typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
+	| golist(lvaluep) typ ASSIGN golist(expr)  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
+	| golist(lvaluep) ASSIGN golist(expr)      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
+    	| goargs(dist_var_decl)               {$1}
     
 dist_var_decl:
     | t_var_decl SEMI dist_var_decl {$1 @ $3}
@@ -158,11 +155,11 @@ dist_var_decl:
 /***** TYPE DECLARATIONS *******/
 
 type_decl:
-    | TYPE IDENT typ {[Type($2, $3)]}
-    | TYPE LPAREN dist_type_decl RPAREN {$3}
+    | TYPE identp typ {[Type($2, $3)]}
+    | TYPE goargs(dist_type_decl) {$2}
     
 dist_type_decl:
-    | IDENT typ SEMI dist_type_decl {Type($1, $2)::$4} 
+    | identp typ SEMI dist_type_decl {Type($1, $2)::$4} 
     | { [] }
 
 /****** STATEMENTS *********/
@@ -171,8 +168,7 @@ dist_type_decl:
 block: LBLOCK statements RBLOCK {$2}
 
 statements:
-	| stmt SEMI statements 	{List.rev ((annot $1 $startpos($1) $endpos($1))::$3)}
-	| eat_unimplemented SEMI statements {$3}
+	| annot(stmt) SEMI statements 	{$1::$3}
 	| SEMI statements	{$2}
 	| {[]}
     | error { throw_error "invalid statement" $startpos($1) }
@@ -196,17 +192,22 @@ simple_stmt:
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
 	| print_stmt		{$1}
-    | expr              {Expr $1}
+    | fun_call          {Expr (annot $1 $startpos($1) $endpos($1))}
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
-    | identifier_list ASSIGN expr_list {Assign($1,$3)}
+    | golist(lvaluep) ASSIGN golist(expr) {Assign($1,$3)}
 
-identifier_list:
-    | lst = separated_nonempty_list(COMMA, IDENT) { lst }
+
+lvaluep:
+| lvalue	{$1:lvalue :> lvalue'}
+| UNDERSCORE	{annot `Blank $startpos($1) $endpos($1)}
 
 op_assign_stmt:
-    | IDENT assign_op expr {OpAssign($1,$2,$3)}
+    | lvalue assign_op expr {OpAssign($1,$2,$3)}
+
+lvalue:
+| expr		{$1}
 
 assign_op: 
     | PASSIGN {`ADD} 
@@ -261,7 +262,7 @@ switch_cond:
 | {(Empty,None)}
 
 switch_case:
-| CASE expr_list COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
+| CASE golist(expr) COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
 | DEFAULT COLON statements {((Default($3)), ENDBREAK)}
 
 switch_body:
@@ -278,25 +279,24 @@ for_conds:
 
 /****** EXPRESSIONS ********/
 
-mandatory_arguments: delimited(LPAREN,expr_list,RPAREN) {$1}
+mandatory_arguments: goargs(golist(expr)) {$1}
 arguments:
 	| mandatory_arguments {$1}
 	| LPAREN RPAREN		{[]}
-expr_list: separated_nonempty_list(COMMA,expr) {$1}
 
 (* follows the go precedence system *)
 expr: expr1 {$1}
 
 expr1: 
-| expr1 OR expr2 {annot (Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
+| expr1 OR expr2 {annot (`Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
 | expr2		 {$1}
 
 expr2:
-| expr2 AND expr3 	{annot (Op2(`AND,$1,$3)) $startpos($1) $endpos($3)}
+| expr2 AND expr3 	{annot (`Op2(`AND,$1,$3)) $startpos($1) $endpos($3)}
 | expr3			{$1}
 
 expr3:
-| expr3 op_rel expr4	{annot (Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+| expr3 op_rel expr4	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
 | expr4			{$1}
 
 op_rel:
@@ -308,7 +308,7 @@ op_rel:
 | GEQ			{`GEQ} 
 
 expr4:
-| expr4 op_add expr5	{annot (Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+| expr4 op_add expr5	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
 | expr5			{$1}
 
 op_add:
@@ -318,7 +318,7 @@ op_add:
 | XOR			{`BXOR} 
 
 expr5:
-| expr5 op_mul expr_unary	{annot (Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+| expr5 op_mul expr_unary	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
 | expr_unary			{$1}
 
 op_mul:
@@ -331,7 +331,7 @@ op_mul:
 | ANDXOR		{`BANDNOT} 
 
 expr_unary:
-| op_unary expr_sub		{annot (Op1($1,$2)) $startpos($1) $endpos($2)}
+| op_unary expr_sub		{annot (`Op1($1,$2)) $startpos($1) $endpos($2)}
 | expr_sub			{$1}
 
 op_unary:
@@ -341,22 +341,27 @@ op_unary:
 | NOT			{`NOT}
 
 expr_sub:
-| LPAREN expr RPAREN		{$2}
-| expr_operand			{annot $1 $startpos($1) $endpos($1)}
+| goargs(expr)				{$1}
+| annot(expr_operand)			{$1}
 
 expr_operand:
-| IDENT				{V $1}
-| literal			{L $1}
+| IDENT				{`V $1}
+| literal			{`L $1}
 | fun_call			{$1}
+| annot(expr_operand) DOT IDENT	{`Selector($1,$3)}
 
 fun_call:
-| IDENT arguments		{Call($1,$2)} 
+| function_name  arguments		{`Call($1,$2)} 
+
+function_name:
+| IDENT 				{$1}
+| APPEND				{"append"}
+| LEN					{"len"}
+| CAP					{"cap"}
 
 literal:
 | STRINGLIT	{String $1}
 | INTLIT 	{Int $1}
 | BOOLLIT	{Bool $1}
-| TRUE      {Bool true}
-| FALSE     {Bool false}
 | FLOATLIT	{Float64 $1}
 | RUNELIT   {Rune $1}
