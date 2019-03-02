@@ -69,11 +69,18 @@ and string_of_switch_case d (c,fmt) = match c with
 and string_of_if_case d case = match case with
 		| Case(stmt, expr_lst, blck) -> "if " ^ (string_of_stmt d false (crt_stmt stmt) ^ "; ") ^ (string_of_lst expr_lst ", " string_of_expr) ^ " " ^ (string_of_block d blck)
 		| Default(blck) 						 -> string_of_block d blck
+and string_of_assn assn = 
+    let rec split acc lst = match lst with
+        | [] -> acc
+        | h::t -> let (lval, exp) = h in let (l, e) = acc in split (l@[lval], e@[exp]) t
+    in
+    let (lvals, exprs) = split ([], []) assn in
+    string_of_lst lvals ", " string_of_lvalue' ^ " = " ^ string_of_lst exprs ", " string_of_expr
 and string_of_stmt d tb stmt = match stmt.v with
 		| Decl(decl_lst)                    -> (crt_tab d tb) ^ (string_of_decl_list d decl_lst)
 		| Expr(expr)                        -> (crt_tab d tb) ^ string_of_expr expr
 		| Block(blck)                       -> string_of_block (d+1) blck
-		| Assign(assn_lst)                  -> (crt_tab d tb) ^ string_of_lst assn_lst ("\n" ^ (crt_tab d tb)) (fun assn -> let lval, expr = assn in string_of_lvalue' lval ^ " = " ^ string_of_expr expr)
+		| Assign(assn_lst)                  -> (crt_tab d tb) ^ string_of_assn assn_lst
         | OpAssign(id, op, expr)            -> (crt_tab d tb) ^ (string_of_expr id) ^ " " ^ (string_of_op_assign op) ^ " " ^ (string_of_expr expr)
 		| IncDec(expr, op)                  -> (crt_tab d tb) ^ string_of_expr expr ^ (match op with `INC -> "++" | `DEC -> "--")
 		| Print(b, expr_lst)                -> (crt_tab d tb) ^ (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")"
