@@ -1,13 +1,17 @@
+MENHIR_OPTS = --explain --stdlib '$(CURDIR)/menhir/share/menhir' -b parser common.mly
+COMMON_OPTS = -I weed -use-ocamlfind -use-menhir -cflags '-g' -lflags -'g' -menhir '$(CURDIR)/menhir/bin/menhir $(MENHIR_OPTS)' goc.native
 default: debug
 
 debug: prep
-	ocamlbuild  -I weed -I debug  -use-ocamlfind -pkg ppx_sexp_conv -pkg sexplib -use-menhir -menhir 'menhir --explain -b parser common.mly' -cflags '-g' -lflags '-g' goc.native
+	ocamlbuild  -I debug -pkg ppx_sexp_conv -pkg sexplib $(COMMON_OPTS) 
 prod: prep
-	ocamlbuild -I prod -use-ocamlfind -use-menhir -menhir 'menhir --explain -b parser common.mly' -cflags '-g' -lflags '-g' goc.native
+	ocamlbuild -I prod $(COMMON_OPTS) 
 clean:
-	-rm -r _build goc.native
-prep:
+	-rm -r _build goc.native menhir
+prep: menhir/bin/menhir
 	-mkdir -p _build
 	cp common.mly _build/
+menhir/bin/menhir:
+	./fix-menhir.sh
 setup:
 	opam install menhir sexplib ppx_sexp_conv ppx_deriving
