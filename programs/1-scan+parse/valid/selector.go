@@ -1,8 +1,7 @@
 package main
 
 func main() {
-	x.y
-	somefunc().x
-	somefunct().nested.x
-	"literal".x
+	x := somefunc().x
+	y := "literal".x
+	z := int(5+5).x
 }
