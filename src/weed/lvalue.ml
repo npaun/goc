@@ -27,6 +27,6 @@ and pass_case = function
 and pass_fallable_case = function
 | (case,mode) -> (pass_case case,mode)
 and pass_decl = function
-| Var({v = `V _}, _,_,false) | Var({v = `Blank},_,_,true) as ok -> ok
-| Var(any, _, _, false) -> raise (SyntaxError ("In typed variable declaration, unexpected " ^ (Pretty.string_of_lvalue' any) ^ " is not an identifier.")) 
-| any -> any (* other kinds of declarations do not need to be weeded right now *)
+    | Var({v = `V _}, _,_,false) | Var({v = `Blank},_,_,false) | Var({v = `Blank},_,_,true) as ok -> ok
+    | Var(any, _, _, false) -> raise (SyntaxError ("In typed variable declaration, unexpected " ^ (Pretty.string_of_lvalue' any) ^ " is not an identifier.")) 
+    | any -> any (* other kinds of declarations do not need to be weeded right now *) 

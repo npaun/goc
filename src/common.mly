@@ -11,5 +11,8 @@
 %public golist(X):
 | separated_nonempty_list(COMMA,X) {$1}
 
+%public gooptlist(X):
+| separated_list(COMMA,X) {$1}
+
 %public goargs(X):
 | delimited(LPAREN,X,RPAREN) {$1}

@@ -8,8 +8,19 @@ let annot node startpos endpos =
 	in
 	{ v = node; _start = pos_tuple startpos; _end = pos_tuple endpos; _debug = "Hi!"; _derived = None}  
     
+    
 let throw_error msg s = 
-    raise (SyntaxError ("Parser - " ^ msg ^ ", at line " ^ string_of_int s.pos_lnum ^ ", char " ^ string_of_int (s.pos_cnum - s.pos_bol + 1)))
+    raise (SyntaxError ("Parser - " ^ msg ^ ", at line " ^ string_of_int s.pos_lnum ^ ", char " ^ string_of_int (s.pos_cnum - s.pos_bol + 1)))    
+    
+let throw_error_expected msg actual expected s = 
+    raise (SyntaxError ("Parser - " ^ msg ^ "\n Unexpected " ^ actual ^ " at line " ^ string_of_int s.pos_lnum ^ ", char " ^ string_of_int (s.pos_cnum - s.pos_bol + 1) ^ "\n"
+                        ^ " expected " ^ expected))
+    
+let try_map f s =
+    try
+        f ()
+    with 
+    | Invalid_argument(arg) -> throw_error "Mismatch between length of LHS and RHS, each lvalue must be matched by exactly one expression." s
 %}
 
 (*****
@@ -44,6 +55,7 @@ STILL TO DO:
 %token DIV LSHIFT DASSIGN LSHASSIGN PLUSPLUS ASSIGN COLASSIGN COMMA SEMI
 %token MOD RSHIFT MODASSIGN RSHASSIGN MINUSMINUS NOT TRIPDOT DOT COLON
 %token ANDXOR ANDXORASSIGN
+%token UMINUS
 %token UNDERSCORE /* blank identifier _ */
 
 %token EOF
@@ -65,38 +77,42 @@ STILL TO DO:
 %%
 
 main: package toplevel EOF {Program($1,$2)}
+    | toplevel EOF { raise (SyntaxError "Parser - Missing package declaration at top of file.") }
 
 /******* DECLARATIONS *******/
 package: PACKAGE IDENT SEMI {Package $2}
-
+    | PACKAGE SEMI {throw_error "Parser - missing package name. Expected identifier." $startpos($2)}
+    
 toplevel: 
     | mapannot(toplevel_decl) SEMI toplevel {$1 @ $3} 
     | { [] }
 
 toplevel_decl:
-    	| function_decl  	{$1}
-    	| typed_var_decl 	{List.map (fun dcl -> Global dcl) $1}
-	| type_decl		{List.map (fun dcl -> Global dcl) $1}
-    	(* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
-	| error          	{throw_error "invalid top level declaration" $startpos($1)} 
+    | function_decl  {$1}
+    | typed_var_decl {List.rev (List.map (fun dcl -> Global dcl) $1)}
+	| type_decl	     {List.rev (List.map (fun dcl -> Global dcl) $1)} 
+    (* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
+    | error          {throw_error "invalid top level declaration" $startpos($1)} 
 
 /*************** TYPES **************/
 
 typ:
-    | IDENT     {`Type($1)} (* user defined *)
-    | type_literal {$1}
-    | error     {throw_error "Unknown/invalid type" $startpos($1)}
+    | IDENT         {`Type($1)}
+    | type_literal  {$1}
+    | error         {throw_error "Unknown/invalid type" $startpos($1)}
     
 type_literal:
-    | array_literal {`TypeLit($1)}
-    | slice_literal {`TypeLit($1)}
-    | struct_literal {`TypeLit($1)}
+    | array_literal     {`TypeLit($1)}
+    | slice_literal     {`TypeLit($1)}
+    | struct_literal    {`TypeLit($1)}
+    | error             {throw_error "Invalid type litteral, 
+        supported litterals are: [<int>]<name> for array, []<name> for slice, and <name> struct { <members> } for structs." $startpos($1)}
 
 array_literal:
-    | LSQUARE INTLIT RSQUARE typ {Array($2, $4)}
+    | LSQUARE INTLIT RSQUARE IDENT {Array($2, `Type $4)}
     
 slice_literal:
-    | LSQUARE RSQUARE typ {Slice($3)}
+    | LSQUARE RSQUARE IDENT {Slice(`Type $3)}
     
 struct_literal:
     | STRUCT LBLOCK struct_signatures RBLOCK {Struct($3)}
@@ -110,6 +126,7 @@ struct_signatures:
 function_decl:
     | FUNC identp signature block     {[Func($2, $3, `VOID, $4)]}
     | FUNC identp signature typ block {[Func($2, $3, $4, $5)]}
+    | identp signature block | identp signature typ block {throw_error_expected "Ill-formed function declaration." "identifier" "func" $startpos($1)}
 
 signature:
 	| goargs(flatten(separated_list(COMMA,signature_ids))) {$1}
@@ -119,23 +136,25 @@ signature_ids:
     
 /***** VARIABLE DECLARATIONS *****/
 
-identp:
-| IDENT		{`V $1}
-| UNDERSCORE	{`Blank}
+identp: 
+    | IDENT 		{`V $1}
+    | UNDERSCORE	{`Blank}
 
+identpp: annot(identp) {$1:ident'' :> lvalue'}    
+    
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-	| golist(lvaluep) COLASSIGN golist(expr) {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3}
+    | golist(lvaluep) COLASSIGN golist(expr) {try_map (fun () -> List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3) $startpos($1)} 
 
 typed_var_decl:
     | VAR t_var_decl {$2}
     
 t_var_decl:
-    	| golist(lvaluep) typ                   {List.map (fun id -> Var(id, $2, None, false)) $1}
-	| golist(lvaluep) typ ASSIGN golist(expr)  {List.map2 (fun id expr -> Var(id, $2, Some expr, false)) $1 $4}
-	| golist(lvaluep) ASSIGN golist(expr)      {List.map2 (fun id expr -> Var(id, `AUTO, Some expr, false)) $1 $3}
-    	| goargs(dist_var_decl)               {$1}
+    | golist(identpp) typ                      {List.map (fun id -> Var((id), $2, None, false)) $1}
+    | golist(identpp) typ ASSIGN golist(expr)  {try_map (fun () -> List.map2 (fun id expr -> Var((id), $2, Some expr, false)) $1 $4) $startpos($1)}
+	| golist(identpp) ASSIGN golist(expr)      {try_map (fun () -> List.map2 (fun id expr -> Var((id), `AUTO, Some expr, false)) $1 $3) $startpos($1)}
+    | goargs(dist_var_decl)                    {$1}
     
 dist_var_decl:
     | t_var_decl SEMI dist_var_decl {$1 @ $3}
@@ -160,8 +179,10 @@ statements:
 	| annot(stmt) SEMI statements 	{$1::$3}
 	| SEMI statements	{$2}
 	| {[]}
-    	| error { throw_error "invalid statement" $startpos($1) }
+    | error { throw_error "invalid statement" $startpos($1) }
 
+eat_unimplemented:
+	| DEFER {}
 
 stmt:
     | typed_var_decl	{Decl $1}
@@ -183,18 +204,17 @@ simple_stmt:
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
-    | golist(lvaluep) ASSIGN golist(expr) {Assign($1,$3)}
-
+    | golist(lvaluep) ASSIGN golist(expr) {Assign(try_map (fun () -> List.map2 (fun lval exp -> (lval, exp)) $1 $3) $startpos($1))} 
 
 lvaluep:
-| lvalue	{$1:lvalue :> lvalue'}
-| UNDERSCORE	{annot `Blank $startpos($1) $endpos($1)}
+    | lvalue    	{$1:lvalue :> lvalue'}
+    | UNDERSCORE	{annot `Blank $startpos($1) $endpos($1)}
 
 op_assign_stmt:
     | lvalue assign_op expr {OpAssign($1,$2,$3)}
 
 lvalue:
-| expr		{$1}
+    | expr		{$1}
 
 assign_op: 
     | PASSIGN {`ADD} 
@@ -210,14 +230,16 @@ assign_op:
     | ANDXORASSIGN {`BANDNOT}
 
 incdec_stmt:
-    | IDENT PLUSPLUS {IncDec($1,`INC)}
-    | IDENT MINUSMINUS {IncDec($1,`DEC)}
+    | expr PLUSPLUS {IncDec($1, `INC)}
+    | expr MINUSMINUS {IncDec($1, `DEC)}
 
 /***** PRINT ******/
 print_stmt:
-    | PRINT mandatory_arguments {Print(false, $2)}
-    | PRINTLN mandatory_arguments {Print(true, $2)}
+    | PRINT opt_arguments {Print(false, $2)}
+    | PRINTLN opt_arguments {Print(true, $2)}
 
+opt_arguments: goargs(gooptlist(expr)) {$1}
+    
 /**** RETURN ****/
 return_stmt:
     | RETURN {Return None}
@@ -225,44 +247,44 @@ return_stmt:
 
 /**** IF STATEMENT *****/
 if_stmt:
-| if_head			{If  $1}
+    | if_head			{If (List.rev $1)}
 
 if_head:
-| IF if_cond block if_tail	{let (c1,c2) = $2 in (Case (c1,c2,$3))::$4}
+    | IF if_cond block if_tail	{let (c1,c2) = $2 in (Case (c1,c2,$3))::$4}
 
 if_cond:
-| simple_stmt SEMI expr		{($1, [$3])}
-| expr				{(Empty, [$1])}
+    | simple_stmt SEMI expr		{($1, [$3])}
+    | expr				{(Empty, [$1])}
 
 if_tail:
-| ELSE if_head  {$2}
-| ELSE block	{[Default $2]}
-| {[]}
+    | ELSE if_head  {$2}
+    | ELSE block	{[Default $2]}
+    | {[]}
 
 /**** SWITCH STATEMENT ****/
 switch_stmt:
-| SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,$3)}
+    | SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,List.rev $3)}
 
 switch_cond:
-| expr      		        {(Empty, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
-| simple_stmt SEMI expr?    {($1,$3)}
-| {(Empty,None)}
+    | expr      		        {(Empty, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
+    | simple_stmt SEMI expr?    {($1,$3)}
+    | {(Empty,None)}
 
 switch_case:
-| CASE golist(expr) COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
-| DEFAULT COLON statements {((Default($3)), ENDBREAK)}
+    | CASE golist(expr) COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
+    | DEFAULT COLON statements {((Default($3)), ENDBREAK)}
 
 switch_body:
-| statements FALLTHROUGH SEMI* {($1,FALLTHROUGH)}
-| statements 			       {($1,ENDBREAK)}
+    | statements FALLTHROUGH SEMI* {($1,FALLTHROUGH)}
+    | statements 			       {($1,ENDBREAK)}
 
 /**** FOR STATEMENT *****/
 for_stmt:
-| FOR for_conds	block	{let (c1,c2,c3) = $2 in For(c1,c2,c3,$3)}
+    | FOR for_conds	block	{let (c1,c2,c3) = $2 in For(c1,c2,c3,$3)}
 
 for_conds:
-| expr? 		{(None,$1,None)}
-| simple_stmt? SEMI expr? SEMI simple_stmt? {($1,$3,$5)}
+    | expr? 		{(None,$1,None)}
+    | simple_stmt? SEMI expr? SEMI simple_stmt? {($1,$3,$5)}
 
 /****** EXPRESSIONS ********/
 
@@ -275,80 +297,84 @@ arguments:
 expr: expr1 {$1}
 
 expr1: 
-| expr1 OR expr2 {annot (`Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
-| expr2		 {$1}
+    | expr1 OR expr2 {annot (`Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
+    | expr2		 {$1}
 
 expr2:
-| expr2 AND expr3 	{annot (`Op2(`AND,$1,$3)) $startpos($1) $endpos($3)}
-| expr3			{$1}
+    | expr2 AND expr3 	{annot (`Op2(`AND,$1,$3)) $startpos($1) $endpos($3)}
+    | expr3			{$1}
 
 expr3:
-| expr3 op_rel expr4	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-| expr4			{$1}
+    | expr3 op_rel expr4	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | expr4			{$1}
 
 op_rel:
-| EQUAL			{`EQ}
-| NEQUAL		{`NEQ}
-| LESSER		{`LT}
-| GREATER		{`GT}
-| LEQ			{`LEQ}
-| GEQ			{`GEQ} 
+    | EQUAL			{`EQ}
+    | NEQUAL		{`NEQ}
+    | LESSER		{`LT}
+    | GREATER		{`GT}
+    | LEQ			{`LEQ}
+    | GEQ			{`GEQ} 
 
 expr4:
-| expr4 op_add expr5	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-| expr5			{$1}
+    | expr4 op_add expr5	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | expr5			{$1}
 
 op_add:
-| PLUS			{`ADD}
-| MINUS			{`SUB}
-| BOR			{`BOR}
-| XOR			{`BXOR} 
+    | PLUS			{`ADD}
+    | MINUS			{`SUB}
+    | BOR			{`BOR}
+    | XOR			{`BXOR} 
 
 expr5:
-| expr5 op_mul expr_unary	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-| expr_unary			{$1}
+    | expr5 op_mul expr_unary	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | expr_unary			{$1}
 
 op_mul:
-| TIMES			{`MUL}
-| DIV			{`DIV}
-| MOD			{`MOD}
-| LSHIFT		{`SL}
-| RSHIFT		{`SR}
-| BAND			{`BAND}
-| ANDXOR		{`BANDNOT} 
+    | TIMES			{`MUL}
+    | DIV			{`DIV}
+    | MOD			{`MOD}
+    | LSHIFT		{`SL}
+    | RSHIFT		{`SR}
+    | BAND			{`BAND}
+    | ANDXOR		{`BANDNOT} 
 
 expr_unary:
-| op_unary expr_sub		{annot (`Op1($1,$2)) $startpos($1) $endpos($2)}
-| expr_sub			{$1}
+    | op_unary expr_sub		{annot (`Op1($1,$2)) $startpos($1) $endpos($2)}
+    | expr_sub			{$1}
 
 op_unary:
-| PLUS			{`POS}
-| MINUS			{`NEG}
-| XOR			{`BNOT}
-| NOT			{`NOT}
+    | PLUS			{`POS}
+    | MINUS			{`NEG}
+    | XOR			{`BNOT}
+    | NOT			{`NOT}
 
 expr_sub:
-| goargs(expr)				{$1}
-| annot(expr_operand)			{$1}
+    | goargs(expr)		    {$1}
+    | annot(expr_operand)	{$1}
 
 expr_operand:
-| IDENT				{`V $1}
-| literal			{`L $1}
-| fun_call			{$1}
-| annot(expr_operand) DOT IDENT	{`Selector($1,$3)}
+    | IDENT				{`V $1}
+    | literal			{`L $1}
+    | index             {$1}
+    | fun_call			{$1}
+    | annot(expr_operand) DOT IDENT	{`Selector($1,$3)}
 
+index:
+    | IDENT LSQUARE expr RSQUARE {`Indexing($1, $3)}
+    
 fun_call:
-| function_name  arguments		{`Call($1,$2)} 
+    | function_name arguments {`Call($1,$2)} 
 
 function_name:
-| IDENT 				{$1}
-| APPEND				{"append"}
-| LEN					{"len"}
-| CAP					{"cap"}
+    | IDENT 	{$1}
+    | APPEND	{"append"}
+    | LEN		{"len"}
+    | CAP		{"cap"}
 
 literal:
-| STRINGLIT	{String $1}
-| INTLIT 	{Int $1}
-| BOOLLIT	{Bool $1}
-| FLOATLIT	{Float64 $1}
-| RUNELIT   {Rune $1}
+    | STRINGLIT	{String $1}
+    | INTLIT 	{Int $1}
+    | BOOLLIT	{Bool $1}
+    | FLOATLIT	{Float64 $1}
+    | RUNELIT   {Rune $1}
