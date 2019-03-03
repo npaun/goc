@@ -307,7 +307,7 @@ expr2:
 
 expr3:
     | expr3 op_rel expr4	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-    | op_rel                {throw_error "I'll formed expression, insufficient arguments for relational operator" $startpos($1)}
+    | op_rel                {throw_error "Ill-formed expression, insufficient arguments for relational operator" $startpos($1)}
     | expr4			{$1}
 
 op_rel:
@@ -320,7 +320,7 @@ op_rel:
 
 expr4:
     | expr4 op_add expr5	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-    | op_add                {throw_error "I'll formed expression, insufficient arguments for binary operator" $startpos($1)}
+    | op_add                {throw_error "Ill-formed expression, insufficient arguments for binary operator" $startpos($1)}
     | expr5			{$1}
 
 op_add:
@@ -331,7 +331,7 @@ op_add:
 
 expr5:
     | expr5 op_mul expr_unary	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-    | op_mul                {throw_error "I'll formed expression, insufficient arguments for binary operator" $startpos($1)}
+    | op_mul                {throw_error "Ill-formed expression, insufficient arguments for binary operator" $startpos($1)}
     | expr_unary			{$1}
 
 op_mul:
