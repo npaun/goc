@@ -106,7 +106,7 @@ and string_of_stmt d tb stmt = match stmt.v with
             | `Cast(typ, e)    		-> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
             | `V(id)           		-> id
             | `Selector(expr, id)	-> (string_of_expr expr) ^ "." ^ id
-            | `Indexing(id, expr)   -> id ^ "[" ^ string_of_expr expr ^ "]"
+            | `Indexing(id, expr)   -> (string_of_expr expr) ^ "[" ^ string_of_expr expr ^ "]"
             | `L(lit)          		-> (
                 match lit with
                 | Bool(b) -> string_of_bool b

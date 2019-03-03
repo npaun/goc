@@ -49,7 +49,7 @@ and operand = [
 	| `Cast of (gotype * expression)
 	| `Selector of (expression * identifier)
 	| `L of literal
-    | `Indexing of (identifier * expression)
+    	| `Indexing of (expression * expression)
 	|  tagged_identifier ]
 [@@deriving sexp]
 and literal =

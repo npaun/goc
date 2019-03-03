@@ -89,7 +89,7 @@ toplevel:
 toplevel_decl:
     | function_decl  {$1}
     | typed_var_decl {List.map (fun dcl -> Global dcl) $1}
-	| type_decl	     {List.map (fun dcl -> Global dcl) $1} 
+    | type_decl	     {List.map (fun dcl -> Global dcl) $1} 
     (* this is kind of a "catch-all" solution, it will catch any parsing error that doesn't already have an error defined *)
     | error          {throw_error "invalid top level declaration" $startpos($1)} 
 
@@ -104,8 +104,6 @@ type_literal:
     | array_literal     {`TypeLit($1)}
     | slice_literal     {`TypeLit($1)}
     | struct_literal    {`TypeLit($1)}
-    | error             {throw_error "Invalid type litteral, 
-        supported litterals are: [<int>]<name> for array, []<name> for slice, and <name> struct { <members> } for structs." $startpos($1)}
 
 array_literal:
     | LSQUARE INTLIT RSQUARE IDENT {Array($2, `Type $4)}
@@ -172,17 +170,17 @@ dist_type_decl:
 /****** STATEMENTS *********/
 
 /** TODO: Deal with empty statements **/
-block: LBLOCK statements RBLOCK {$2}
+block: 
+| LBLOCK statements RBLOCK {$2}
+| LBLOCK statements EOF {throw_error "unterminated block" $startpos($3) }
 
 statements:
 	| annot(stmt) SEMI statements 	{$1::$3}
 	| SEMI statements	{$2}
 	| {[]}
-    | EOF   {throw_error "End of file in open block" $startpos($1)}
-    | error {throw_error "invalid statement" $startpos($1) }
 
 stmt:
-    | typed_var_decl	{Decl $1}
+    	| typed_var_decl	{Decl $1}
 	| block			    {Block $1}
 	| simple_stmt		{$1}
 	| return_stmt		{$1}
@@ -191,13 +189,14 @@ stmt:
 	| for_stmt		    {$1}
 	| BREAK			    {Break}
 	| CONTINUE		    {Continue}
+	| error				{throw_error "not a statement" $startpos($1) }
 simple_stmt:
 	| assign_stmt		{$1} 
 	| short_var_decl	{Decl $1}
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
 	| print_stmt		{$1}
-    | fun_call          {Expr (annot $1 $startpos($1) $endpos($1))}
+    	| fun_call          	{Expr (annot $1 $startpos($1) $endpos($1))}
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
@@ -235,8 +234,9 @@ print_stmt:
     | PRINT opt_arguments {Print(false, $2)}
     | PRINTLN opt_arguments {Print(true, $2)}
 
-opt_arguments: goargs(gooptlist(expr)) {$1}
-    
+opt_arguments:
+| goargs(gooptlist(expr)) {$1}
+| error	{throw_error "Arguments required" $startpos} 
 /**** RETURN ****/
 return_stmt:
     | RETURN {Return None}
@@ -257,6 +257,7 @@ if_cond:
 if_tail:
     | ELSE if_head  {$2}
     | ELSE block	{[Default $2]}
+    | ELSE error	{throw_error "Only an if clause or a block may follow an else"  $startpos($2) }
     | {[]}
 
 /**** SWITCH STATEMENT ****/
@@ -271,8 +272,7 @@ switch_cond:
 switch_case:
     | CASE golist(expr) COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
     | DEFAULT COLON statements {((Default($3)), ENDBREAK)}
-    | error {throw_error "Ill-formed switch case, expected expression" $startpos($1)}
-
+    | CASE error | DEFAULT error {throw_error "Ill-formed switch case, expected expression" $startpos($1)}
 switch_body:
     | statements FALLTHROUGH SEMI* {($1,FALLTHROUGH)}
     | statements 			       {($1,ENDBREAK)}
@@ -285,17 +285,16 @@ for_stmt:
 for_conds:
     | expr? 		{(None,$1,None)}
     | simple_stmt? SEMI expr? SEMI simple_stmt? {($1,$3,$5)}
-
 /****** EXPRESSIONS ********/
 
 mandatory_arguments: goargs(golist(expr)) {$1}
 arguments:
 	| mandatory_arguments {$1}
 	| LPAREN RPAREN		{[]}
+	| LPAREN error			{throw_error "Invalid arguments" $startpos}
 
 (* follows the go precedence system *)
 expr: expr1 {$1}
-    | error {throw_error "Ill-formed expression" $startpos($1)}
 
 expr1: 
     | expr1 OR expr2 {annot (`Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
@@ -307,7 +306,6 @@ expr2:
 
 expr3:
     | expr3 op_rel expr4	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-    | op_rel                {throw_error "Ill-formed expression, insufficient arguments for relational operator" $startpos($1)}
     | expr4			{$1}
 
 op_rel:
@@ -320,7 +318,6 @@ op_rel:
 
 expr4:
     | expr4 op_add expr5	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-    | op_add                {throw_error "Ill-formed expression, insufficient arguments for binary operator" $startpos($1)}
     | expr5			{$1}
 
 op_add:
@@ -331,7 +328,6 @@ op_add:
 
 expr5:
     | expr5 op_mul expr_unary	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
-    | op_mul                {throw_error "Ill-formed expression, insufficient arguments for binary operator" $startpos($1)}
     | expr_unary			{$1}
 
 op_mul:
@@ -346,7 +342,7 @@ op_mul:
 expr_unary:
     | op_unary expr_sub		{annot (`Op1($1,$2)) $startpos($1) $endpos($2)}
     | expr_sub			{$1}
-
+    | op_rel | op_mul |  AND | OR {throw_error "Insufficient arguments to binary operator" $startpos($1) }
 op_unary:
     | PLUS			{`POS}
     | MINUS			{`NEG}
@@ -356,6 +352,8 @@ op_unary:
 expr_sub:
     | goargs(expr)		    {$1}
     | annot(expr_operand)	{$1}
+    | LPAREN RPAREN				{throw_error "Empty sub-expression" $startpos($1) }
+    | LPAREN error				{throw_error "Invalid expression" $startpos($1) }
 
 expr_operand:
     | IDENT				{`V $1}
@@ -363,10 +361,10 @@ expr_operand:
     | index             {$1}
     | fun_call			{$1}
     | annot(expr_operand) DOT IDENT	{`Selector($1,$3)}
-
+    | annot(expr_operand) DOT error	{throw_error "Only an field name may be referred to by a selector" $startpos($3)}
 index:
-    | IDENT LSQUARE expr RSQUARE {`Indexing($1, $3)}
-    
+    | annot(expr_operand) LSQUARE expr RSQUARE {`Indexing($1, $3)}
+    | annot(expr_operand) LSQUARE error	{throw_error "Invalid expression as index" $startpos($3)}
 fun_call:
     | function_name arguments {`Call($1,$2)} 
 
