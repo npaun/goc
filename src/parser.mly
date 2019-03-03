@@ -178,7 +178,8 @@ statements:
 	| annot(stmt) SEMI statements 	{$1::$3}
 	| SEMI statements	{$2}
 	| {[]}
-    | error { throw_error "invalid statement" $startpos($1) }
+    | EOF   {throw_error "End of file in open block" $startpos($1)}
+    | error {throw_error "invalid statement" $startpos($1) }
 
 stmt:
     | typed_var_decl	{Decl $1}
@@ -240,6 +241,7 @@ opt_arguments: goargs(gooptlist(expr)) {$1}
 return_stmt:
     | RETURN {Return None}
     | RETURN expr {Return (Some $2)}
+    | error {throw_error "Ill-formed return statement, can return at most one expression" $startpos($1)}
 
 /**** IF STATEMENT *****/
 if_stmt:
@@ -269,6 +271,7 @@ switch_cond:
 switch_case:
     | CASE golist(expr) COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
     | DEFAULT COLON statements {((Default($3)), ENDBREAK)}
+    | error {throw_error "Ill-formed switch case, expected expression" $startpos($1)}
 
 switch_body:
     | statements FALLTHROUGH SEMI* {($1,FALLTHROUGH)}
@@ -277,6 +280,7 @@ switch_body:
 /**** FOR STATEMENT *****/
 for_stmt:
     | FOR for_conds	block	{let (c1,c2,c3) = $2 in For(c1,c2,c3,$3)}
+    | FOR for_conds error   {throw_error "Ill-formed for statement, block expected after condition" $endpos($2)}
 
 for_conds:
     | expr? 		{(None,$1,None)}
@@ -291,6 +295,7 @@ arguments:
 
 (* follows the go precedence system *)
 expr: expr1 {$1}
+    | error {throw_error "Ill-formed expression" $startpos($1)}
 
 expr1: 
     | expr1 OR expr2 {annot (`Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
@@ -302,6 +307,7 @@ expr2:
 
 expr3:
     | expr3 op_rel expr4	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | op_rel                {throw_error "I'll formed expression, insufficient arguments for relational operator" $startpos($1)}
     | expr4			{$1}
 
 op_rel:
@@ -314,6 +320,7 @@ op_rel:
 
 expr4:
     | expr4 op_add expr5	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | op_add                {throw_error "I'll formed expression, insufficient arguments for binary operator" $startpos($1)}
     | expr5			{$1}
 
 op_add:
@@ -324,6 +331,7 @@ op_add:
 
 expr5:
     | expr5 op_mul expr_unary	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | op_mul                {throw_error "I'll formed expression, insufficient arguments for binary operator" $startpos($1)}
     | expr_unary			{$1}
 
 op_mul:
