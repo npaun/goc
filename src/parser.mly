@@ -241,7 +241,7 @@ opt_arguments: goargs(gooptlist(expr)) {$1}
 return_stmt:
     | RETURN {Return None}
     | RETURN expr {Return (Some $2)}
-    | error {throw_error "Ill-formed return statement, can return at most one expression" $startpos($1)}
+    | RETURN error {throw_error "Ill-formed return statement, can return at most one expression" $startpos($1)}
 
 /**** IF STATEMENT *****/
 if_stmt:
