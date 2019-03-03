@@ -152,7 +152,6 @@ t_var_decl:
     | golist(identpp) typ ASSIGN golist(expr)  {try_map (fun () -> List.map2 (fun id expr -> Var((id), $2, Some expr, false)) $1 $4) $startpos($1)}
 	| golist(identpp) ASSIGN golist(expr)      {try_map (fun () -> List.map2 (fun id expr -> Var((id), `AUTO, Some expr, false)) $1 $3) $startpos($1)}
     | goargs(dist_var_decl)                    {$1}
-    
 dist_var_decl:
     | t_var_decl SEMI dist_var_decl {$1 @ $3}
     | { [] }
@@ -208,7 +207,8 @@ lvaluep:
 
 op_assign_stmt:
     | lvalue assign_op expr {OpAssign($1,$2,$3)}
-
+    | UNDERSCORE assign_op  { throw_error "You may not modify the blank variable" $startpos }
+     
 lvalue:
     | expr		{$1}
 
@@ -253,7 +253,7 @@ if_head:
 if_cond:
     | simple_stmt SEMI expr		{($1, [$3])}
     | expr				{(Empty, [$1])}
-
+    | error SEMI			{throw_error "Only a simple statement may be used in if initialization" $startpos($1)}
 if_tail:
     | ELSE if_head  {$2}
     | ELSE block	{[Default $2]}
@@ -267,6 +267,7 @@ switch_stmt:
 switch_cond:
     | expr      		        {(Empty, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
     | simple_stmt SEMI expr?    {($1,$3)}
+    | error SEMI		{throw_error "Only a simple statement may be used in switch-initialization" $startpos}
     | {(Empty,None)}
 
 switch_case:
@@ -298,14 +299,17 @@ expr: expr1 {$1}
 
 expr1: 
     | expr1 OR expr2 {annot (`Op2(`OR, $1, $3)) $startpos($1) $endpos($3)}
+    | expr1 OR error	{throw_error "RHS argument to operator invalid" $startpos($3)}
     | expr2		 {$1}
 
 expr2:
     | expr2 AND expr3 	{annot (`Op2(`AND,$1,$3)) $startpos($1) $endpos($3)}
+    | expr2 AND error	{throw_error "RHS argument to operator invalid" $startpos($3)}
     | expr3			{$1}
 
 expr3:
     | expr3 op_rel expr4	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | expr3 op_rel error	{throw_error "RHS argument to operator invalid" $startpos($3)}
     | expr4			{$1}
 
 op_rel:
@@ -318,6 +322,7 @@ op_rel:
 
 expr4:
     | expr4 op_add expr5	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | expr4 op_add error	{throw_error "RHS argument to operator invalid" $startpos($3)}
     | expr5			{$1}
 
 op_add:
@@ -328,6 +333,7 @@ op_add:
 
 expr5:
     | expr5 op_mul expr_unary	{annot (`Op2($2,$1,$3)) $startpos($1) $endpos($3)}
+    | expr5 op_mul error	{throw_error "RHS argument to operator invalid" $startpos($3)}
     | expr_unary			{$1}
 
 op_mul:
@@ -362,6 +368,7 @@ expr_operand:
     | fun_call			{$1}
     | annot(expr_operand) DOT IDENT	{`Selector($1,$3)}
     | annot(expr_operand) DOT error	{throw_error "Only an field name may be referred to by a selector" $startpos($3)}
+
 index:
     | annot(expr_operand) LSQUARE expr RSQUARE {`Indexing($1, $3)}
     | annot(expr_operand) LSQUARE error	{throw_error "Invalid expression as index" $startpos($3)}
