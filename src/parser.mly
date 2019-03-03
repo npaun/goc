@@ -20,7 +20,7 @@ let try_map f s =
     try
         f ()
     with 
-    | Invalid_argument(arg) -> throw_error "Mismatch between length of LHS and RHS, each lvalue must be matched by exactly one expression." s
+    | Invalid_argument(arg) -> throw_error "Mismatch between length of LHS and RHS, each lvalue must be matched by exactly one expression" s
 %}
 
 (*****
