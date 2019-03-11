@@ -102,11 +102,11 @@ and string_of_stmt d tb stmt = match stmt.v with
 		and string_of_expr expr = match expr.v with
             | `Op1(op, e)      		-> "(" ^ string_of_op1 op ^ string_of_expr e ^ ")"
             | `Op2(op, e1, e2) 		-> "(" ^ string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2 ^ ")"
-            | `Call(id, e_lst) 		-> id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
+            | `Call(id, e_lst) 		-> string_of_expr id ^ "(" ^ (string_of_lst e_lst ", " string_of_expr) ^ ")"
             | `Cast(typ, e)    		-> string_of_typ typ ^ "(" ^ string_of_expr e ^ ")"
             | `V(id)           		-> id
             | `Selector(expr, id)	-> (string_of_expr expr) ^ "." ^ id
-            | `Indexing(id, expr)   -> (string_of_expr expr) ^ "[" ^ string_of_expr expr ^ "]"
+            | `Indexing(id, expr)   -> (string_of_expr id) ^ "[" ^ string_of_expr expr ^ "]"
             | `L(lit)          		-> (
                 match lit with
                 | Bool(b) -> string_of_bool b

@@ -96,9 +96,10 @@ toplevel_decl:
 /*************** TYPES **************/
 
 typ:
-    | IDENT         {`Type($1)}
-    | type_literal  {$1}
-    | error         {throw_error "Unknown/invalid type" $startpos($1)}
+    | IDENT             {`Type($1)}
+    | type_literal      {$1}
+    | LPAREN typ RPAREN {$2}
+    | error             {throw_error "Unknown/invalid type" $startpos($1)}
     
 type_literal:
     | array_literal     {`TypeLit($1)}
@@ -106,10 +107,12 @@ type_literal:
     | struct_literal    {`TypeLit($1)}
 
 array_literal:
-    | LSQUARE INTLIT RSQUARE IDENT {Array($2, `Type $4)}
+    (*| LSQUARE INTLIT RSQUARE IDENT {Array($2, `Type $4)}*)
+    | LSQUARE INTLIT RSQUARE typ {Array($2, $4)}
     
 slice_literal:
-    | LSQUARE RSQUARE IDENT {Slice(`Type $3)}
+    | LSQUARE RSQUARE typ           {Slice($3)}
+    | LSQUARE RSQUARE slice_literal {Slice(`TypeLit($3))}
     
 struct_literal:
     | STRUCT LBLOCK struct_signatures RBLOCK {Struct($3)}
@@ -142,7 +145,7 @@ identpp: annot(identp) {$1:ident'' :> lvalue'}
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-    | golist(lvaluep) COLASSIGN golist(expr) {try_map (fun () -> List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3) $startpos($1)} 
+    | golist(identpp) COLASSIGN golist(expr) {try_map (fun () -> List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3) $startpos($1)} 
 
 typed_var_decl:
     | VAR t_var_decl {$2}
@@ -179,7 +182,7 @@ statements:
 	| {[]}
 
 stmt:
-    	| typed_var_decl	{Decl $1}
+    | typed_var_decl	{Decl $1}
 	| block			    {Block $1}
 	| simple_stmt		{$1}
 	| return_stmt		{$1}
@@ -191,12 +194,12 @@ stmt:
 	| print_stmt		{$1}
 	| error				{throw_error "not a statement" $startpos($1) }
 simple_stmt:
+    | fun_call          {Expr (annot $1 $startpos($1) $endpos($1))}
 	| assign_stmt		{$1} 
 	| short_var_decl	{Decl $1}
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
 	(*| print_stmt		{$1}*)
-    | fun_call          	{Expr (annot $1 $startpos($1) $endpos($1))}
     
 (* Used explicitly by the for-statements, since the last simple_stmt can't be a short-var-decl and this is much simpler than a weeding phase*)    
 post_stmt:
@@ -381,9 +384,12 @@ expr_operand:
 index:
     | annot(expr_operand) LSQUARE expr RSQUARE {`Indexing($1, $3)}
     | annot(expr_operand) LSQUARE error	{throw_error "Invalid expression as index" $startpos($3)}
+    
 fun_call:
-    | function_name arguments {`Call($1,$2)} 
-
+    | fun_name arguments {`Call($1,$2)}
+fun_name:
+    | expr_sub      {$1}
+    | function_name {annot (`V $1) $startpos($1) $endpos($1)}
 function_name:
     | IDENT 	{$1}
     | APPEND	{"append"}
