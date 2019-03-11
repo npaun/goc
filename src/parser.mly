@@ -188,14 +188,22 @@ stmt:
 	| for_stmt		    {$1}
 	| BREAK			    {Break}
 	| CONTINUE		    {Continue}
+	| print_stmt		{$1}
 	| error				{throw_error "not a statement" $startpos($1) }
 simple_stmt:
 	| assign_stmt		{$1} 
 	| short_var_decl	{Decl $1}
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
-	| print_stmt		{$1}
-    	| fun_call          	{Expr (annot $1 $startpos($1) $endpos($1))}
+	(*| print_stmt		{$1}*)
+    | fun_call          	{Expr (annot $1 $startpos($1) $endpos($1))}
+    
+(* Used explicitly by the for-statements, since the last simple_stmt can't be a short-var-decl and this is much simpler than a weeding phase*)    
+post_stmt:
+	| assign_stmt		{$1} 
+	| op_assign_stmt	{$1}
+	| incdec_stmt		{$1}
+    | fun_call          {Expr (annot $1 $startpos($1) $endpos($1))}
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
@@ -285,7 +293,8 @@ for_stmt:
 
 for_conds:
     | expr? 		{(None,$1,None)}
-    | simple_stmt? SEMI expr? SEMI simple_stmt? {($1,$3,$5)}
+    | simple_stmt? SEMI expr? SEMI post_stmt? {($1,$3,$5)}
+
 /****** EXPRESSIONS ********/
 
 mandatory_arguments: goargs(golist(expr)) {$1}

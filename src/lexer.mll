@@ -54,10 +54,10 @@ let decimal_digit = ['0'-'9']
 let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
 
 let char = ['a'-'z' 'A'-'Z' '0'-'9'
-	'`' '~' '!' '@' '#' '$' '%' '^'  '&' '*' '(' ')' '-' '_' '=' '+'
-	'[' ']' '{' '}' '|' ';' ':'  '\'' ',' '<' '.' '>' '/' '?' ' ']
+	'~' '!' '@' '#' '$' '%' '^'  '&' '*' '(' ')' '-' '_' '=' '+'
+	'[' ']' '{' '}' '|' ';' ':' ',' '<' '.' '>' '/' '?' ' ']
 
-let escaped_char = '\\' ['a' 'b' 'f' 'n' 'r' 't' 'v' '\\' ''']
+let escaped_char = '\\' ['a' 'b' 'f' 'n' 'r' 't' 'v' '\\' '"' ''' '`']
 
 
 rule lex = parse
@@ -140,7 +140,7 @@ rule lex = parse
     | decimal_digit*'.'decimal_digit* as lxm                  { insert_semi_up(); FLOATLIT(float_of_string lxm) } 
     | ''' (char | escaped_char) '''                           { insert_semi_up(); RUNELIT (Lexing.lexeme lexbuf) }
     | '"' (char | escaped_char)* '"'                          { insert_semi_up(); STRINGLIT(Lexing.lexeme lexbuf) }    
-    | '`' (char | '\\')* '`'                                  { insert_semi_up(); STRINGLIT(Lexing.lexeme lexbuf) }
+    | '`' (char | escaped_char )* '`'                                  { insert_semi_up(); STRINGLIT(Lexing.lexeme lexbuf) }
     | ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '_' '0'-'9']* as tok
      {
          try
@@ -159,3 +159,4 @@ and block_comment hit_eol = parse
               | _, _ ->
                   lex lexbuf }
     | _ { block_comment hit_eol lexbuf }
+    | eof { raise (Golite.LexFailure ("SyntaxError: EOF in block comment"))}
