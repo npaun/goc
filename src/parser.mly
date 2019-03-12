@@ -145,7 +145,7 @@ identpp: annot(identp) {$1:ident'' :> lvalue'}
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-    | golist(identpp) COLASSIGN golist(expr) {try_map (fun () -> List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3) $startpos($1)} 
+    | golist(lvaluep) COLASSIGN golist(expr) {try_map (fun () -> List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3) $startpos($1)} 
 
 typed_var_decl:
     | VAR t_var_decl {$2}
