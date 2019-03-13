@@ -22,7 +22,7 @@ let try_map f s =
     with 
     | Invalid_argument(arg) -> throw_error "Mismatch between length of LHS and RHS, each lvalue must be matched by exactly one expression" s
     
-let weed_fun_call fun_name args pos =
+let weed_builtin_call fun_name args pos =
     match fun_name.v with
     | `V(n) -> (
         match n with 
@@ -32,6 +32,19 @@ let weed_fun_call fun_name args pos =
         | _ -> `Call(fun_name, args)
     )
     | _ -> `Call(fun_name, args)
+    
+let weed_exprstmt_funcall func startpos endpos = 
+    match func with
+    | `Call(fun_name, _) -> (
+        match fun_name.v with
+        | `V(n) -> (
+            match n with 
+            | "append" | "len" | "cap" -> throw_error "Builtin functions are not allowed as expression statements" startpos
+            | _ -> Expr (annot (func) startpos endpos)
+        )
+        | _ -> Expr (annot (func) startpos endpos)
+    )
+    | _ -> Expr (annot func startpos endpos)
 %}
 
 (*****
@@ -89,14 +102,14 @@ STILL TO DO:
 main: 
     (* Temporary hack to get around missing semicolon insertion when there's only a package decl
      * followed by a comment *)
-    | package                       {Program($1, [])}
+    | package EOF                   {Program($1, [])}
     | package SEMI toplevel EOF     {Program($1,$3)}
     | toplevel EOF                  {raise (SyntaxError "Parser - Missing package declaration at top of file.")}
 
 /******* DECLARATIONS *******/
 package: 
     | PACKAGE IDENT  {Package $2}
-    | PACKAGE SEMI {throw_error "Parser - missing package name. Expected identifier." $startpos($2)}
+    | PACKAGE {throw_error "Parser - missing package name. Expected identifier." $endpos($1)}
     
 toplevel: 
     | mapannot(toplevel_decl) SEMI toplevel {$1 @ $3}
@@ -160,7 +173,8 @@ identpp: annot(identp) {$1:ident'' :> lvalue'}
 (* TODO: validate that id_list and expr_list have same length? *)    
 short_var_decl:
 	(* TODO: Emit the list of variable declarations *)
-    | golist(lvaluep) COLASSIGN golist(expr) {try_map (fun () -> List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3) $startpos($1)} 
+    (*| golist(lvaluep) COLASSIGN golist(expr) {try_map (fun () -> List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3) $startpos($1)} *)
+    | golist(identpp) COLASSIGN golist(expr) {try_map (fun () -> List.map2 (fun id expr -> Var(id, `AUTO, Some expr, true)) $1 $3) $startpos($1)} 
 
 typed_var_decl:
     | VAR t_var_decl {$2}
@@ -210,7 +224,7 @@ stmt:
 	| print_stmt		{$1}
 	| error				{throw_error "not a statement" $startpos($1) }
 simple_stmt:
-    | fun_call          {Expr (annot $1 $startpos($1) $endpos($1))}
+    | fun_call          {weed_exprstmt_funcall $1 $startpos($1) $endpos($1)}
 	| assign_stmt		{$1} 
 	| short_var_decl	{Decl $1}
 	| op_assign_stmt	{$1}
@@ -222,11 +236,16 @@ post_stmt:
 	| assign_stmt		{$1} 
 	| op_assign_stmt	{$1}
 	| incdec_stmt		{$1}
-    | fun_call          {Expr (annot $1 $startpos($1) $endpos($1))}
+    | fun_call          {weed_exprstmt_funcall $1 $startpos($1) $endpos($1)}
 
 /**** ASSIGNMENT-RELATED STATEMENTS ******/
 assign_stmt:
-    | golist(lvaluep) ASSIGN golist(expr) {Assign(try_map (fun () -> List.map2 (fun lval exp -> (lval, exp)) $1 $3) $startpos($1))} 
+    | special_rule ASSIGN golist(expr) {Assign(try_map (fun () -> List.map2 (fun lval exp -> (lval, exp)) $1 $3) $startpos($1))} 
+    
+(* this is very weird but it works *)
+special_rule:    
+    | golist(lvaluep) {$1}
+    | golist(identpp) {$1}
 
 lvaluep:
     | lvalue    	{$1:lvalue :> lvalue'}
@@ -404,7 +423,7 @@ index:
     | annot(expr_operand) LSQUARE error	{throw_error "Invalid expression as index" $startpos($3)}
     
 fun_call:
-    | fun_name arguments {weed_fun_call $1 $2 $startpos($1)}
+    | fun_name arguments {weed_builtin_call $1 $2 $startpos($1)}
 fun_name:
     | expr_sub      {$1}
     | function_name {annot (`V $1) $startpos($1) $endpos($1)}
