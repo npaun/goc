@@ -13,7 +13,8 @@ let with_error_handling fn ok =
 	) with
 	| Golite.SyntaxError message
 	| Golite.LexFailure message 
-    | Symtbl.SymbolErr message ->  (
+	| Symtbl.SymbolErr message 
+	| Symtbl.SymbolInvInputErr message ->  (
 		fprintf stderr "Error: %s\n" message;
 		exit 1
     )
@@ -32,7 +33,7 @@ let main () =
 		| "parse" -> with_error_handling (fun () -> parse lexbuf) true 
 		| "pretty" -> with_error_handling (fun () -> parse lexbuf |> Pretty.dump_ast |> printf "%s\n") false
 		| "dumpast" -> with_error_handling (fun () -> parse lexbuf |> Dumpast.dump |> printf "%s\n") false
-        | "symbol" -> with_error_handling (fun () -> build_symtbl) true
+		| "symbol" -> with_error_handling (fun () -> build_symtbl) true
 		| _ -> printf "Go away\n"
 
 let _ = main ()
