@@ -82,4 +82,13 @@ let scope_tbl parent =
     let _ = add_child parent newtbl in
     newtbl
 
+let rec sym_ast ast symtbl = match ast with
+    | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
+and sym_toplvl toplvl symtbl = match toplvl.v with
+    | Global(decl) -> (match decl with
+        | Var(lhs, `AUTO, Some expr, _) -> (match lhs.v with
+            | `V(id) -> put_symbol symtbl (make_symbol id Var `AUTO (Stmtnode({v: decl; _debug = toplvl._debug; _start = toplvl._start; _end = toplvl._end; _derived = toplvl._derived})))
+            | _      -> raise (SymbolError "Variable declaration with non-identifier lhs given to symbol table")
+        )
+    )
 
