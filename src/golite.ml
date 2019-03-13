@@ -45,7 +45,7 @@ type expression = operand annotated
 and operand = [
 	| `Op1 of (op1 * expression)
 	| `Op2 of (op2 * expression * expression)
-	| `Call of ((*identifier*)expression * expression list)
+	| `Call of (expression * expression list)
 	| `Cast of (gotype * expression)
 	| `Selector of (expression * identifier)
 	| `L of literal

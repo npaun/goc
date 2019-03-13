@@ -21,6 +21,17 @@ let try_map f s =
         f ()
     with 
     | Invalid_argument(arg) -> throw_error "Mismatch between length of LHS and RHS, each lvalue must be matched by exactly one expression" s
+    
+let weed_fun_call fun_name args pos =
+    match fun_name.v with
+    | `V(n) -> (
+        match n with 
+        | "append" -> if List.length args = 2 then `Call(fun_name, args) else throw_error "Builtin function 'append' takes exactly 2 arguments" pos
+        | "len" -> if List.length args = 1 then `Call(fun_name, args) else throw_error "Builtin function 'len' takes exactly 1 arguments" pos
+        | "cap" -> if List.length args = 1 then `Call(fun_name, args) else throw_error "Builtin function 'cap' takes exactly 1 arguments" pos
+        | _ -> `Call(fun_name, args)
+    )
+    | _ -> `Call(fun_name, args)
 %}
 
 (*****
@@ -75,16 +86,21 @@ STILL TO DO:
 %type <Golite.ast> main
 %%
 
-main: package toplevel EOF {Program($1,$2)}
-    | toplevel EOF { raise (SyntaxError "Parser - Missing package declaration at top of file.") }
+main: 
+    (* Temporary hack to get around missing semicolon insertion when there's only a package decl
+     * followed by a comment *)
+    | package                       {Program($1, [])}
+    | package SEMI toplevel EOF     {Program($1,$3)}
+    | toplevel EOF                  {raise (SyntaxError "Parser - Missing package declaration at top of file.")}
 
 /******* DECLARATIONS *******/
-package: PACKAGE IDENT SEMI {Package $2}
+package: 
+    | PACKAGE IDENT  {Package $2}
     | PACKAGE SEMI {throw_error "Parser - missing package name. Expected identifier." $startpos($2)}
     
 toplevel: 
-    | mapannot(toplevel_decl) SEMI toplevel {$1 @ $3} 
-    | { [] }
+    | mapannot(toplevel_decl) SEMI toplevel {$1 @ $3}
+    | {[]}
 
 toplevel_decl:
     | function_decl  {$1}
@@ -107,7 +123,6 @@ type_literal:
     | struct_literal    {`TypeLit($1)}
 
 array_literal:
-    (*| LSQUARE INTLIT RSQUARE IDENT {Array($2, `Type $4)}*)
     | LSQUARE INTLIT RSQUARE typ {Array($2, $4)}
     
 slice_literal:
@@ -182,6 +197,7 @@ statements:
 	| {[]}
 
 stmt:
+    | type_decl         {Decl $1}
     | typed_var_decl	{Decl $1}
 	| block			    {Block $1}
 	| simple_stmt		{$1}
@@ -262,8 +278,9 @@ if_head:
     | IF if_cond block if_tail	{let (c1,c2) = $2 in (Case (c1,c2,$3))::$4}
 
 if_cond:
-    | simple_stmt SEMI expr		{($1, [$3])}
-    | expr				{(Empty, [$1])}
+    | simple_stmt SEMI expr	{($1, [$3])}
+    | SEMI expr             {(Empty, [$2])}
+    | expr      			{(Empty, [$1])}
     | error SEMI			{throw_error "Only a simple statement may be used in if initialization" $startpos($1)}
 if_tail:
     | ELSE if_head  {$2}
@@ -358,8 +375,9 @@ op_mul:
     | ANDXOR		{`BANDNOT} 
 
 expr_unary:
-    | op_unary expr_sub		{annot (`Op1($1,$2)) $startpos($1) $endpos($2)}
-    | expr_sub			{$1}
+    | op_unary expr_unary   {annot (`Op1($1,$2)) $startpos($1) $endpos($2)}
+    (*| op_unary expr_sub		{annot (`Op1($1,$2)) $startpos($1) $endpos($2)}*)
+    | expr_sub			    {$1}
     | op_rel | op_mul |  AND | OR {throw_error "Insufficient arguments to binary operator" $startpos($1) }
 op_unary:
     | PLUS			{`POS}
@@ -386,7 +404,7 @@ index:
     | annot(expr_operand) LSQUARE error	{throw_error "Invalid expression as index" $startpos($3)}
     
 fun_call:
-    | fun_name arguments {`Call($1,$2)}
+    | fun_name arguments {weed_fun_call $1 $2 $startpos($1)}
 fun_name:
     | expr_sub      {$1}
     | function_name {annot (`V $1) $startpos($1) $endpos($1)}

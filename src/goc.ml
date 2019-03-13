@@ -18,7 +18,7 @@ let with_error_handling fn ok =
 		exit 1
     )
 
-let weed ast = Terminal.pass ast |> Lvalue.pass |> Switch.pass    
+let weed ast = Terminal.pass ast |> Lvalue.pass |> Switch.pass   
     
 let parse lexbuf = Parser.main Lexer.lex lexbuf |> weed
 
