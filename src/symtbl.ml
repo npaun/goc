@@ -94,6 +94,7 @@ let put_iden iden' kind typ node symtbl = match iden' with
     | `V(id) -> put_symbol symtbl (make_symbol id kind typ node);
     | `Blank -> ()
 
+(* TODO: missing sym_stmt cases, sym_expr, sym_case *)
 let rec sym_ast ast symtbl = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
 and sym_toplvl toplvl symtbl = match toplvl.v with
@@ -110,24 +111,32 @@ and sym_block block symtbl =
     List.iter (sym_stmt csymtbl) block
 and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl (Stmtnode(stmt)) stmt._start symtbl) decllst
-    | Expr(expr) -> ()
-    | Block(block) -> ()
+    | Expr(expr) -> sym_expr symtbl expr
+    | Block(block) -> sym_block block symtbl
     | Assign(alist) -> ()
     | OpAssign(lvalue, _, expr) -> ()
-    | IncDec(expr, _) -> ()
-    | Print(_, exprlist) -> ()
-    | Return (expr_opt) -> ()
-    | If(clist) -> () 
+    | IncDec(expr, _) -> sym_expr symtbl expr
+    | Print(_, exprlist) -> List.iter (sym_expr symtbl) exprlist
+    | Return (expr_opt) -> sym_expr_opt symtbl expr_opt
+    | If(clist) -> () (* List.iter (sym_case symtbl) clist *)
     | Switch(stmt, expr_opt, fclist) -> ()
     | For(stmt_opt, expr_opt, stmt_opt2, block) -> ()
     | Break
     | Continue
     | Empty -> ()
+and sym_case symtbl case = match case with
+    | Case(stmt, exprlist, block) -> () (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
+    | Default(block)              -> sym_block block symtbl
 and sym_decl node s symtbl decl = match decl with
     | Var(lhs, typ, _, _) -> (match lhs.v with
         | `V(id) -> put_symbol symtbl (make_symbol id VarK typ node)
         | _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
     | Type(iden', typ) -> put_iden iden' TypeK typ node symtbl
+and sym_expr symtbl expr = ()
+and sym_expr_opt symtbl expr_opt = match expr_opt with
+    | Some e -> sym_expr symtbl e
+    | None   -> ()
+
 
 
