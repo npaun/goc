@@ -111,6 +111,6 @@ and sym_toplvl toplvl symtbl = match toplvl.v with
         sym_block block csymtbl;
     )
 
-and sym_siglist toplvl siglist symtbl =  () (* List.iter (fun (iden', typ) -> put_iden iden' Var typ (Topnode(toplvl)) symtbl) siglist *)
+and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id Var typ (Topnode(toplvl)))) siglist
 and sym_block block symtbl = ()
 
