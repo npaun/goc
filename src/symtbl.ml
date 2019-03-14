@@ -4,7 +4,7 @@ exception SymbolErr of string
 exception SymbolInvInputErr of string
     
 (* handle user-defined types as a symbol and lookup the table when a type is used? *)
-type symbolkind = Var | Type | Func (* other kinds? *)
+type symbolkind = VarK | TypeK | FuncK (* other kinds? *)
 
 (* the point here is to get the annotation for position info *)
 type astnode = Topnode of toplevel_declaration annotated | Stmtnode of statement | Exprnode of expression (* add more? *)
@@ -26,8 +26,8 @@ let symbol_error sym =
     let line, chr = get_pos sym in
     let msg = "At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", " ^
     (match sym.kind with
-    | Var -> "variable " ^ sym.name
-    | Type -> "type " ^ sym.name (* or typ *)
+    | VarK -> "variable " ^ sym.name
+    | TypeK -> "type " ^ sym.name (* or typ *)
     ) ^ " is already defined in this scope!"
     in raise (SymbolErr (msg))
 
@@ -97,20 +97,37 @@ let put_iden iden' kind typ node symtbl = match iden' with
 let rec sym_ast ast symtbl = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
 and sym_toplvl toplvl symtbl = match toplvl.v with
-    | Global(decl) -> (match decl with
-        | Var(lhs, typ, _, _) -> (match lhs.v with
-            | `V(id) -> put_symbol symtbl (make_symbol id Var typ (Topnode(toplvl)))
-            | _      -> symbol_invalid_input_error toplvl._start "invalid lhs given in declaration - can only be identifier"
-        )
-        | Type(iden', typ) -> put_iden iden' Type typ (Topnode(toplvl)) symtbl
-    )
+    | Global(decl) -> sym_decl (Topnode(toplvl)) toplvl._start symtbl decl
     | Func(iden', siglst, typ, block) -> (
-        put_iden iden' Func typ (Topnode(toplvl)) symtbl;
+        put_iden iden' FuncK typ (Topnode(toplvl)) symtbl;
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
         sym_block block csymtbl;
     )
+and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ (Topnode(toplvl)))) siglist
+and sym_block block symtbl = 
+    let csymtbl = scope_tbl symtbl in
+    List.iter (sym_stmt csymtbl) block
+and sym_stmt symtbl stmt = match stmt.v with
+    | Decl(decllst) -> List.iter (sym_decl (Stmtnode(stmt)) stmt._start symtbl) decllst
+    | Expr(expr) -> ()
+    | Block(block) -> ()
+    | Assign(alist) -> ()
+    | OpAssign(lvalue, _, expr) -> ()
+    | IncDec(expr, _) -> ()
+    | Print(_, exprlist) -> ()
+    | Return (expr_opt) -> ()
+    | If(clist) -> () 
+    | Switch(stmt, expr_opt, fclist) -> ()
+    | For(stmt_opt, expr_opt, stmt_opt2, block) -> ()
+    | Break
+    | Continue
+    | Empty -> ()
+and sym_decl node s symtbl decl = match decl with
+    | Var(lhs, typ, _, _) -> (match lhs.v with
+        | `V(id) -> put_symbol symtbl (make_symbol id VarK typ node)
+        | _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
+    )
+    | Type(iden', typ) -> put_iden iden' TypeK typ node symtbl
 
-and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id Var typ (Topnode(toplvl)))) siglist
-and sym_block block symtbl = ()
 
