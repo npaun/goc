@@ -3,7 +3,9 @@ open Golite
 exception SymbolErr of string
 exception SymbolInvInputErr of string
 exception SymbolUndefinedErr of string
-    
+
+let print_sym = ref false
+
 (* handle user-defined types as a symbol and lookup the table when a type is used? *)
 type symbolkind = VarK | TypeK | FuncK (* other kinds? *)
 
@@ -16,7 +18,37 @@ type symbol = {
     mutable kind : symbolkind;
     mutable typ  : gotype;
     mutable node : astnode;
-}
+    }
+    
+(* hashtbl(name, sym) * parent (optional) * children * depth *)
+type symtbl = Symt of (string, symbol) Hashtbl.t * (symtbl ref) option * symtbl list * int
+
+let rec print_symbol sym tbl = 
+    let Symt(_,_,_,depth) = tbl in
+    Printf.printf "%s%s [%s] = %s\n" (String.make depth '\t') sym.name (string_of_kind sym.kind) (string_of_typ sym.typ)
+and string_of_kind kind = match kind with 
+    | VarK  -> "variable"
+    | TypeK -> "type"
+    | FuncK -> "function"
+and string_of_typ typ = match typ with
+    | `BOOL         -> "bool"
+    | `RUNE         -> "char"
+    | `INT          -> "int"
+    | `FLOAT64      -> "float64"
+    | `STRING       -> "string"
+    | `Type(id)     -> id
+    | `AUTO | `VOID -> ""
+    | `TypeLit(t)   -> string_of_typlit t
+(* had to copy this from pretty.ml due to differences with struct printing *)
+and string_of_typlit typlit = match typlit with
+    | Slice(typ)    -> "[]" ^ string_of_typ typ 
+    | Array(i, typ) -> "[" ^ string_of_int i ^ "]" ^ string_of_typ typ
+    | Struct(mems)  -> "struct { " ^ (string_of_sigs mems "; ") ^ " }"
+and string_of_sigs sigs sep = 
+    let string_of_sig = function
+        | (id, typ) -> id ^ " " ^ string_of_typ typ 
+    in
+    String.concat sep (List.map string_of_sig sigs)
 
 let get_pos sym = match sym.node with
     | Stmtnode node -> node._start
@@ -48,44 +80,46 @@ let make_symbol n k t a = {
     name = n; kind = k; typ = t; node = a
 }
 
-(* hashtbl(name, sym) * parent (optional) * children *)
-type symtbl = Symt of (string, symbol) Hashtbl.t * (symtbl ref) option * symtbl list
 
 (* unit -> symtbl *)
 (* used to create a table without a parent *)
-let init_tbl = Symt(Hashtbl.create 500, None, [])
+let init_tbl = Symt(Hashtbl.create 500, None, [], 0)
 
 (* symtbl -> symtbl *)
-let make_tbl parent = Symt(Hashtbl.create 500, Some (ref parent), [])
+let make_tbl parent = 
+    let Symt(_, _, _, d) = parent in
+    Symt(Hashtbl.create 500, Some (ref parent), [], d + 1)
 
 (* symtbl -> symtbl ref option *)
 let get_parent tbl = match tbl with
-| Symt(_, parent, _) -> parent
+| Symt(_, parent, _, _) -> parent
 
 (* symtbl -> symtbl -> symtbl *)
 (* Adds tbl2 to tbl1's children *)
 let add_child tbl1 tbl2 = match tbl1 with
-    | Symt(tbl, parent, children) -> Symt(tbl, parent, children @ [tbl2])
+    | Symt(tbl, parent, children, d) -> Symt(tbl, parent, children @ [tbl2], d)
 
-(* symtbl -> string -> symbol option *)
+(* symtbl -> string -> symbol option -> bool*)
 (* searches through the current scope, then through parent scopes until global (no parents left) *)
-let rec get_symbol tbl name = match tbl with
-    | Symt(table, parent, _) ->
+(* rc bool param controls if we recursive up to the parent symtbl's *)
+let rec get_symbol tbl name rc = match tbl with
+    | Symt(table, parent, _, _) ->
         let found = Hashtbl.find_opt table name in
-        match found with
-        | Some s -> found
-        | None -> (
+        match found, rc with
+        | Some s, _   -> found
+        | None, false -> None
+        | None, true  -> (
             match parent with
-            | Some p -> get_symbol !p name
+            | Some p -> get_symbol !p name true
             | None -> None
         )
 
 (* symbol -> symtbl -> unit *)
 let put_symbol tbl sym = 
     match tbl with
-    | Symt(table, _, _) -> 
-        match get_symbol tbl sym.name with
-        | None -> Hashtbl.add table sym.name sym
+    | Symt(table, _, _, _) -> 
+        match get_symbol tbl sym.name false with
+        | None -> Hashtbl.add table sym.name sym; if !print_sym then print_symbol sym tbl
         | Some s -> symbol_error sym
 
 (* symtbl -> symtbl *)        
@@ -101,7 +135,7 @@ let put_iden iden' kind typ node symtbl = match iden' with
     | `V(id) -> put_symbol symtbl (make_symbol id kind typ node);
     | `Blank -> ()
 
-(* TODO: missing sym_stmt cases, sym_expr, sym_case *)
+(* TODO: implement missing entries below, add checking for types *)
 let rec sym_ast ast symtbl = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
 and sym_toplvl toplvl symtbl = match toplvl.v with
@@ -113,7 +147,11 @@ and sym_toplvl toplvl symtbl = match toplvl.v with
         sym_block block csymtbl;
     )
 and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ (Topnode(toplvl)))) siglist
-and sym_block block symtbl = List.iter (sym_stmt symtbl) block
+and sym_block block symtbl =
+    let Symt(_,_,_,d) = symtbl in
+    Printf.printf "%s{\n" (String.make (d-1) '\t');
+    List.iter (sym_stmt symtbl) block;
+    Printf.printf "%s}\n" (String.make (d-1) '\t')
 and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl (Stmtnode(stmt)) stmt._start symtbl) decllst
     | Expr(expr) -> sym_expr symtbl expr
@@ -146,13 +184,11 @@ and sym_expr symtbl expr = match expr.v with
     | `Selector(exp, id)   -> () (* TODO *)
     | `L(lit)              -> ()
     | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
-    | `V(id)               -> (match (get_symbol symtbl id) with 
+    | `V(id)               -> (match (get_symbol symtbl id true) with 
         | Some s -> ()
         | None   -> symbol_undefined_error expr._start id
     )
 and sym_expr_opt symtbl expr_opt = match expr_opt with
     | Some e -> sym_expr symtbl e
     | None   -> ()
-
-
 

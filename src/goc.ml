@@ -24,7 +24,7 @@ let weed ast = Terminal.pass ast |> Lvalue.pass |> Switch.pass
     
 let parse lexbuf = Parser.main Lexer.lex lexbuf |> weed
 
-let build_symtbl = let tbl = Symtbl.make_tbl in ()
+let build_symtbl ast = let tbl = Symtbl.init_tbl in (Symtbl.sym_ast ast tbl)
 
 let main () = 
 	let lexbuf = load_text() in
@@ -34,7 +34,7 @@ let main () =
 		| "parse" -> with_error_handling (fun () -> parse lexbuf) true 
 		| "pretty" -> with_error_handling (fun () -> parse lexbuf |> Pretty.dump_ast |> printf "%s\n") false
 		| "dumpast" -> with_error_handling (fun () -> parse lexbuf |> Dumpast.dump |> printf "%s\n") false
-		| "symbol" -> with_error_handling (fun () -> build_symtbl) true
+		| "symbol" -> with_error_handling (fun () -> Symtbl.print_sym := true; parse lexbuf |> build_symtbl) false
 		| _ -> printf "Go away\n"
 
 let _ = main ()
