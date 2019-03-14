@@ -2,6 +2,7 @@ open Golite
 
 exception SymbolErr of string
 exception SymbolInvInputErr of string
+exception SymbolUndefinedErr of string
     
 (* handle user-defined types as a symbol and lookup the table when a type is used? *)
 type symbolkind = VarK | TypeK | FuncK (* other kinds? *)
@@ -35,6 +36,12 @@ let symbol_invalid_input_error start m =
     let line, chr = start in
     let msg = "At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", " ^ m in
     raise (SymbolInvInputErr (msg))
+
+let symbol_undefined_error start id =
+    let line, chr = start in
+    let msg = "At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", use of undefined identifier " ^ id in
+    raise (SymbolUndefinedErr (msg)) 
+
     
 (* string -> symbolkind -> gotype -> astnode -> symbol *)    
 let make_symbol n k t a = {
@@ -106,26 +113,24 @@ and sym_toplvl toplvl symtbl = match toplvl.v with
         sym_block block csymtbl;
     )
 and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ (Topnode(toplvl)))) siglist
-and sym_block block symtbl = 
-    let csymtbl = scope_tbl symtbl in
-    List.iter (sym_stmt csymtbl) block
+and sym_block block symtbl = List.iter (sym_stmt symtbl) block
 and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl (Stmtnode(stmt)) stmt._start symtbl) decllst
     | Expr(expr) -> sym_expr symtbl expr
-    | Block(block) -> sym_block block symtbl
-    | Assign(alist) -> ()
-    | OpAssign(lvalue, _, expr) -> ()
+    | Block(block) -> sym_block block (scope_tbl symtbl)
+    | Assign(alist) -> () (* TODO *)
+    | OpAssign(lvalue, _, expr) -> () (* TODO *)
     | IncDec(expr, _) -> sym_expr symtbl expr
     | Print(_, exprlist) -> List.iter (sym_expr symtbl) exprlist
     | Return (expr_opt) -> sym_expr_opt symtbl expr_opt
-    | If(clist) -> () (* List.iter (sym_case symtbl) clist *)
+    | If(clist) -> () (* List.iter (sym_case symtbl) clist *) (* TODO *)
     | Switch(stmt, expr_opt, fclist) -> ()
     | For(stmt_opt, expr_opt, stmt_opt2, block) -> ()
     | Break
     | Continue
     | Empty -> ()
 and sym_case symtbl case = match case with
-    | Case(stmt, exprlist, block) -> () (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
+    | Case(stmt, exprlist, block) -> () (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
     | Default(block)              -> sym_block block symtbl
 and sym_decl node s symtbl decl = match decl with
     | Var(lhs, typ, _, _) -> (match lhs.v with
@@ -133,7 +138,18 @@ and sym_decl node s symtbl decl = match decl with
         | _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
     | Type(iden', typ) -> put_iden iden' TypeK typ node symtbl
-and sym_expr symtbl expr = ()
+and sym_expr symtbl expr = match expr.v with
+    | `Op1(op1,exp)        -> sym_expr symtbl exp
+    | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
+    | `Call(exp, explist)  -> sym_expr symtbl exp; List.iter (sym_expr symtbl) explist
+    | `Cast(typ, exp)      -> sym_expr symtbl exp
+    | `Selector(exp, id)   -> () (* TODO *)
+    | `L(lit)              -> ()
+    | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
+    | `V(id)               -> (match (get_symbol symtbl id) with 
+        | Some s -> ()
+        | None   -> symbol_undefined_error expr._start id
+    )
 and sym_expr_opt symtbl expr_opt = match expr_opt with
     | Some e -> sym_expr symtbl e
     | None   -> ()
