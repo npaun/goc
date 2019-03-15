@@ -53,6 +53,7 @@ and string_of_sigs sigs sep =
 let get_pos sym = match sym.node with
     | Stmtnode node -> node._start
     | Exprnode node -> node._start
+    | Topnode node -> node._start
 
 (* TODO - add position information (line, char) *)
 let symbol_error sym =
@@ -129,7 +130,7 @@ let scope_tbl parent =
     let _ = add_child parent newtbl in
     newtbl
 
-(* identifier' -> symbolkind -> gotype -> astnode -> symtbl *)
+(* identifier' -> symbolkind -> gotype -> astnode -> symtbl -> unit *)
 (* puts an indentifier' into the given symtbl *)
 let put_iden iden' kind typ node symtbl = match iden' with
     | `V(id) -> put_symbol symtbl (make_symbol id kind typ node);
@@ -156,19 +157,42 @@ and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl (Stmtnode(stmt)) stmt._start symtbl) decllst
     | Expr(expr) -> sym_expr symtbl expr
     | Block(block) -> sym_block block (scope_tbl symtbl)
-    | Assign(alist) -> () (* TODO *)
-    | OpAssign(lvalue, _, expr) -> () (* TODO *)
+    | Assign(alist) -> List.iter (sym_assn symtbl) alist
+    | OpAssign(lvalue, _, expr) -> sym_expr symtbl lvalue; sym_expr symtbl expr
     | IncDec(expr, _) -> sym_expr symtbl expr
     | Print(_, exprlist) -> List.iter (sym_expr symtbl) exprlist
     | Return (expr_opt) -> sym_expr_opt symtbl expr_opt
-    | If(clist) -> () (* List.iter (sym_case symtbl) clist *) (* TODO *)
-    | Switch(stmt, expr_opt, fclist) -> ()
-    | For(stmt_opt, expr_opt, stmt_opt2, block) -> ()
+    | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case outer_scope) clist (* TODO *)
+    | Switch(stmt, expr_opt, fclist) -> () (* TODO *)
+    | For(stmt_opt, expr_opt, stmt_opt2, block) -> () (* TODO *)
     | Break
     | Continue
     | Empty -> ()
+and sym_assn symtbl assn = 
+    let (lval, expr) = assn in 
+    let _ = sym_lval symtbl lval in
+    let _ = sym_expr symtbl expr in
+    ()
+(* the types lvalue and expr are extremely similar but not quite the same *)
+and sym_lval symtbl lval = match lval.v with
+    | `Blank               -> ()
+    | `Op1(op1,exp)        -> sym_expr symtbl exp
+    | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
+    | `Call(exp, explist)  -> sym_expr symtbl exp; List.iter (sym_expr symtbl) explist
+    | `Cast(typ, exp)      -> sym_expr symtbl exp
+    | `Selector(exp, id)   -> () (* TODO *)
+    | `L(lit)              -> ()
+    | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
+    | `V(id)               -> (match (get_symbol symtbl id true) with 
+        | Some s -> ()
+        | None   -> symbol_undefined_error lval._start id
+    )
 and sym_case symtbl case = match case with
-    | Case(stmt, exprlist, block) -> () (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
+    | Case(stmt, exprlist, block) -> (
+        let _ = sym_stmt symtbl stmt in
+        let _ = List.iter (sym_expr symtbl) exprlist in
+        sym_block (scope_tbl symtbl) block
+    ) (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
     | Default(block)              -> sym_block block symtbl
 and sym_decl node s symtbl decl = match decl with
     | Var(lhs, typ, _, _) -> (match lhs.v with
@@ -192,3 +216,4 @@ and sym_expr_opt symtbl expr_opt = match expr_opt with
     | Some e -> sym_expr symtbl e
     | None   -> ()
 
+    
