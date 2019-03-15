@@ -91,8 +91,8 @@ and statement_node =
 	| Print of bool * expression list
 	| Return of expression option
 	| If of case list
-	| Switch of statement * expression option * fallable_case list
-	| For of statement option * expression option * statement option * block
+	| Switch of statement_node * expression option * fallable_case list
+	| For of statement_node option * expression option * statement_node option * block
 	| Break
 	| Continue
 	| Empty
@@ -100,7 +100,7 @@ and statement_node =
 and fallable_case = case * fallthrough_mode
 [@@deriving sexp]
 and case = 
-	| Case of statement * expression list * block
+	| Case of statement_node * expression list * block
 	| Default of block
 [@@deriving sexp]
 

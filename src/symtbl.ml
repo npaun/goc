@@ -21,7 +21,7 @@ type symbol = {
     }
     
 (* hashtbl(name, sym) * parent (optional) * children * depth *)
-type symtbl = Symt of (string, symbol) Hashtbl.t * (symtbl ref) option * symtbl list * int
+type symtbl = Symt of (string, symbol) Hashtbl.t * (symtbl ref) option * (symtbl ref) list * int
 
 let rec print_symbol sym tbl = 
     let Symt(_,_,_,depth) = tbl in
@@ -98,7 +98,7 @@ let get_parent tbl = match tbl with
 (* symtbl -> symtbl -> symtbl *)
 (* Adds tbl2 to tbl1's children *)
 let add_child tbl1 tbl2 = match tbl1 with
-    | Symt(tbl, parent, children, d) -> Symt(tbl, parent, children @ [tbl2], d)
+    | Symt(tbl, parent, children, d) -> Symt(tbl, parent, children @ [ref tbl2], d)
 
 (* symtbl -> string -> symbol option -> bool*)
 (* searches through the current scope, then through parent scopes until global (no parents left) *)
@@ -145,18 +145,20 @@ and sym_toplvl toplvl symtbl = match toplvl.v with
         put_iden iden' FuncK typ (Topnode(toplvl)) symtbl;
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
-        sym_block block csymtbl;
+        sym_block csymtbl block;
     )
 and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ (Topnode(toplvl)))) siglist
-and sym_block block symtbl =
+and sym_block symtbl block =
     let Symt(_,_,_,d) = symtbl in
     Printf.printf "%s{\n" (String.make (d-1) '\t');
     List.iter (sym_stmt symtbl) block;
     Printf.printf "%s}\n" (String.make (d-1) '\t')
 and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl (Stmtnode(stmt)) stmt._start symtbl) decllst
+    | _ -> sym_stmt_node symtbl stmt.v
+and sym_stmt_node symtbl stmt = match stmt with
     | Expr(expr) -> sym_expr symtbl expr
-    | Block(block) -> sym_block block (scope_tbl symtbl)
+    | Block(block) -> sym_block (scope_tbl symtbl) block
     | Assign(alist) -> List.iter (sym_assn symtbl) alist
     | OpAssign(lvalue, _, expr) -> sym_expr symtbl lvalue; sym_expr symtbl expr
     | IncDec(expr, _) -> sym_expr symtbl expr
@@ -189,11 +191,11 @@ and sym_lval symtbl lval = match lval.v with
     )
 and sym_case symtbl case = match case with
     | Case(stmt, exprlist, block) -> (
-        let _ = sym_stmt symtbl stmt in
+        let _ = sym_stmt_node symtbl stmt in
         let _ = List.iter (sym_expr symtbl) exprlist in
         sym_block (scope_tbl symtbl) block
     ) (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
-    | Default(block)              -> sym_block block symtbl
+    | Default(block)              -> sym_block symtbl block
 and sym_decl node s symtbl decl = match decl with
     | Var(lhs, typ, _, _) -> (match lhs.v with
         | `V(id) -> put_symbol symtbl (make_symbol id VarK typ node)
