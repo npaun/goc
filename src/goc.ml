@@ -26,6 +26,13 @@ let parse lexbuf = Parser.main Lexer.lex lexbuf |> weed
 
 let build_symtbl ast = let tbl = Symtbl.init_tbl in (Symtbl.sym_ast ast tbl)
 
+let do_typecheck lexbuf = 
+	let ast = parse lexbuf in
+		let symt = Symtbl.init_tbl in
+			Symtbl.sym_ast ast symt;
+			Typecheck.pass_ast symt ast
+
+
 let main () = 
 	let lexbuf = load_text() in
 		match Sys.argv.(1) with
@@ -35,6 +42,7 @@ let main () =
 		| "pretty" -> with_error_handling (fun () -> parse lexbuf |> Pretty.dump_ast |> printf "%s\n") false
 		| "dumpast" -> with_error_handling (fun () -> parse lexbuf |> Dumpast.dump |> printf "%s\n") false
 		| "symbol" -> with_error_handling (fun () -> Symtbl.print_sym := true; parse lexbuf |> build_symtbl) false
+	        | "typecheck" -> with_error_handling (fun () -> do_typecheck lexbuf) true
 		| _ -> printf "Go away\n"
 
 let _ = main ()

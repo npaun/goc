@@ -36,7 +36,7 @@ type 'a annotated = {
 	_debug: string [@sexp_drop_if fun x -> x = "Hi!"];
 	_start: (int * int) [@sexp_drop_if fun x -> true];
 	_end: (int * int) [@sexp_drop_if fun x -> true];
-	_derived: type_name option [@sexp_drop_if fun x -> x = None]
+	_derived: gotype [@sexp_drop_if fun x -> x = `AUTO]
 } [@@deriving sexp]
 
 (* Expressions *)
