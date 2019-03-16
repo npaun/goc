@@ -7,7 +7,7 @@ exception SymbolUndefinedErr of string
 let print_sym = ref false
 
 (* handle user-defined types as a symbol and lookup the table when a type is used? *)
-type symbolkind = VarK | TypeK | FuncK (* other kinds? *)
+type symbolkind = VarK | TypeK | FuncK | ConstK (* other kinds? *)
 
 (* the point here is to get the annotation for position info *)
 type astnode = Topnode of toplevel_declaration annotated | Stmtnode of statement | Exprnode of expression (* add more? *)
@@ -17,19 +17,23 @@ type symbol = {
     mutable name : string; (* or identifier'? *)
     mutable kind : symbolkind;
     mutable typ  : gotype;
-    mutable node : astnode;
+    mutable node : astnode option;
     }
     
 (* hashtbl(name, sym) * parent (optional) * children * depth *)
 type symtbl = Symt of (string, symbol) Hashtbl.t * (symtbl ref) option * (symtbl ref) list * int
 
+
+(* PRINTING *)
+(************)
 let rec print_symbol sym tbl = 
     let Symt(_,_,_,depth) = tbl in
     Printf.printf "%s%s [%s] = %s\n" (String.make depth '\t') sym.name (string_of_kind sym.kind) (string_of_typ sym.typ)
 and string_of_kind kind = match kind with 
-    | VarK  -> "variable"
-    | TypeK -> "type"
-    | FuncK -> "function"
+    | VarK   -> "variable"
+    | TypeK  -> "type"
+    | FuncK  -> "function"
+    | ConstK -> "constant"
 and string_of_typ typ = match typ with
     | `BOOL         -> "bool"
     | `RUNE         -> "char"
@@ -51,10 +55,13 @@ and string_of_sigs sigs sep =
     String.concat sep (List.map string_of_sig sigs)
 
 let get_pos sym = match sym.node with
-    | Stmtnode node -> node._start
-    | Exprnode node -> node._start
-    | Topnode node -> node._start
+    | Some(Topnode n)  -> n._start
+    | Some(Stmtnode n) -> n._start
+    | Some(Exprnode n) -> n._start 
+    | None    -> (-1,-1)
 
+(* ERROR HELPERS *)
+(*****************)
 (* TODO - add position information (line, char) *)
 let symbol_error sym =
     let line, chr = get_pos sym in
@@ -75,16 +82,13 @@ let symbol_undefined_error start id =
     let msg = "At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", use of undefined identifier " ^ id in
     raise (SymbolUndefinedErr (msg)) 
 
-    
+
+(* UTIL FUNCS *)
+(**************)
 (* string -> symbolkind -> gotype -> astnode -> symbol *)    
 let make_symbol n k t a = {
     name = n; kind = k; typ = t; node = a
 }
-
-
-(* unit -> symtbl *)
-(* used to create a table without a parent *)
-let init_tbl = Symt(Hashtbl.create 500, None, [], 0)
 
 (* symtbl -> symtbl *)
 let make_tbl parent = 
@@ -118,7 +122,7 @@ let rec get_symbol tbl name rc = match tbl with
 (* symbol -> symtbl -> unit *)
 let put_symbol tbl sym = 
     match tbl with
-    | Symt(table, _, _, _) -> 
+    | Symt(table, _, _, _) ->
         match get_symbol tbl sym.name false with
         | None -> Hashtbl.add table sym.name sym; if !print_sym then print_symbol sym tbl
         | Some s -> symbol_error sym
@@ -136,27 +140,41 @@ let put_iden iden' kind typ node symtbl = match iden' with
     | `V(id) -> put_symbol symtbl (make_symbol id kind typ node);
     | `Blank -> ()
 
+(* unit -> symtbl *)
+(* used to create a table without a parent *)
+let init_tbl print = 
+    let tbl = Symt(Hashtbl.create 500, None, [], 0) in
+    print_sym := print;
+    put_symbol tbl (make_symbol "int" TypeK `INT None);
+    put_symbol tbl (make_symbol "float64" TypeK `FLOAT64 None);
+    put_symbol tbl (make_symbol "bool" TypeK `BOOL None);
+    put_symbol tbl (make_symbol "rune" TypeK `RUNE None);
+    put_symbol tbl (make_symbol "string" TypeK `STRING None);
+    put_symbol tbl (make_symbol "true" ConstK `BOOL None);
+    put_symbol tbl (make_symbol "false" ConstK `BOOL None);
+    scope_tbl tbl
+
+(* SYMBOL GENERATION *)
+(*********************)
 (* TODO: implement missing entries below, add checking for types *)
 let rec sym_ast ast symtbl = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
 and sym_toplvl toplvl symtbl = match toplvl.v with
-    | Global(decl) -> sym_decl (Topnode(toplvl)) toplvl._start symtbl decl
+    | Global(decl) -> sym_decl (Some(Topnode(toplvl))) toplvl._start symtbl decl
     | Func(iden', siglst, typ, block) -> (
-        put_iden iden' FuncK typ (Topnode(toplvl)) symtbl;
+        put_iden iden' FuncK typ (Some(Topnode(toplvl))) symtbl;
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
         sym_block csymtbl block;
     )
-and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ (Topnode(toplvl)))) siglist
+and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ (Some(Topnode(toplvl))))) siglist
 and sym_block symtbl block =
     let Symt(_,_,_,d) = symtbl in
     Printf.printf "%s{\n" (String.make (d-1) '\t');
     List.iter (sym_stmt symtbl) block;
     Printf.printf "%s}\n" (String.make (d-1) '\t')
 and sym_stmt symtbl stmt = match stmt.v with
-    | Decl(decllst) -> List.iter (sym_decl (Stmtnode(stmt)) stmt._start symtbl) decllst
-    | _ -> sym_stmt_node symtbl stmt.v
-and sym_stmt_node symtbl stmt = match stmt with
+    | Decl(decllst) -> List.iter (sym_decl (Some(Stmtnode(stmt))) stmt._start symtbl) decllst
     | Expr(expr) -> sym_expr symtbl expr
     | Block(block) -> sym_block (scope_tbl symtbl) block
     | Assign(alist) -> List.iter (sym_assn symtbl) alist
@@ -190,8 +208,8 @@ and sym_lval symtbl lval = match lval.v with
         | None   -> symbol_undefined_error lval._start id
     )
 and sym_case symtbl case = match case with
-    | Case(stmt, exprlist, block) -> (
-        let _ = sym_stmt_node symtbl stmt in
+    | Case(stmtnode, exprlist, block) -> (
+        (* let _ = sym_stmt_node symtbl stmtnode in *) (* TODO: seperating sym_stmt to sym_stmt_node doesn't work, we need to find a better solution *)
         let _ = List.iter (sym_expr symtbl) exprlist in
         sym_block (scope_tbl symtbl) block
     ) (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
