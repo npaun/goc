@@ -103,19 +103,19 @@ let make_symbol n k t = {
     name = n; kind = k; typ = t
 }
 
-(* symtbl -> symtbl *)
+(* ref symtbl -> symtbl *)
 let make_tbl parent = 
-    let Symt(_, _, _, d) = parent in
-    Symt(Hashtbl.create 500, Some (ref parent), [], d + 1)
+    let Symt(_, _, _, d) = !parent in
+    Symt(Hashtbl.create 500, Some (parent), [], d + 1)
 
 (* symtbl -> symtbl ref option *)
 let get_parent tbl = match tbl with
 | Symt(_, parent, _, _) -> parent
 
-(* symtbl -> symtbl -> symtbl *)
-(* Adds tbl2 to tbl1's children *)
-let add_child tbl1 tbl2 = match tbl1 with
-    | Symt(tbl, parent, children, d) -> Symt(tbl, parent, children @ [ref tbl2], d)
+(* symtbl ref -> symtbl ref -> symtbl *)
+(* Adds tbl2 to tbl1's children, returns copy of tbl1 *)
+let add_child (tbl1 : symtbl ref) (tbl2 : symtbl ref) = match !tbl1 with
+    | Symt(tbl, parent, children, d) -> tbl1 := Symt(tbl, parent, children @ [tbl2], d); !tbl1
 
 (* symtbl -> string -> symbol option -> bool*)
 (* searches through the current scope, then through parent scopes until global (no parents left) *)
@@ -157,16 +157,16 @@ let put_symbol_short_decl tbl sym start hasnew = match tbl with
             let (line,chr) = start in 
             raise (SymbolErr ("At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", short declaration contains no new variables"))
 
-(* symtbl -> symtbl *)        
+(* ref symtbl -> ref symtbl *)        
 (* makes new table with arg as parent, adds it to the parent's children and returns it *)        
 let scope_tbl parent = 
-    let newtbl = make_tbl parent in
+    let newtbl = ref (make_tbl parent) in
     let Symt(_,_,_,d) = add_child parent newtbl in
     if !print_sym then Printf.printf "%s{\n" (String.make (d+1) '\t');
     newtbl  
 
 let unscope_tbl tbl = 
-    let Symt(_,_,_,d) = tbl in
+    let Symt(_,_,_,d) = !tbl in
     if !print_sym then Printf.printf "%s}\n" (String.make d '\t')
 
 let get_func_typ iden' siglist ret_typ = 
@@ -211,25 +211,25 @@ let rec has_new_vars symtbl decllst = match decllst with
 
 (* SYMBOL GENERATION *)
 (*********************)
-let rec sym_ast ast symtbl = match ast with
+let rec sym_ast ast (symtbl : symtbl ref) = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
-and sym_toplvl toplvl symtbl = match toplvl.v with
+and sym_toplvl toplvl (symtbl : symtbl ref) = match toplvl.v with
     | Global(decl) -> sym_decl toplvl._start symtbl false decl
     | Func(iden', siglst, typ, block) -> (
         invalid_maininit_check iden' siglst typ toplvl._start;
         let func_typ = get_func_typ iden' siglst typ in
-        put_iden iden' FuncK func_typ toplvl._start symtbl;
+        put_iden iden' FuncK func_typ toplvl._start !symtbl;
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
         sym_block csymtbl block;
         unscope_tbl csymtbl
     )
-and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK [typ]) toplvl._start) siglist
+and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol !symtbl (make_symbol id VarK [typ]) toplvl._start) siglist
 and sym_block symtbl block =
-    let Symt(_,_,_,d) = symtbl in
+    let Symt(_,_,_,d) = !symtbl in
     List.iter (sym_stmt symtbl) block;
 and sym_stmt symtbl stmt = match stmt.v with
-    | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl (has_new_vars symtbl decllst)) decllst
+    | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl (has_new_vars !symtbl decllst)) decllst
     | Expr(expr) -> sym_expr symtbl expr
     | Block(block) -> let tbl = scope_tbl symtbl in sym_block tbl block; unscope_tbl tbl
     | Assign(alist) -> List.iter (sym_assn symtbl) alist
@@ -274,7 +274,7 @@ and sym_lval symtbl lval = match lval.v with
     | `Selector(exp, id)   -> sym_expr symtbl exp
     | `L(lit)              -> ()
     | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
-    | `V(id)               -> (match (get_symbol symtbl id true) with 
+    | `V(id)               -> (match (get_symbol !symtbl id true) with 
         | Some s -> ()
         | None   -> symbol_undefined_error lval._start id
     )
@@ -289,12 +289,12 @@ and sym_case stmt symtbl case = match case with
     | Default(block)              -> sym_block symtbl block
 and sym_decl s symtbl hasnew decl = match decl with
     | Var(lhs, typ, _, isshort) -> (match lhs.v, isshort with
-        | `V(id), false -> put_symbol symtbl (make_symbol id VarK [typ]) s
-        | `V(id), true  -> put_symbol_short_decl symtbl (make_symbol id VarK [typ]) s hasnew
+        | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ]) s
+        | `V(id), true  -> put_symbol_short_decl !symtbl (make_symbol id VarK [typ]) s hasnew
         | `Blank, _ -> ()
         | _, _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
-    | Type(iden', typ) -> put_iden iden' TypeK [typ] s symtbl
+    | Type(iden', typ) -> put_iden iden' TypeK [typ] s !symtbl
 and sym_expr symtbl expr = match expr.v with
     | `Op1(op1,exp)        -> sym_expr symtbl exp
     | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
@@ -303,7 +303,7 @@ and sym_expr symtbl expr = match expr.v with
     | `Selector(exp, id)   -> sym_expr symtbl exp
     | `L(lit)              -> ()
     | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
-    | `V(id)               -> (match (get_symbol symtbl id true) with 
+    | `V(id)               -> (match (get_symbol !symtbl id true) with 
         | Some s -> ()
         | None   -> symbol_undefined_error expr._start id
     )
@@ -315,16 +315,16 @@ and sym_expr_opt symtbl expr_opt = match expr_opt with
 (* unit -> symtbl *)
 (* used to create a table without a parent *)
 let init_tbl print ast = 
-    let root_tbl = Symt(Hashtbl.create 500, None, [], 0) in
+    let root_tbl = ref (Symt(Hashtbl.create 500, None, [], 0)) in
     print_sym := print;
     if !print_sym then Printf.printf "{\n";
-    put_symbol root_tbl (make_symbol "int" TypeK [`INT]) (-1,-1);
-    put_symbol root_tbl (make_symbol "float64" TypeK [`FLOAT64]) (-1, -1);
-    put_symbol root_tbl (make_symbol "bool" TypeK [`BOOL]) (-1,-1);
-    put_symbol root_tbl (make_symbol "rune" TypeK [`RUNE]) (-1,-1);
-    put_symbol root_tbl (make_symbol "string" TypeK [`STRING]) (-1,-1);
-    put_symbol root_tbl (make_symbol "true" ConstK [`BOOL]) (-1,-1);
-    put_symbol root_tbl (make_symbol "false" ConstK [`BOOL]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "int" TypeK [`INT]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "float64" TypeK [`FLOAT64]) (-1, -1);
+    put_symbol !root_tbl (make_symbol "bool" TypeK [`BOOL]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "rune" TypeK [`RUNE]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "string" TypeK [`STRING]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "true" ConstK [`BOOL]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "false" ConstK [`BOOL]) (-1,-1);
     let tbl = scope_tbl root_tbl in
     sym_ast ast tbl;
     unscope_tbl tbl;
