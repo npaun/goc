@@ -5,7 +5,7 @@ exception SymbolInvInputErr of string
 exception SymbolUndefinedErr of string
 
 let print_sym = ref false
-let init_count = ref 0
+let unboundfunc_count = ref 0
 
 (* handle user-defined types as a symbol and lookup the table when a type is used? *)
 type symbolkind = VarK | TypeK | FuncK | ConstK (* other kinds? *)
@@ -17,7 +17,7 @@ type symbolkind = VarK | TypeK | FuncK | ConstK (* other kinds? *)
 type symbol = {
     mutable name : string; (* or identifier'? *)
     mutable kind : symbolkind;
-    mutable typ  : gotype;
+    mutable typ  : gotype list;
     }
     
 (* hashtbl(name, sym) * parent (optional) * children * depth *)
@@ -30,41 +30,52 @@ let sym_name sym = if (String.get sym.name 0) = '$' then "init" else sym.name
 (************)
 let rec print_symbol sym tbl = 
     let Symt(_,_,_,depth) = tbl in
-    Printf.printf "%s%s [%s] = %s\n" (String.make (depth + 1) '\t') (sym_name sym) (string_of_kind sym.kind) (string_of_typ sym.typ)
+    Printf.printf "%s%s [%s] = %s\n" (String.make (depth + 1) '\t') (sym_name sym) (string_of_kind sym.kind) (string_of_typ_list sym.typ sym.kind)
+and string_of_typ_list typ kind = match kind with
+    | VarK   
+    | TypeK
+    | ConstK -> string_of_typ kind (List.hd typ)
+    | FuncK  -> (match typ with
+        | h::[] -> string_of_typ kind h
+        | h::t -> Printf.sprintf "(%s) -> %s" (String.concat ", " (List.map (string_of_typ kind) t )) (string_of_typ kind h)
+        | []    -> "INVALID FUNC TYPE - EMPTY LIST"
+    )
 and string_of_kind kind = match kind with 
     | VarK   -> "variable"
     | TypeK  -> "type"
     | FuncK  -> "function"
     | ConstK -> "constant"
-and string_of_typ typ = match typ with
-    | `BOOL         -> "bool"
-    | `RUNE         -> "char"
-    | `INT          -> "int"
-    | `FLOAT64      -> "float64"
-    | `STRING       -> "string"
-    | `Type(id)     -> id
-    | `AUTO | `VOID -> ""
-    | `TypeLit(t)   -> string_of_typlit t
+and string_of_typ kind typ = match typ,kind with
+    | `BOOL,_         -> "bool"
+    | `RUNE,_         -> "char"
+    | `INT,_          -> "int"
+    | `FLOAT64,_      -> "float64"
+    | `STRING,_       -> "string"
+    | `Type(id),_     -> id
+    | `AUTO, FuncK    -> "<unmapped>"
+    | `AUTO,_         -> "<infer>"
+    | `VOID,_ -> ""
+    | `TypeLit(t),_   -> string_of_typlit t
 (* had to copy this from pretty.ml due to differences with struct printing *)
 and string_of_typlit typlit = match typlit with
-    | Slice(typ)    -> "[]" ^ string_of_typ typ 
-    | Array(i, typ) -> "[" ^ string_of_int i ^ "]" ^ string_of_typ typ
+    | Slice(typ)    -> "[]" ^ string_of_typ TypeK typ
+    | Array(i, typ) -> "[" ^ string_of_int i ^ "]" ^ string_of_typ TypeK typ
     | Struct(mems)  -> "struct { " ^ (string_of_sigs mems "; ") ^ " }"
 and string_of_sigs sigs sep = 
     let string_of_sig = function
-        | (id, typ) -> id ^ " " ^ string_of_typ typ 
+        | (id, typ) -> id ^ " " ^ string_of_typ VarK typ
     in
     String.concat sep (List.map string_of_sig sigs)
 
 (* ERROR HELPERS *)
 (*****************)
-(* TODO - add position information (line, char) *)
 let symbol_error sym start =
     let line, chr = start in
     let msg = "At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", " ^
     (match sym.kind with
     | VarK -> "variable " ^ sym.name
     | TypeK -> "type " ^ sym.name (* or typ *)
+    | FuncK -> "funcion " ^ sym.name
     ) ^ " is already defined in this scope!"
     in raise (SymbolErr (msg))
 
@@ -87,7 +98,7 @@ let gen_stmt_opt stmt_node_opt stmt = match stmt_node_opt with
     | Some stmt_node -> Some(gen_stmt stmt_node stmt)
     | None -> None
 
-(* string -> symbolkind -> gotype -> astnode -> symbol *)    
+(* string -> symbolkind -> gotype list -> astnode -> symbol *)    
 let make_symbol n k t = {
     name = n; kind = k; typ = t
 }
@@ -122,14 +133,14 @@ let rec get_symbol tbl name rc = match tbl with
         )
 
 
-let init_getandinc = init_count := !init_count + 1; !init_count - 1
-let handle_init tbl sym = match tbl with
-    | Symt(table, _, _, _) -> Hashtbl.add table ("$init" ^  string_of_int init_getandinc) sym; if !print_sym then print_symbol sym tbl
+let unbound_getandinc = unboundfunc_count := !unboundfunc_count + 1; !unboundfunc_count - 1
+let handle_unbound_func tbl sym = match tbl with
+    | Symt(table, _, _, _) -> Hashtbl.add table ("$" ^ sym.name ^ string_of_int unbound_getandinc) sym; if !print_sym then print_symbol sym tbl
 
 
 (* symbol -> symtbl -> unit *)
 let put_symbol tbl sym start =
-    if sym.name = "init" &&  sym.kind = FuncK then handle_init tbl sym
+    if (sym.name = "init" || sym.name = "_") &&  sym.kind = FuncK then handle_unbound_func tbl sym
     else (
         match tbl with
             | Symt(table, _, _, _) ->
@@ -137,6 +148,14 @@ let put_symbol tbl sym start =
                 | None -> Hashtbl.add table sym.name sym; if !print_sym then print_symbol sym tbl
                 | Some s -> symbol_error sym start
     )
+
+let put_symbol_short_decl tbl sym start hasnew = match tbl with
+    | Symt(table, _, _, _) -> match (get_symbol tbl sym.name false), hasnew with
+        | None, _ -> Hashtbl.add table sym.name sym; if !print_sym then print_symbol sym tbl
+        | Some s, true -> () (* if we have new vars in short decl we ignore redeclares *)
+        | Some s, false -> 
+            let (line,chr) = start in 
+            raise (SymbolErr ("At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", short declaration contains no new variables"))
 
 (* symtbl -> symtbl *)        
 (* makes new table with arg as parent, adds it to the parent's children and returns it *)        
@@ -149,33 +168,68 @@ let scope_tbl parent =
 let unscope_tbl tbl = 
     let Symt(_,_,_,d) = tbl in
     if !print_sym then Printf.printf "%s}\n" (String.make d '\t')
+
+let get_func_typ iden' siglist ret_typ = 
+    let rec get_sig_typ sigl acc = match sigl with
+        | (iden, got)::t -> get_sig_typ t (got::acc)
+        | [] -> acc
+    in
+    match iden' with
+        | `V(id) -> if id == "init" then [`AUTO] else ret_typ::(get_sig_typ siglist [])
+        | `Blank -> [`AUTO]
   
 (* identifier' -> symbolkind -> gotype -> astnode -> symtbl -> unit *)
 (* puts an indentifier' into the given symtbl *)
 let put_iden iden' kind typ start symtbl = match iden' with
-    | `V(id) -> put_symbol symtbl (make_symbol id kind typ) start;
+    | `V(id) -> put_symbol symtbl (make_symbol id kind typ) start
+    | `Blank -> match kind with
+        | FuncK -> put_symbol symtbl (make_symbol "_" kind typ) start
+        | _ -> ()
+
+let invalid_maininit_check iden' siglist typ start = match iden' with
+    | `V(id) -> 
+        if (id = "main" || id = "init") then (match siglist, typ with
+            | [], `VOID -> ()
+            | _,_       -> 
+                let (line,chr) = start in 
+                raise (SymbolInvInputErr ("At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", "^ id ^ " must have no parameters and no return value"))
+        )
     | `Blank -> ()
+
+let rec has_new_vars symtbl decllst = match decllst with
+    | h::t -> (match h with 
+        | Var(lhs, _, _, _) -> (match lhs.v with
+            | `V(id) -> (match get_symbol symtbl id false with
+                | Some s -> has_new_vars symtbl t
+                | None   -> true 
+            )
+            | `Blank -> has_new_vars symtbl t
+        )
+        | Type(_,_) -> false
+    )
+    | []   -> false
 
 (* SYMBOL GENERATION *)
 (*********************)
-(* TODO: implement missing entries below, add checking for types *)
 let rec sym_ast ast symtbl = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
 and sym_toplvl toplvl symtbl = match toplvl.v with
-    | Global(decl) -> sym_decl toplvl._start symtbl decl
+    | Global(decl) -> sym_decl toplvl._start symtbl false decl
     | Func(iden', siglst, typ, block) -> (
-        put_iden iden' FuncK typ toplvl._start symtbl;
+        invalid_maininit_check iden' siglst typ toplvl._start;
+        let func_typ = get_func_typ iden' siglst typ in
+        put_iden iden' FuncK func_typ toplvl._start symtbl;
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
         sym_block csymtbl block;
         unscope_tbl csymtbl
     )
-and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ) toplvl._start) siglist
+and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK [typ]) toplvl._start) siglist
 and sym_block symtbl block =
     let Symt(_,_,_,d) = symtbl in
     List.iter (sym_stmt symtbl) block;
 and sym_stmt symtbl stmt = match stmt.v with
-    | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl) decllst
+    | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl (has_new_vars symtbl decllst)) decllst
     | Expr(expr) -> sym_expr symtbl expr
     | Block(block) -> let tbl = scope_tbl symtbl in sym_block tbl block; unscope_tbl tbl
     | Assign(alist) -> List.iter (sym_assn symtbl) alist
@@ -217,7 +271,7 @@ and sym_lval symtbl lval = match lval.v with
     | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
     | `Call(exp, explist)  -> sym_expr symtbl exp; List.iter (sym_expr symtbl) explist
     | `Cast(typ, exp)      -> sym_expr symtbl exp
-    | `Selector(exp, id)   -> () (* TODO *)
+    | `Selector(exp, id)   -> sym_expr symtbl exp
     | `L(lit)              -> ()
     | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
     | `V(id)               -> (match (get_symbol symtbl id true) with 
@@ -231,20 +285,22 @@ and sym_case stmt symtbl case = match case with
         let tbl = scope_tbl symtbl in
         sym_block tbl block;
         unscope_tbl tbl
-    ) (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
+    ) 
     | Default(block)              -> sym_block symtbl block
-and sym_decl s symtbl decl = match decl with
-    | Var(lhs, typ, _, _) -> (match lhs.v with
-        | `V(id) -> put_symbol symtbl (make_symbol id VarK typ) s
-        | _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
+and sym_decl s symtbl hasnew decl = match decl with
+    | Var(lhs, typ, _, isshort) -> (match lhs.v, isshort with
+        | `V(id), false -> put_symbol symtbl (make_symbol id VarK [typ]) s
+        | `V(id), true  -> put_symbol_short_decl symtbl (make_symbol id VarK [typ]) s hasnew
+        | `Blank, _ -> ()
+        | _, _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
-    | Type(iden', typ) -> put_iden iden' TypeK typ s symtbl
+    | Type(iden', typ) -> put_iden iden' TypeK [typ] s symtbl
 and sym_expr symtbl expr = match expr.v with
     | `Op1(op1,exp)        -> sym_expr symtbl exp
     | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
     | `Call(exp, explist)  -> sym_expr symtbl exp; List.iter (sym_expr symtbl) explist
     | `Cast(typ, exp)      -> sym_expr symtbl exp
-    | `Selector(exp, id)   -> () (* TODO *)
+    | `Selector(exp, id)   -> sym_expr symtbl exp
     | `L(lit)              -> ()
     | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
     | `V(id)               -> (match (get_symbol symtbl id true) with 
@@ -262,13 +318,13 @@ let init_tbl print ast =
     let root_tbl = Symt(Hashtbl.create 500, None, [], 0) in
     print_sym := print;
     if !print_sym then Printf.printf "{\n";
-    put_symbol root_tbl (make_symbol "int" TypeK `INT) (-1,-1);
-    put_symbol root_tbl (make_symbol "float64" TypeK `FLOAT64) (-1, -1);
-    put_symbol root_tbl (make_symbol "bool" TypeK `BOOL) (-1,-1);
-    put_symbol root_tbl (make_symbol "rune" TypeK `RUNE) (-1,-1);
-    put_symbol root_tbl (make_symbol "string" TypeK `STRING) (-1,-1);
-    put_symbol root_tbl (make_symbol "true" ConstK `BOOL) (-1,-1);
-    put_symbol root_tbl (make_symbol "false" ConstK `BOOL) (-1,-1);
+    put_symbol root_tbl (make_symbol "int" TypeK [`INT]) (-1,-1);
+    put_symbol root_tbl (make_symbol "float64" TypeK [`FLOAT64]) (-1, -1);
+    put_symbol root_tbl (make_symbol "bool" TypeK [`BOOL]) (-1,-1);
+    put_symbol root_tbl (make_symbol "rune" TypeK [`RUNE]) (-1,-1);
+    put_symbol root_tbl (make_symbol "string" TypeK [`STRING]) (-1,-1);
+    put_symbol root_tbl (make_symbol "true" ConstK [`BOOL]) (-1,-1);
+    put_symbol root_tbl (make_symbol "false" ConstK [`BOOL]) (-1,-1);
     let tbl = scope_tbl root_tbl in
     sym_ast ast tbl;
     unscope_tbl tbl;
