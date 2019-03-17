@@ -179,6 +179,16 @@ let put_iden iden' kind typ start symtbl = match iden' with
         | FuncK -> put_symbol symtbl (make_symbol "_" kind typ) start
         | _ -> ()
 
+let invalid_main_check iden' siglist typ start = match iden' with
+    | `V(id) -> 
+        if id = "main" then (match siglist, typ with
+            | [], `VOID -> ()
+            | _,_       -> 
+                let (line,chr) = start in 
+                raise (SymbolInvInputErr ("At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", main must have no parameters and no return value"))
+        )
+    | `Blank -> ()
+
 (* SYMBOL GENERATION *)
 (*********************)
 (* TODO: implement missing entries below, add checking for types *)
@@ -187,6 +197,7 @@ let rec sym_ast ast symtbl = match ast with
 and sym_toplvl toplvl symtbl = match toplvl.v with
     | Global(decl) -> sym_decl toplvl._start symtbl decl
     | Func(iden', siglst, typ, block) -> (
+        invalid_main_check iden' siglst typ toplvl._start;
         let func_typ = get_func_typ iden' siglst typ in
         put_iden iden' FuncK func_typ toplvl._start symtbl;
         let csymtbl = scope_tbl symtbl in
