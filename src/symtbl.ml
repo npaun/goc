@@ -288,10 +288,10 @@ and sym_case stmt symtbl case = match case with
     ) 
     | Default(block)              -> sym_block symtbl block
 and sym_decl s symtbl hasnew decl = match decl with
-    | Var(lhs, typ, _, isshort) -> (match lhs.v, isshort with
-        | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ]) s
-        | `V(id), true  -> put_symbol_short_decl !symtbl (make_symbol id VarK [typ]) s hasnew
-        | `Blank, _ -> ()
+    | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v, isshort with
+        | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ]) s; sym_expr_opt symtbl expr_opt
+        | `V(id), true  -> put_symbol_short_decl !symtbl (make_symbol id VarK [typ]) s hasnew; sym_expr_opt symtbl expr_opt
+        | `Blank, _ -> sym_expr_opt symtbl expr_opt
         | _, _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
     | Type(iden', typ) -> put_iden iden' TypeK [typ] s !symtbl
@@ -325,6 +325,9 @@ let init_tbl print ast =
     put_symbol !root_tbl (make_symbol "string" TypeK [`STRING]) (-1,-1);
     put_symbol !root_tbl (make_symbol "true" ConstK [`BOOL]) (-1,-1);
     put_symbol !root_tbl (make_symbol "false" ConstK [`BOOL]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "append" FuncK [`AUTO; `AUTO; `AUTO]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "len" FuncK [`AUTO; `INT]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "cap" FuncK [`AUTO; `INT]) (-1,-1);
     let tbl = scope_tbl root_tbl in
     sym_ast ast tbl;
     unscope_tbl tbl;
