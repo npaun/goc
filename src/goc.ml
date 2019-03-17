@@ -24,12 +24,11 @@ let weed ast = Terminal.pass ast |> Lvalue.pass |> Switch.pass
     
 let parse lexbuf = Parser.main Lexer.lex lexbuf |> weed
 
-let build_symtbl print ast = let tbl = Symtbl.init_tbl print in (Symtbl.sym_ast ast tbl)
+let build_symtbl print ast = Symtbl.init_tbl print ast
 
 let do_typecheck lexbuf = 
 	let ast = parse lexbuf in
-		let symt = Symtbl.init_tbl false in
-			Symtbl.sym_ast ast symt;
+		let symt = Symtbl.init_tbl false ast in
 			Typecheck.pass_ast symt ast
 
 
@@ -41,8 +40,8 @@ let main () =
 		| "parse" -> with_error_handling (fun () -> parse lexbuf) true 
 		| "pretty" -> with_error_handling (fun () -> parse lexbuf |> Pretty.dump_ast |> printf "%s\n") false
 		| "dumpast" -> with_error_handling (fun () -> parse lexbuf |> Dumpast.dump |> printf "%s\n") false
-	        | "typecheck" -> with_error_handling (fun () -> do_typecheck lexbuf) true
-		| "symbol" -> with_error_handling (fun () -> parse lexbuf |> (build_symtbl true)) false
+		| "typecheck" -> with_error_handling (fun () -> do_typecheck lexbuf) true
+		| "symbol" -> with_error_handling (fun () -> parse lexbuf |> (Symtbl.init_tbl true)) false
 		| _ -> printf "Go away\n"
 
 let _ = main ()

@@ -27,7 +27,7 @@ type symtbl = Symt of (string, symbol) Hashtbl.t * (symtbl ref) option * (symtbl
 (************)
 let rec print_symbol sym tbl = 
     let Symt(_,_,_,depth) = tbl in
-    Printf.printf "%s%s [%s] = %s\n" (String.make depth '\t') sym.name (string_of_kind sym.kind) (string_of_typ sym.typ)
+    Printf.printf "%s%s [%s] = %s\n" (String.make (depth + 1) '\t') sym.name (string_of_kind sym.kind) (string_of_typ sym.typ)
 and string_of_kind kind = match kind with 
     | VarK   -> "variable"
     | TypeK  -> "type"
@@ -130,28 +130,19 @@ let put_symbol tbl sym start =
 (* makes new table with arg as parent, adds it to the parent's children and returns it *)        
 let scope_tbl parent = 
     let newtbl = make_tbl parent in
-    let _ = add_child parent newtbl in
-    newtbl
+    let Symt(_,_,_,d) = add_child parent newtbl in
+    if !print_sym then Printf.printf "%s{\n" (String.make (d+1) '\t');
+    newtbl  
 
+let unscope_tbl tbl = 
+    let Symt(_,_,_,d) = tbl in
+    if !print_sym then Printf.printf "%s}\n" (String.make d '\t')
+  
 (* identifier' -> symbolkind -> gotype -> astnode -> symtbl -> unit *)
 (* puts an indentifier' into the given symtbl *)
 let put_iden iden' kind typ start symtbl = match iden' with
     | `V(id) -> put_symbol symtbl (make_symbol id kind typ) start;
     | `Blank -> ()
-
-(* unit -> symtbl *)
-(* used to create a table without a parent *)
-let init_tbl print = 
-    let tbl = Symt(Hashtbl.create 500, None, [], 0) in
-    print_sym := print;
-    put_symbol tbl (make_symbol "int" TypeK `INT) (-1,-1);
-    put_symbol tbl (make_symbol "float64" TypeK `FLOAT64) (-1, -1);
-    put_symbol tbl (make_symbol "bool" TypeK `BOOL) (-1,-1);
-    put_symbol tbl (make_symbol "rune" TypeK `RUNE) (-1,-1);
-    put_symbol tbl (make_symbol "string" TypeK `STRING) (-1,-1);
-    put_symbol tbl (make_symbol "true" ConstK `BOOL) (-1,-1);
-    put_symbol tbl (make_symbol "false" ConstK `BOOL) (-1,-1);
-    scope_tbl tbl
 
 (* SYMBOL GENERATION *)
 (*********************)
@@ -165,34 +156,36 @@ and sym_toplvl toplvl symtbl = match toplvl.v with
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
         sym_block csymtbl block;
+        unscope_tbl csymtbl
     )
 and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ) toplvl._start) siglist
 and sym_block symtbl block =
     let Symt(_,_,_,d) = symtbl in
-    if !print_sym then Printf.printf "%s{\n" (String.make (d-1) '\t');
     List.iter (sym_stmt symtbl) block;
-    if !print_sym then Printf.printf "%s}\n" (String.make (d-1) '\t')
 and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl) decllst
     | Expr(expr) -> sym_expr symtbl expr
-    | Block(block) -> sym_block (scope_tbl symtbl) block
+    | Block(block) -> let tbl = scope_tbl symtbl in sym_block tbl block; unscope_tbl tbl
     | Assign(alist) -> List.iter (sym_assn symtbl) alist
     | OpAssign(lvalue, _, expr) -> sym_expr symtbl lvalue; sym_expr symtbl expr
     | IncDec(expr, _) -> sym_expr symtbl expr
     | Print(_, exprlist) -> List.iter (sym_expr symtbl) exprlist
     | Return (expr_opt) -> sym_expr_opt symtbl expr_opt
-    | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case stmt outer_scope) clist (* TODO *)
+    | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case stmt outer_scope) clist; unscope_tbl outer_scope
     | Switch(stmtn, expr_opt, fclist) -> (
         let outer_scope = scope_tbl symtbl in 
         let _ = sym_stmt outer_scope (gen_stmt stmtn stmt) in
         let _ = sym_expr_opt outer_scope expr_opt in
-        List.iter (fun (c, ftm) -> sym_case stmt outer_scope c) fclist
+        List.iter (fun (c, ftm) -> sym_case stmt outer_scope c) fclist;
+        unscope_tbl outer_scope
     )
     | For(stmt_opt, expr_opt, stmt_opt2, block) -> (
         let _ = sym_stmt_opt symtbl (gen_stmt_opt stmt_opt stmt) in
         let _ = sym_expr_opt symtbl expr_opt in
         let _ = sym_stmt_opt symtbl (gen_stmt_opt stmt_opt2 stmt) in
-        sym_block (scope_tbl symtbl) block
+        let tbl = scope_tbl symtbl in 
+        sym_block tbl block;
+        unscope_tbl tbl
     )
     | Break
     | Continue
@@ -223,7 +216,9 @@ and sym_case stmt symtbl case = match case with
     | Case(stmtnode, exprlist, block) -> (
         let _ = sym_stmt symtbl (gen_stmt stmtnode stmt) in
         let _ = List.iter (sym_expr symtbl) exprlist in
-        sym_block (scope_tbl symtbl) block
+        let tbl = scope_tbl symtbl in
+        sym_block tbl block;
+        unscope_tbl tbl
     ) (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
     | Default(block)              -> sym_block symtbl block
 and sym_decl s symtbl decl = match decl with
@@ -249,3 +244,21 @@ and sym_expr_opt symtbl expr_opt = match expr_opt with
     | None   -> ()
 
     
+(* unit -> symtbl *)
+(* used to create a table without a parent *)
+let init_tbl print ast = 
+    let root_tbl = Symt(Hashtbl.create 500, None, [], 0) in
+    print_sym := print;
+    if !print_sym then Printf.printf "{\n";
+    put_symbol root_tbl (make_symbol "int" TypeK `INT) (-1,-1);
+    put_symbol root_tbl (make_symbol "float64" TypeK `FLOAT64) (-1, -1);
+    put_symbol root_tbl (make_symbol "bool" TypeK `BOOL) (-1,-1);
+    put_symbol root_tbl (make_symbol "rune" TypeK `RUNE) (-1,-1);
+    put_symbol root_tbl (make_symbol "string" TypeK `STRING) (-1,-1);
+    put_symbol root_tbl (make_symbol "true" ConstK `BOOL) (-1,-1);
+    put_symbol root_tbl (make_symbol "false" ConstK `BOOL) (-1,-1);
+    let tbl = scope_tbl root_tbl in
+    sym_ast ast tbl;
+    unscope_tbl tbl;
+    if !print_sym then Printf.printf "}\n";
+    root_tbl
