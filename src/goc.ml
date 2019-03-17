@@ -29,7 +29,7 @@ let build_symtbl print ast = Symtbl.init_tbl print ast
 let do_typecheck lexbuf = 
 	let ast = parse lexbuf in
 		let symt = Symtbl.init_tbl false ast in
-			Typecheck.pass_ast symt ast
+			Typecheck.pass_ast !symt ast
 
 
 let main () = 
