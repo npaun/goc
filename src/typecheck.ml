@@ -73,8 +73,10 @@ let assert_redef_match symt node lhs rt =
 	in let search_conflicts name = 
 		match Symtbl.get_symbol symt name true with
 		| Some sym -> 
-			if (resolve_basic symt sym.typ) <> (resolve_basic symt rt) then
-			raise (TypeError (redef_error name sym))
+			raise (TypeError (redef_error name sym));
+			let lt' = sym.typ in
+				if (resolve_basic symt lt') <> (resolve_basic symt rt) then
+				raise (TypeError (redef_error name sym))
 		| None -> ()
 	in match lhs.v with
 	| `V name -> search_conflicts name
@@ -90,10 +92,22 @@ let ast_typeof node = typeof node |> List.hd
 let rec pass_ast symt = function
 | Program(pkg,tops) -> 
 	let top_symt = (List.hd (descend symt)) in
-		 Program(pkg, List.map (pass_toplevel top_symt) tops)
-and pass_toplevel symt node = {node with v = match node.v with
-| Global decl -> Global(pass_decl symt {node with v = decl})
-| x -> x}
+		 Program(pkg, pass_toplevels (descend top_symt) top_symt tops)
+and pass_toplevels child_symts top_symt tops =
+	let (tops',_) = List.fold_right (fun top (tops,child_symts) -> (pass_toplevel top_symt child_symts top)::tops) tops ([],child_symts)
+	in tops'
+and pass_toplevel sym0 syms1 node =
+	let node', syms1' = match node.v with
+	| Global decl -> (Global(pass_decl sym0 {node with v = decl}), syms1)
+	| Func(name,args,ret,body) -> 
+		match syms1 with
+		| h::t -> (Func(name,args,ret, pass_block h body), t)
+		| [] -> raise (TypeError "Unable to find a child symbol table")
+	in ({node with v = node'}, syms1')
+and pass_block symt body = List.map (pass_stmt symt) body
+and pass_stmt symt node = match node.v with
+| Decl(decls) -> {node with v = Decl(List.map (fun d -> pass_decl symt {node with v = d}) decls)}
+| _ -> node
 and pass_decl symt node = match node.v with
 | Var(name, lt, Some expr, s) ->
 	let expr' = pass_expr symt expr in
