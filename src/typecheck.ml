@@ -34,7 +34,7 @@ let rec resolve_basic symt = function
 | (`Type id) as tref ->
 	begin match maybe_basic id with  
 	| Some legit_typ -> 
-		let alias_typ = typeof_ident symt id in
+		let alias_typ = List.hd (typeof_ident symt id) in
 			if legit_typ = alias_typ
 		 	then legit_typ
 			else tref
@@ -72,7 +72,7 @@ and pass_decl symt node = match node.v with
 | other -> other
 and pass_expr symt node = match node.v with
 | `L lit -> {node with _derived = typeof_literal lit}
-| `V var -> {node with _derived = typeof_ident symt var} 
+| `V var -> {node with _derived = List.hd (typeof_ident symt var)} 
 and typeof_literal = function
 | Int _ -> `INT
 | Float64 _ -> `FLOAT64
