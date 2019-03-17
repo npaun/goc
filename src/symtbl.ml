@@ -5,6 +5,7 @@ exception SymbolInvInputErr of string
 exception SymbolUndefinedErr of string
 
 let print_sym = ref false
+let init_count = ref 0
 
 (* handle user-defined types as a symbol and lookup the table when a type is used? *)
 type symbolkind = VarK | TypeK | FuncK | ConstK (* other kinds? *)
@@ -23,11 +24,13 @@ type symbol = {
 type symtbl = Symt of (string, symbol) Hashtbl.t * (symtbl ref) option * (symtbl ref) list * int
 
 
+let sym_name sym = if (String.get sym.name 0) = '$' then "init" else sym.name
+
 (* PRINTING *)
 (************)
 let rec print_symbol sym tbl = 
     let Symt(_,_,_,depth) = tbl in
-    Printf.printf "%s%s [%s] = %s\n" (String.make (depth + 1) '\t') sym.name (string_of_kind sym.kind) (string_of_typ sym.typ)
+    Printf.printf "%s%s [%s] = %s\n" (String.make (depth + 1) '\t') (sym_name sym) (string_of_kind sym.kind) (string_of_typ sym.typ)
 and string_of_kind kind = match kind with 
     | VarK   -> "variable"
     | TypeK  -> "type"
@@ -118,13 +121,22 @@ let rec get_symbol tbl name rc = match tbl with
             | None -> None
         )
 
+
+let init_getandinc = init_count := !init_count + 1; !init_count - 1
+let handle_init tbl sym = match tbl with
+    | Symt(table, _, _, _) -> Hashtbl.add table ("$init" ^  string_of_int init_getandinc) sym; if !print_sym then print_symbol sym tbl
+
+
 (* symbol -> symtbl -> unit *)
-let put_symbol tbl sym start = 
-    match tbl with
-    | Symt(table, _, _, _) ->
-        match get_symbol tbl sym.name false with
-        | None -> Hashtbl.add table sym.name sym; if !print_sym then print_symbol sym tbl
-        | Some s -> symbol_error sym start
+let put_symbol tbl sym start =
+    if sym.name = "init" &&  sym.kind = FuncK then handle_init tbl sym
+    else (
+        match tbl with
+            | Symt(table, _, _, _) ->
+                match get_symbol tbl sym.name false with
+                | None -> Hashtbl.add table sym.name sym; if !print_sym then print_symbol sym tbl
+                | Some s -> symbol_error sym start
+    )
 
 (* symtbl -> symtbl *)        
 (* makes new table with arg as parent, adds it to the parent's children and returns it *)        
