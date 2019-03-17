@@ -179,13 +179,13 @@ let put_iden iden' kind typ start symtbl = match iden' with
         | FuncK -> put_symbol symtbl (make_symbol "_" kind typ) start
         | _ -> ()
 
-let invalid_main_check iden' siglist typ start = match iden' with
+let invalid_maininit_check iden' siglist typ start = match iden' with
     | `V(id) -> 
-        if id = "main" then (match siglist, typ with
+        if (id = "main" || id = "init") then (match siglist, typ with
             | [], `VOID -> ()
             | _,_       -> 
                 let (line,chr) = start in 
-                raise (SymbolInvInputErr ("At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", main must have no parameters and no return value"))
+                raise (SymbolInvInputErr ("At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", "^ id ^ " must have no parameters and no return value"))
         )
     | `Blank -> ()
 
@@ -197,7 +197,7 @@ let rec sym_ast ast symtbl = match ast with
 and sym_toplvl toplvl symtbl = match toplvl.v with
     | Global(decl) -> sym_decl toplvl._start symtbl decl
     | Func(iden', siglst, typ, block) -> (
-        invalid_main_check iden' siglst typ toplvl._start;
+        invalid_maininit_check iden' siglst typ toplvl._start;
         let func_typ = get_func_typ iden' siglst typ in
         put_iden iden' FuncK func_typ toplvl._start symtbl;
         let csymtbl = scope_tbl symtbl in
@@ -252,7 +252,7 @@ and sym_lval symtbl lval = match lval.v with
     | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
     | `Call(exp, explist)  -> sym_expr symtbl exp; List.iter (sym_expr symtbl) explist
     | `Cast(typ, exp)      -> sym_expr symtbl exp
-    | `Selector(exp, id)   -> () (* TODO *)
+    | `Selector(exp, id)   -> sym_expr symtbl exp
     | `L(lit)              -> ()
     | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
     | `V(id)               -> (match (get_symbol symtbl id true) with 
@@ -280,7 +280,7 @@ and sym_expr symtbl expr = match expr.v with
     | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
     | `Call(exp, explist)  -> sym_expr symtbl exp; List.iter (sym_expr symtbl) explist
     | `Cast(typ, exp)      -> sym_expr symtbl exp
-    | `Selector(exp, id)   -> () (* TODO *)
+    | `Selector(exp, id)   -> sym_expr symtbl exp
     | `L(lit)              -> ()
     | `Indexing(exp,exp2)  -> sym_expr symtbl exp; sym_expr symtbl exp2
     | `V(id)               -> (match (get_symbol symtbl id true) with 
