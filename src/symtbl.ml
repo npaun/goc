@@ -149,6 +149,14 @@ let put_symbol tbl sym start =
                 | Some s -> symbol_error sym start
     )
 
+let put_symbol_short_decl tbl sym start hasnew = match tbl with
+    | Symt(table, _, _, _) -> match (get_symbol tbl sym.name false), hasnew with
+        | None, _ -> Hashtbl.add table sym.name sym; if !print_sym then print_symbol sym tbl
+        | Some s, true -> () (* if we have new vars in short decl we ignore redeclares *)
+        | Some s, false -> 
+            let (line,chr) = start in 
+            raise (SymbolErr ("At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", short declaration contains no new variables"))
+
 (* symtbl -> symtbl *)        
 (* makes new table with arg as parent, adds it to the parent's children and returns it *)        
 let scope_tbl parent = 
@@ -188,12 +196,25 @@ let invalid_maininit_check iden' siglist typ start = match iden' with
         )
     | `Blank -> ()
 
+let rec has_new_vars symtbl decllst = match decllst with
+    | h::t -> (match h with 
+        | Var(lhs, _, _, _) -> (match lhs.v with
+            | `V(id) -> (match get_symbol symtbl id false with
+                | Some s -> has_new_vars symtbl t
+                | None   -> true 
+            )
+            | `Blank -> has_new_vars symtbl t
+        )
+        | Type(_,_) -> false
+    )
+    | []   -> false
+
 (* SYMBOL GENERATION *)
 (*********************)
 let rec sym_ast ast symtbl = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
 and sym_toplvl toplvl symtbl = match toplvl.v with
-    | Global(decl) -> sym_decl toplvl._start symtbl decl
+    | Global(decl) -> sym_decl toplvl._start symtbl false decl
     | Func(iden', siglst, typ, block) -> (
         invalid_maininit_check iden' siglst typ toplvl._start;
         let func_typ = get_func_typ iden' siglst typ in
@@ -208,7 +229,7 @@ and sym_block symtbl block =
     let Symt(_,_,_,d) = symtbl in
     List.iter (sym_stmt symtbl) block;
 and sym_stmt symtbl stmt = match stmt.v with
-    | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl) decllst
+    | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl (has_new_vars symtbl decllst)) decllst
     | Expr(expr) -> sym_expr symtbl expr
     | Block(block) -> let tbl = scope_tbl symtbl in sym_block tbl block; unscope_tbl tbl
     | Assign(alist) -> List.iter (sym_assn symtbl) alist
@@ -266,11 +287,12 @@ and sym_case stmt symtbl case = match case with
         unscope_tbl tbl
     ) 
     | Default(block)              -> sym_block symtbl block
-and sym_decl s symtbl decl = match decl with
-    | Var(lhs, typ, _, _) -> (match lhs.v with
-        | `V(id) -> put_symbol symtbl (make_symbol id VarK [typ]) s
-        | `Blank -> ()
-        | _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
+and sym_decl s symtbl hasnew decl = match decl with
+    | Var(lhs, typ, _, isshort) -> (match lhs.v, isshort with
+        | `V(id), false -> put_symbol symtbl (make_symbol id VarK [typ]) s
+        | `V(id), true  -> put_symbol_short_decl symtbl (make_symbol id VarK [typ]) s hasnew
+        | `Blank, _ -> ()
+        | _, _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
     | Type(iden', typ) -> put_iden iden' TypeK [typ] s symtbl
 and sym_expr symtbl expr = match expr.v with
