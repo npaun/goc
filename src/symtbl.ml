@@ -163,9 +163,9 @@ and sym_toplvl toplvl symtbl = match toplvl.v with
 and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol symtbl (make_symbol id VarK typ) toplvl._start) siglist
 and sym_block symtbl block =
     let Symt(_,_,_,d) = symtbl in
-    Printf.printf "%s{\n" (String.make (d-1) '\t');
+    if !print_sym then Printf.printf "%s{\n" (String.make (d-1) '\t');
     List.iter (sym_stmt symtbl) block;
-    Printf.printf "%s}\n" (String.make (d-1) '\t')
+    if !print_sym then Printf.printf "%s}\n" (String.make (d-1) '\t')
 and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl) decllst
     | _ -> sym_stmt_node symtbl stmt.v
