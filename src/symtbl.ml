@@ -78,6 +78,12 @@ let symbol_undefined_error start id =
 
 (* UTIL FUNCS *)
 (**************)
+
+let gen_stmt stmt_node stmt = {v = stmt_node; _debug = stmt._debug; _start = stmt._start; _end = stmt._end; _derived = stmt._derived }
+let gen_stmt_opt stmt_node_opt stmt = match stmt_node_opt with
+    | Some stmt_node -> Some(gen_stmt stmt_node stmt)
+    | None -> None
+
 (* string -> symbolkind -> gotype -> astnode -> symbol *)    
 let make_symbol n k t = {
     name = n; kind = k; typ = t
@@ -168,11 +174,6 @@ and sym_block symtbl block =
     if !print_sym then Printf.printf "%s}\n" (String.make (d-1) '\t')
 and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl) decllst
-    | _ -> sym_stmt_node symtbl stmt.v
-and sym_stmt_node_opt symtbl stmt_node_opt = match stmt_node_opt with
-    | Some stmt_node -> sym_stmt_node symtbl stmt_node
-    | None      -> ()
-and sym_stmt_node symtbl stmt_node = match stmt_node with
     | Expr(expr) -> sym_expr symtbl expr
     | Block(block) -> sym_block (scope_tbl symtbl) block
     | Assign(alist) -> List.iter (sym_assn symtbl) alist
@@ -180,22 +181,25 @@ and sym_stmt_node symtbl stmt_node = match stmt_node with
     | IncDec(expr, _) -> sym_expr symtbl expr
     | Print(_, exprlist) -> List.iter (sym_expr symtbl) exprlist
     | Return (expr_opt) -> sym_expr_opt symtbl expr_opt
-    | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case outer_scope) clist (* TODO *)
+    | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case stmt outer_scope) clist (* TODO *)
     | Switch(stmtn, expr_opt, fclist) -> (
         let outer_scope = scope_tbl symtbl in 
-        let _ = sym_stmt_node outer_scope stmtn in
+        let _ = sym_stmt outer_scope (gen_stmt stmtn stmt) in
         let _ = sym_expr_opt outer_scope expr_opt in
-        List.iter (fun (c, ftm) -> sym_case outer_scope c) fclist
+        List.iter (fun (c, ftm) -> sym_case stmt outer_scope c) fclist
     )
     | For(stmt_opt, expr_opt, stmt_opt2, block) -> (
-        let _ = sym_stmt_node_opt symtbl stmt_opt in
+        let _ = sym_stmt_opt symtbl (gen_stmt_opt stmt_opt stmt) in
         let _ = sym_expr_opt symtbl expr_opt in
-        let _ = sym_stmt_node_opt symtbl stmt_opt2 in
+        let _ = sym_stmt_opt symtbl (gen_stmt_opt stmt_opt2 stmt) in
         sym_block (scope_tbl symtbl) block
     )
     | Break
     | Continue
     | Empty -> ()
+and sym_stmt_opt symtbl stmt_opt = match stmt_opt with
+    | Some stmt -> sym_stmt symtbl stmt
+    | None      -> ()
 and sym_assn symtbl assn = 
     let (lval, expr) = assn in 
     let _ = sym_lval symtbl lval in
@@ -215,9 +219,9 @@ and sym_lval symtbl lval = match lval.v with
         | Some s -> ()
         | None   -> symbol_undefined_error lval._start id
     )
-and sym_case symtbl case = match case with
+and sym_case stmt symtbl case = match case with
     | Case(stmtnode, exprlist, block) -> (
-        let _ = sym_stmt_node symtbl stmtnode in
+        let _ = sym_stmt symtbl (gen_stmt stmtnode stmt) in
         let _ = List.iter (sym_expr symtbl) exprlist in
         sym_block (scope_tbl symtbl) block
     ) (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
