@@ -69,7 +69,6 @@ and string_of_sigs sigs sep =
 
 (* ERROR HELPERS *)
 (*****************)
-(* TODO - add position information (line, char) *)
 let symbol_error sym start =
     let line, chr = start in
     let msg = "At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", " ^
@@ -191,7 +190,6 @@ let invalid_maininit_check iden' siglist typ start = match iden' with
 
 (* SYMBOL GENERATION *)
 (*********************)
-(* TODO: implement missing entries below, add checking for types *)
 let rec sym_ast ast symtbl = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
 and sym_toplvl toplvl symtbl = match toplvl.v with
@@ -266,7 +264,7 @@ and sym_case stmt symtbl case = match case with
         let tbl = scope_tbl symtbl in
         sym_block tbl block;
         unscope_tbl tbl
-    ) (* TODO *) (* NOTE: we cannot simply call sym_block here because the stmt adds entries into the block's scope *)
+    ) 
     | Default(block)              -> sym_block symtbl block
 and sym_decl s symtbl decl = match decl with
     | Var(lhs, typ, _, _) -> (match lhs.v with
