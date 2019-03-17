@@ -169,6 +169,9 @@ and sym_block symtbl block =
 and sym_stmt symtbl stmt = match stmt.v with
     | Decl(decllst) -> List.iter (sym_decl stmt._start symtbl) decllst
     | _ -> sym_stmt_node symtbl stmt.v
+and sym_stmt_node_opt symtbl stmt_node_opt = match stmt_node_opt with
+    | Some stmt_node -> sym_stmt_node symtbl stmt_node
+    | None      -> ()
 and sym_stmt_node symtbl stmt_node = match stmt_node with
     | Expr(expr) -> sym_expr symtbl expr
     | Block(block) -> sym_block (scope_tbl symtbl) block
@@ -178,8 +181,18 @@ and sym_stmt_node symtbl stmt_node = match stmt_node with
     | Print(_, exprlist) -> List.iter (sym_expr symtbl) exprlist
     | Return (expr_opt) -> sym_expr_opt symtbl expr_opt
     | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case outer_scope) clist (* TODO *)
-    | Switch(stmt, expr_opt, fclist) -> () (* TODO *)
-    | For(stmt_opt, expr_opt, stmt_opt2, block) -> () (* TODO *)
+    | Switch(stmtn, expr_opt, fclist) -> (
+        let outer_scope = scope_tbl symtbl in 
+        let _ = sym_stmt_node outer_scope stmtn in
+        let _ = sym_expr_opt outer_scope expr_opt in
+        List.iter (fun (c, ftm) -> sym_case outer_scope c) fclist
+    )
+    | For(stmt_opt, expr_opt, stmt_opt2, block) -> (
+        let _ = sym_stmt_node_opt symtbl stmt_opt in
+        let _ = sym_expr_opt symtbl expr_opt in
+        let _ = sym_stmt_node_opt symtbl stmt_opt2 in
+        sym_block (scope_tbl symtbl) block
+    )
     | Break
     | Continue
     | Empty -> ()
