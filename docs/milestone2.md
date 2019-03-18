@@ -68,8 +68,9 @@ else if <cond> {
 ```
 
 ##### For Statements
+For statements are a much simpler case of the if/switch statement scoping rules. Here we still make sure to start with scoping a new symbol table, here we call it *for_scope*. We do the usual symbol adds/checks for the stmts and expr contained within the for statement using *for_scope*. Next, we scope a new symbol table for the block and we go through it. We finish by unscoping the block symbol table and then *for_scope*.
 ##### Short Variable Redecleration
-
+GoLite allows for redeclerations of variables within short variable declerations statements as long as there is a new variable being declared within the statement. This is implemented within our compiler by first scanning through the list of identifiers in the short var declarations and checking to see if there are any new variables (i.e. if there exists a non blank identifier which is not in the current scope). If so, then we simple ignore the identifiers in the short var declaration which already exist. 
 ### Type Checker
 
 *have fun Nic!*
@@ -91,5 +92,5 @@ else if <cond> {
     
 ## References
 
-* [](https://github.com/ossamaAhmed/GoLite-compiler)
+* [ossamaAhmed/GoLite-compiler](https://github.com/ossamaAhmed/GoLite-compiler)
     * Ideas for parser/lexer fixes
