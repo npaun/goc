@@ -117,6 +117,7 @@ While performing the type-check phase, the type-checker also performs type infer
     * Symbol table implementation
     * Symbol table building
     * Symbol table printing
+    * tests
 * Nicholas
     * Symbol table implementation
     * Type checking
@@ -125,6 +126,7 @@ While performing the type-check phase, the type-checker also performs type infer
     * Symbol table building
     * Parser/Lexer fixes from previous milestone
     * Weeding passes for builtin functions calls
+    * tests
     
 ## References
 
