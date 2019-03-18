@@ -57,6 +57,9 @@ let assert_match symt node lt rt =
 			raise_type node lt' rt
 		
 
+let save_inferred_type (sym:Symtbl.symbol) inferred = 
+	sym.typ <- inferred
+
 let assert_redef_match symt node lhs rt =
 	let redef_error name (lsym:Symtbl.symbol) =
 		let lr0,cr0 = node._start in
@@ -73,10 +76,10 @@ let assert_redef_match symt node lhs rt =
 	in let search_conflicts name = 
 		match Symtbl.get_symbol symt name true with
 		| Some sym -> 
-			raise (TypeError (redef_error name sym));
-			let lt' = sym.typ in
+			let lt' = (infer_auto sym.typ rt) in
 				if (resolve_basic symt lt') <> (resolve_basic symt rt) then
 				raise (TypeError (redef_error name sym))
+				else save_inferred_type sym rt
 		| None -> ()
 	in match lhs.v with
 	| `V name -> search_conflicts name
@@ -86,32 +89,46 @@ let assert_redef_match symt node lhs rt =
 let descend = function
 | Symtbl.Symt(_,_,children,_) -> List.map (fun r -> !r) children
 
-let travesor sym0 sym1s node fn =
-	let down = 
-		match sym1s with
-		| h::t -> (traversoru
+
+let same fn nodes child childs =
+	match child with
+	| Some c -> (fn ())::nodes, c::childs
+	| None -> (fn ())::nodes, childs
+let down fn nodes child childs = 
+	match child with
+	| Some c -> (fn c)::nodes, childs
+	| None -> raise (TypeError "Fucking symbol table missing a scope")
+
+let traverse fn symt ast = 
+	let aux this_symt (nodes,child_symts) node = 
+	match child_symts with
+	| [] -> fn this_symt node node.v (**) nodes  None [] 
+	| h::t -> fn this_symt node node.v (**) nodes (Some h) t
+	in let nodes,_= List.fold_left (aux symt) ([], (descend symt)) ast
+	in nodes |> List.rev
+
+		
+
 let typeof node = node._derived
 let ast_typeof node = typeof node |> List.hd
 
+
+and typeof_literal = function
+| Int _ -> `INT
+| Float64 _ -> `FLOAT64
+| Rune _ -> `RUNE
+| String _ -> `STRING
+| Bool _ -> `BOOL
+
 let rec pass_ast symt = function
-| Program(pkg,tops) -> 
-	let top_symt = (List.hd (descend symt)) in
-		 Program(pkg, pass_toplevels (descend top_symt) top_symt tops)
-and pass_toplevels child_symts top_symt tops =
-	let (tops',_) = List.fold_right (fun top (tops,child_symts) -> (pass_toplevel top_symt child_symts top)::tops) tops ([],child_symts)
-	in tops'
-and pass_toplevel sym0 syms1 node =
-	let node', syms1' = match node.v with
-	| Global decl -> (Global(pass_decl sym0 {node with v = decl}), syms1)
-	| Func(name,args,ret,body) -> 
-		match syms1 with
-		| h::t -> (Func(name,args,ret, pass_block h body), t)
-		| [] -> raise (TypeError "Unable to find a child symbol table")
-	in ({node with v = node'}, syms1')
-and pass_block symt body = List.map (pass_stmt symt) body
-and pass_stmt symt node = match node.v with
-| Decl(decls) -> {node with v = Decl(List.map (fun d -> pass_decl symt {node with v = d}) decls)}
-| _ -> node
+| Program(pkg,tops) -> Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops)
+and pass_toplevel this_symt node  = function
+| Global(decl) -> same (fun () -> {node with v = Global(pass_decl this_symt {node with v = decl})})
+| Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, pass_block child_symt body)})
+and pass_block this_symt body = traverse pass_statement this_symt body
+and pass_statement this_symt node = function
+| Decl(decls) -> same (fun () -> {node with v = Decl(List.map (fun d -> pass_decl this_symt {node with v = d}) decls)})
+| _ -> same (fun () -> node)
 and pass_decl symt node = match node.v with
 | Var(name, lt, Some expr, s) ->
 	let expr' = pass_expr symt expr in
@@ -122,9 +139,4 @@ and pass_decl symt node = match node.v with
 and pass_expr symt node = match node.v with
 | `L lit -> {node with _derived = [typeof_literal lit]}
 | `V var -> {node with _derived = typeof_ident symt var} 
-and typeof_literal = function
-| Int _ -> `INT
-| Float64 _ -> `FLOAT64
-| Rune _ -> `RUNE
-| String _ -> `STRING
-| Bool _ -> `BOOL
+| other -> {node with _derived = [`RUNE; `RUNE; `RUNE]} (* This is a really silly type to warn what's going on *)
