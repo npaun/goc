@@ -110,6 +110,7 @@ While performing the type-check phase, the type-checker also performs type infer
 * 4-8-3-len-return.go : The result of len is of type int, cannot assign to non-int assignable values. 
 * 4-9-float64-into-string.go : float64 cannot be cast into string
 * 4-9-float64-into-string2.go : float64 cannot be cast into string (even through indirect types)
+* 4-9-bool-into-string.go : bool cannot be cast into string 
 
 ## Team Organization
 

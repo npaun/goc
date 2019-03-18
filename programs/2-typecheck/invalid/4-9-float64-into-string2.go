@@ -1,3 +1,4 @@
+// float64 cannot be cast into string
 package main
 
 type wow string
