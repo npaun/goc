@@ -86,6 +86,10 @@ let assert_redef_match symt node lhs rt =
 let descend = function
 | Symtbl.Symt(_,_,children,_) -> List.map (fun r -> !r) children
 
+let travesor sym0 sym1s node fn =
+	let down = 
+		match sym1s with
+		| h::t -> (traversoru
 let typeof node = node._derived
 let ast_typeof node = typeof node |> List.hd
 
