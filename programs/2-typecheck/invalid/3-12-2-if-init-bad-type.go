@@ -1,3 +1,4 @@
+// The init-stmt of an if-statement case must be well-typed
 package foo
 
 func main() {

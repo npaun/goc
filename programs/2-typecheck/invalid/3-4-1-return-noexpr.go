@@ -1,3 +1,4 @@
+// return no expression is only legal when the function doesn't specify a return-type
 package thing
 
 func foo() {

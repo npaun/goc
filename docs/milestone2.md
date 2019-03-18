@@ -73,7 +73,28 @@ For statements are a much simpler case of the if/switch statement scoping rules.
 GoLite allows for redeclerations of variables within short variable declerations statements as long as there is a new variable being declared within the statement. This is implemented within our compiler by first scanning through the list of identifiers in the short var declarations and checking to see if there are any new variables (i.e. if there exists a non blank identifier which is not in the current scope). If so, then we simple ignore the identifiers in the short var declaration which already exist. 
 ### Type Checker
 
-*have fun Nic!*
+The implementation of the type checker is very straight forward; it takes the AST and the previously generated symbol table as inputs and performs a traversal of the AST, recursively type-checking the nodes following the rules in the language specification. When it encounters a variable, type name, or function call, it performs a lookup in the symbol table in order to resolves its type (or signature for functions).
+
+While performing the type-check phase, the type-checker also performs type inference when needed and annotates the AST node with their type information, as long as they are well-typed.
+
+#### Invalid Programs
+
+* 1-2-1-defined-types.go : In order for two types to be identical, they must have the same underlying type, unless they are user-defined, then they must be the exact same type.
+* 2-1-1-bad-expr-type.go : When declaring a variable, the RHS expression's type must be identical to its declared type if it is present.
+* 2-1-2-decl-defined-type.go : When declaring a variable of a user-defined type, the expression cannot be of its underlying type, it must be cast to the user-defined type.
+* 3-4-1-return-noexpr.go : A function declaration is ill-typed if it has a specified return-type but returns no expression.
+* 3-4-2-return-expr1.go : The type of a returned expression must match the function's specified return-type.
+* 3-5-3-short-var-decl-partial-redeclare-to-different-type.go : A variable cannot be redeclared to a different type using a short variable declaration.
+* 3-12-2-if-init-bad-type.go : In order for an if-statement to be well-typed, its init-statement must also be well-typed.
+* 3-12-3-if-expr-bad-type.go : In order for an if-statement to be well-typed, the expression in its condition must resolve to type `bool`.
+* 3-13-1-switch-bad-init.go : In order for a switch-statement to be well-typed, its init-statement must also be well-typed.
+* 3-12-2-switch-bad-expr.go : In order for a switch-statement to be well-typed, its expression must also be well-typed.
+* 3-13-4-switch-bad-case.go : In order for a switch-statement to be well-typed, all of its cases' expressions must also be well-typed and resolve to the same type as the switch-statement's expression.
+* 4-5-funcall1.go : In order for a function call to be well typed, all the arguments' types must match the function's formal parameters' types.
+* 4-5-funcall2.go : In order for a function call `(<expr>)(a1, ..., an)` to be well-typed, the expression's type must resolve to a function type, in this case, it must be a function name.
+* 4-6-1-indexing-badindex.go : When indexing, the index must be well-typed and resolve to int.
+* 4-6-2-indexing-badexpr.go : An expression that is being indexed must resolve to type array or slice
+
 
 ## Team Organization
 

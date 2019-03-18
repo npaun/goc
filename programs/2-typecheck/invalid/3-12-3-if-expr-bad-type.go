@@ -1,3 +1,4 @@
+// The expression in an if-statement case must always resolve to bool
 package foo
 
 func main() {

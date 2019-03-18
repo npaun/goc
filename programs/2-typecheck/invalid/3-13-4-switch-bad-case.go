@@ -1,3 +1,4 @@
+// cases' expressions must have the same type as the first expression
 package foo
 
 func main() {
@@ -8,7 +9,6 @@ func main() {
         var x2 = x
     default:
         x = 2
-        var y = x // not declared, only in previous case
     }
 }
 
