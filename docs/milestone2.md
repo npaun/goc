@@ -44,6 +44,29 @@ GoLite supports multiple definitions of blank functions as well as functions nam
 
 ##### If and Switch Statements
 Special care was taken to ensure that the if and switch statements scoped properly. The main difficulty here lies in the fact that each case can declare new variables, which can be used in following cases. To implement this, we first scope a new symbol table for the entire if/switch statement, let's call this *outer_scope*. Next, we iterate through each of the cases (if and switch statements use the same case ast node), and do the following: 1) add a symbol entry for the case's statement into *outer_scope* 2) scope a new symbol table for the case's block and go through the block 3) unscope the block's symbol table and continue to the next case. 
+
+```
+if x := <expr>; <cond> {
+    // block scope, x is accessible
+} else if y := <expr>; <cond> {
+    // block scope, x and y are accessible
+}
+
+// equivalent to:
+
+{
+// outer scope
+x := <expr>
+if <cond> {
+    // block scope, x is accessible
+}
+y := <expr>
+else if <cond> {
+    // block scope, x and y are accessible
+}
+}
+```
+
 ##### For Statements
 ##### Short Variable Redecleration
 
