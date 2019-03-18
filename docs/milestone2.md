@@ -111,6 +111,8 @@ While performing the type-check phase, the type-checker also performs type infer
 * 4-9-float64-into-string.go : float64 cannot be cast into string
 * 4-9-float64-into-string2.go : float64 cannot be cast into string (even through indirect types)
 * 4-9-bool-into-string.go : bool cannot be cast into string 
+* 4-9-int-into-bool.go : int cannot be cast into bool
+
 
 ## Team Organization
 
@@ -118,7 +120,6 @@ While performing the type-check phase, the type-checker also performs type infer
     * Symbol table implementation
     * Symbol table building
     * Symbol table printing
-    * tests
 * Nicholas
     * Symbol table implementation
     * Type checking
@@ -127,7 +128,6 @@ While performing the type-check phase, the type-checker also performs type infer
     * Symbol table building
     * Parser/Lexer fixes from previous milestone
     * Weeding passes for builtin functions calls
-    * tests
     
 ## References
 
