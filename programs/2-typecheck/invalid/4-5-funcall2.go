@@ -1,3 +1,4 @@
+// in a function call (expr)(args...), the expr must resolve to a function type
 package foo
 
 func bar(a1 int, a2 float64) {

@@ -1,3 +1,4 @@
+// an index must be of type int
 package foo
 
 func main() {
