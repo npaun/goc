@@ -2,8 +2,11 @@ open Sexplib
 
 
 let dump_types typs = 
-	List.map (fun typ -> Golite.sexp_of_gotype typ |> Sexp.to_string_hum) typs
-	|> String.concat " -> "
+	match typs with
+	| h::t -> 
+		List.map (fun typ -> Golite.sexp_of_gotype typ |> Sexp.to_string_hum) (t @ [h]) 
+		|> String.concat " -> "
+	| [] -> "<VOID>"
 
 	
 let dump ast = 

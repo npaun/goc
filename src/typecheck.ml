@@ -36,7 +36,7 @@ let typeof_ident symt var = match (Symtbl.get_symbol symt var true) with
 
 let typeof_var symt var = match (Symtbl.get_symbol symt var true) with
 | Some sym -> 
-	if sym.kind = Symtbl.VarK || sym.kind = Symtbl.ConstK then
+	if sym.kind = Symtbl.VarK || sym.kind = Symtbl.ConstK || sym.kind = Symtbl.FuncK then
 		sym.typ
 	else
 		raise (TypeError (sprintf "%s is not a variable\n" var))
@@ -77,6 +77,45 @@ let assert_match resolver symt node lt rt =
 		if (resolver symt lt') <> (resolver symt rt) then
 			raise_type node lt' rt
 		
+
+let assert_consist resolver symt ident rhs rt = 
+	let inconsistency_error id dectype usedtype = 
+		let l0,c0 = rhs._start in
+		let l1,c1 = rhs._end in
+		sprintf "%s has type %s, but expression %s has type %s at line %d, cols %d-%d\n"
+		id
+		(Dumpast.dump_types dectype)
+		(Pretty.string_of_expr rhs)
+		(Dumpast.dump_types usedtype)
+		l0 c0 c1
+	in match ident.v with
+	| `Blank -> () (*Anything goes with blank?*)
+	| `V id -> 
+		if (resolver symt (typeof_var symt id)) <> (resolver symt rt) then
+			raise (TypeError (inconsistency_error id (typeof_var symt id) (resolver symt rt)))
+	| _ -> raise (TypeError "Mystery meat callable")
+
+let return_type symt fn = 
+	let not_callable_error badtype =
+		let l0,c0 = fn._start in
+		let l1,c1 = fn._end in
+			sprintf "Expression %s of type %s is not callable at line %d, cols %d-%d\n"
+			(Pretty.string_of_expr fn)
+			(Dumpast.dump_types badtype)
+			l0 c0 c1
+	in match fn.v with
+	| `V id ->
+		begin match (Symtbl.get_symbol symt id true) with
+		| Some sym ->
+			if sym.kind <> Symtbl.FuncK then
+				raise (TypeError (not_callable_error (resolve_basic symt sym.typ)))
+			else 
+				List.hd (resolve_basic symt sym.typ)
+		| None -> raise (SyntaxError "Bogus bogus bogus")
+		end
+  	| other -> raise (TypeError ("Mystery meat callable"))
+
+ 
 
 let element_type symt node = 
 	let element_type_error () = 
@@ -216,4 +255,19 @@ and pass_expr symt node = match node.v with
 	let obj' = pass_expr symt obj in
 		let field_t = field_type symt obj' field in
 			{node with v = `Selector(obj',field); _derived = field_t}
+| `Call(_,_) -> pass_call symt node
 | other -> {node with _derived = [`RUNE; `RUNE; `RUNE]} (* This is a really silly type to warn what's going on *)
+and pass_call symt node = match node.v with
+| `Call({v = `V "append"},[arr;elm]) -> node
+| `Call({v = `V "len"},[obj]) -> node
+| `Call({v = `V "cap"},[obj]) -> node
+| `Call({v = `V "init"},_) -> raise (TypeError "The function init must not be called")
+(* todo casts *)
+| `Call(fn,args) ->
+	let fn' = pass_expr symt fn in
+	let args' = List.map (pass_expr symt) args in
+	let typeof_args' = List.map typeof args' |> List.flatten in
+		let return_t = return_type symt fn' in
+			assert_consist resolve_basic symt (fn':expression :> lvalue') node (return_t::typeof_args');
+			{node with v = `Call(fn', args'); _derived = [return_t]}
+
