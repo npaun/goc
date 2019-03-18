@@ -15,7 +15,8 @@ let with_error_handling fn ok =
 	| Golite.LexFailure message 
 	| Symtbl.SymbolErr message 
 	| Symtbl.SymbolInvInputErr message 
-	| Symtbl.SymbolUndefinedErr message ->  (
+	| Symtbl.SymbolUndefinedErr message
+    | Typecheck.TypeError message -> (
 		fprintf stderr "Error: %s\n" message;
 		exit 1
     )

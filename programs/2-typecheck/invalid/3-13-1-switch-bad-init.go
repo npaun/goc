@@ -1,3 +1,4 @@
+// switch-statement init is not well-typed
 package foo
 
 func main() {

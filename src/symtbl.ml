@@ -246,12 +246,14 @@ and sym_stmt symtbl stmt = match stmt.v with
         unscope_tbl outer_scope
     )
     | For(stmt_opt, expr_opt, stmt_opt2, block) -> (
-        let _ = sym_stmt_opt symtbl (gen_stmt_opt stmt_opt stmt) in
-        let _ = sym_expr_opt symtbl expr_opt in
-        let _ = sym_stmt_opt symtbl (gen_stmt_opt stmt_opt2 stmt) in
-        let tbl = scope_tbl symtbl in 
+        let for_scope = scope_tbl symtbl in
+        let _ = sym_stmt_opt for_scope (gen_stmt_opt stmt_opt stmt) in
+        let _ = sym_expr_opt for_scope expr_opt in
+        let _ = sym_stmt_opt for_scope (gen_stmt_opt stmt_opt2 stmt) in
+        let tbl = scope_tbl for_scope in 
         sym_block tbl block;
-        unscope_tbl tbl
+        unscope_tbl tbl;
+        unscope_tbl for_scope
     )
     | Break
     | Continue
@@ -288,10 +290,10 @@ and sym_case stmt symtbl case = match case with
     ) 
     | Default(block)              -> sym_block symtbl block
 and sym_decl s symtbl hasnew decl = match decl with
-    | Var(lhs, typ, _, isshort) -> (match lhs.v, isshort with
-        | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ]) s
-        | `V(id), true  -> put_symbol_short_decl !symtbl (make_symbol id VarK [typ]) s hasnew
-        | `Blank, _ -> ()
+    | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v, isshort with
+        | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ]) s; sym_expr_opt symtbl expr_opt
+        | `V(id), true  -> put_symbol_short_decl !symtbl (make_symbol id VarK [typ]) s hasnew; sym_expr_opt symtbl expr_opt
+        | `Blank, _ -> sym_expr_opt symtbl expr_opt
         | _, _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
     | Type(iden', typ) -> put_iden iden' TypeK [typ] s !symtbl
@@ -325,6 +327,9 @@ let init_tbl print ast =
     put_symbol !root_tbl (make_symbol "string" TypeK [`STRING]) (-1,-1);
     put_symbol !root_tbl (make_symbol "true" ConstK [`BOOL]) (-1,-1);
     put_symbol !root_tbl (make_symbol "false" ConstK [`BOOL]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "append" FuncK [`AUTO; `AUTO; `AUTO]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "len" FuncK [`AUTO; `INT]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "cap" FuncK [`AUTO; `INT]) (-1,-1);
     let tbl = scope_tbl root_tbl in
     sym_ast ast tbl;
     unscope_tbl tbl;
