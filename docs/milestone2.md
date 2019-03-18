@@ -23,12 +23,54 @@ In order to generate the symbol table, we implemented a symbol table module (see
 
 #### Symbol Table
 
-The symbol table is implemented in a very conventional way; it consists of a hash table of symbols, mapped to their names. It also holds references to its parent and children aswell as it's depth, the global scope being of depth 0.
+The symbol table is implemented in a very conventional way; it consists of a hash table of symbols, mapped to their names. It also holds references to its parent and children aswell as it's depth, the global scope having a depth of 0. The depth is primarly used for pretty-printing the symbol table, as it controls how many tabs are printed.
 
 #### Symbols
 
-The symbol implementation is also very straight forward; it consts of a name, the kind of symbol (variable, typedef, function or constant), and its type.
+The symbol implementation is also very straight forward; it consts of a name, the kind of symbol (variable, typedef, function or constant), and its type. The type of the symbol is implemented as a list of types in order to support function signatures. Symbol entries for variables and types just have a single entry in this type list, while symbol entries for functions have a type list in the form of: [return type; arg1 type; arg2 type, etc]. This allows for easy pretty-printing of the function signature and make the job of the typechecker. Lastly, it should be noted that all of the fields in the symbol struct are mutable, which allows for the symbol's to be modified in later stages of the compiler (ex. typechecker when it performs type inference)
 
+##### Global Symbol Entries
+A set of symbol entries are added into the root symbol table at the start of symbol generation. These symbol entries include all of GoLite's primitive types (int, float64, bool, rune, string), true/false constants, as well as the built-in functions (append, len, and cap). The actual program is contained within a symbol table which is the child of this global symbol table.
+
+#### Scoping Rules
+For the most part, most of the scoping rules just involve adding/getting symbols from the same scope. However, there are some notable statements that require careful handling of symbol table scoping. Some of these rules are noted below.
+
+##### Functions
+Functions are toplevel declerations, and are composed of an identifier, signature list and a block. Firstly, we add an entry into the program's symbol table (the one under the "global" symbol table exaplined in the Global Symbol Entries section above) for the function's identifier. Next, we scope a new symbol table and add in all of the parameters, followed by adding all of the statements within the block. This ensures that the function identifier is visible from the program's symbol table but the parameters and contents of the block are not.
+###### Invalid main/init check
+According the GoLite spec, function(s) with the name "main" or "init" cannot have parameters or a return type. This is enforced in our compiler by doing a check to ensure that no signatures exist and that the function's type is `VOID before any symbol entries are added. If this check passes, we through an error stating that the special function must be void and have no parameters.
+###### Multiple init/blank funcs
+GoLite supports multiple definitions of blank functions as well as functions named "init". Since we use a hashtable to map the function's name to it's symbol, we prefix the name of the function with "$" and postfix it with a number. The postfixed number is the current count of unbounded functions (init/blank funcs are not bounded). This allows us to have an entry in the symbol table's hashtable for each of the unbounded function definitions. Lastly, we set the type list of these functions to [`AUTO] to indicate that it is not bounded (this is used in the pretty-printer and typechecker).
+
+##### If and Switch Statements
+Special care was taken to ensure that the if and switch statements scoped properly. The main difficulty here lies in the fact that each case can declare new variables, which can be used in following cases. To implement this, we first scope a new symbol table for the entire if/switch statement, let's call this *outer_scope*. Next, we iterate through each of the cases (if and switch statements use the same case ast node), and do the following: 1) add a symbol entry for the case's statement into *outer_scope* 2) scope a new symbol table for the case's block and go through the block 3) unscope the block's symbol table and continue to the next case. 
+
+```
+if x := <expr>; <cond> {
+    // block scope, x is accessible
+} else if y := <expr>; <cond> {
+    // block scope, x and y are accessible
+}
+
+// equivalent to:
+
+{
+// outer scope
+x := <expr>
+if <cond> {
+    // block scope, x is accessible
+}
+y := <expr>
+else if <cond> {
+    // block scope, x and y are accessible
+}
+}
+```
+
+##### For Statements
+For statements are a much simpler case of the if/switch statement scoping rules. Here we still make sure to start with scoping a new symbol table, here we call it *for_scope*. We do the usual symbol adds/checks for the stmts and expr contained within the for statement using *for_scope*. Next, we scope a new symbol table for the block and we go through it. We finish by unscoping the block symbol table and then *for_scope*.
+##### Short Variable Redecleration
+GoLite allows for redeclerations of variables within short variable declerations statements as long as there is a new variable being declared within the statement. This is implemented within our compiler by first scanning through the list of identifiers in the short var declarations and checking to see if there are any new variables (i.e. if there exists a non blank identifier which is not in the current scope). If so, then we simple ignore the identifiers in the short var declaration which already exist. 
 ### Type Checker
 
 *have fun Nic!*
@@ -50,5 +92,5 @@ The symbol implementation is also very straight forward; it consts of a name, th
     
 ## References
 
-* [](https://github.com/ossamaAhmed/GoLite-compiler)
+* [ossamaAhmed/GoLite-compiler](https://github.com/ossamaAhmed/GoLite-compiler)
     * Ideas for parser/lexer fixes

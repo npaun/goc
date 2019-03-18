@@ -13,7 +13,10 @@ let with_error_handling fn ok =
 	) with
 	| Golite.SyntaxError message
 	| Golite.LexFailure message 
-    | Symtbl.SymbolErr message ->  (
+	| Symtbl.SymbolErr message 
+	| Symtbl.SymbolInvInputErr message 
+	| Symtbl.SymbolUndefinedErr message
+    | Typecheck.TypeError message -> (
 		fprintf stderr "Error: %s\n" message;
 		exit 1
     )
@@ -22,7 +25,13 @@ let weed ast = Terminal.pass ast |> Lvalue.pass |> Switch.pass
     
 let parse lexbuf = Parser.main Lexer.lex lexbuf |> weed
 
-let build_symtbl = let tbl = Symtbl.make_tbl in ()
+let build_symtbl print ast = Symtbl.init_tbl print ast
+
+let do_typecheck lexbuf = 
+	let ast = parse lexbuf in
+		let symt = Symtbl.init_tbl false ast in
+			Typecheck.pass_ast !symt ast
+
 
 let main () = 
 	let lexbuf = load_text() in
@@ -32,7 +41,8 @@ let main () =
 		| "parse" -> with_error_handling (fun () -> parse lexbuf) true 
 		| "pretty" -> with_error_handling (fun () -> parse lexbuf |> Pretty.dump_ast |> printf "%s\n") false
 		| "dumpast" -> with_error_handling (fun () -> parse lexbuf |> Dumpast.dump |> printf "%s\n") false
-        | "symbol" -> with_error_handling (fun () -> build_symtbl) true
+		| "typecheck" -> with_error_handling (fun () -> do_typecheck lexbuf) true
+		| "symbol" -> with_error_handling (fun () -> parse lexbuf |> (Symtbl.init_tbl true)) false
 		| _ -> printf "Go away\n"
 
 let _ = main ()

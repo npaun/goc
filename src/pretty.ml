@@ -5,7 +5,7 @@ open Golite
 (* TODO: finish string_of_stmt *)
 
 let crt_stmt stmt_node = 
-	{v = stmt_node;_debug="";_start=(-1,-1);_end=(-1,-1);_derived=None}
+	{v = stmt_node;_debug="";_start=(-1,-1);_end=(-1,-1);_derived=`AUTO}
 
 let crt_tab d b =
 	if b then (String.make d '\t') else ""

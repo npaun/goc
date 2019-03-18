@@ -36,7 +36,7 @@ type 'a annotated = {
 	_debug: string [@sexp_drop_if fun x -> x = "Hi!"];
 	_start: (int * int) [@sexp_drop_if fun x -> true];
 	_end: (int * int) [@sexp_drop_if fun x -> true];
-	_derived: type_name option [@sexp_drop_if fun x -> x = None]
+	_derived: gotype [@sexp_drop_if fun x -> x = `AUTO]
 } [@@deriving sexp]
 
 (* Expressions *)
@@ -70,7 +70,7 @@ and lvalue' = [operand | identifier'] annotated
 type ast = Program of package * toplevel_declaration annotated list [@@deriving sexp]
 and package = Package of identifier [@@deriving sexp]
 and declaration =
-	| Var of lvalue' * gotype * expression option * bool
+	| Var of lvalue' * gotype * expression option * bool (* is_short var (used in pretty printer) *)
 	| Type of identifier' * gotype
 [@@deriving sexp]
 and toplevel_declaration = 
