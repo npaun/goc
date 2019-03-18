@@ -4,5 +4,5 @@ package fail_to_fly
 func init() {
 }
 
-func init() struct { x rune } {
+func init() rune {
 }
