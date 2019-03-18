@@ -5,7 +5,7 @@
 *)
 open Golite
 
-let disablereturn = true
+let disablereturn = false (*extra free points ya*)
 
 let rec pass = function 
 | Program(package,decls) -> Program(package, List.map pass_toplevel decls)
