@@ -6,7 +6,7 @@ let annot node startpos endpos =
 	let pos_tuple pos = 
 		(pos.pos_lnum, pos.pos_cnum - pos.pos_bol)
 	in
-	{ v = node; _start = pos_tuple startpos; _end = pos_tuple endpos; _debug = "Hi!"; _derived = `AUTO}  
+	{ v = node; _start = pos_tuple startpos; _end = pos_tuple endpos; _debug = "Hi!"; _derived = []}  
     
     
 let throw_error msg s = 
