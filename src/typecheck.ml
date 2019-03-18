@@ -3,6 +3,10 @@ open Printf
 exception TypeError of string
 
 
+let typeof node = node._derived
+let ast_typeof node = typeof node |> List.hd
+
+
 let raise_type node lt rt =
 	let l0,c0 = node._start in
 	let l1,c1 = node._end in 
@@ -47,15 +51,38 @@ let resolve_basic symt typs =
 	| rest -> rest
 	in List.map aux typs
 
+let rt symt typs = 
+	let rec aux = function
+	| (`Type id) -> List.hd (typeof_ident symt id)
+	| `TypeLit Slice typ -> `TypeLit (Slice (aux typ))
+	| `TypeLit Array(sz, typ) -> `TypeLit (Array(sz, aux typ))
+	| `TypeLit Struct(ms) -> `TypeLit(Struct(List.map (fun (i,t) -> (i, aux t)) ms))
+	| rest -> rest
+	in List.map aux typs
+
 let infer_auto lt rt = match lt with
 | [`AUTO] -> rt
 | _ -> lt
 
-let assert_match symt node lt rt = 
+let assert_match resolver symt node lt rt = 
 	let lt' = infer_auto lt rt in
-		if (resolve_basic symt lt') <> (resolve_basic symt rt) then
+		if (resolver symt lt') <> (resolver symt rt) then
 			raise_type node lt' rt
 		
+
+let element_type symt node = 
+	let element_type_error () = 
+		let l0,c0 = node._start in
+		let l1,c1 = node._end in 
+			sprintf "Expression %s of type %s (i.e. %s) is not indexable at line %d, cols %d-%d\n"
+			(Pretty.string_of_expr node)
+			(Dumpast.dump_types (typeof node))
+			(Dumpast.dump_types (rt symt (typeof node)))
+			l0 c0 c1
+	in match (rt symt (typeof node)) with
+	| [`TypeLit Slice typ] -> [typ]
+	| [`TypeLit Array(sz,typ)] -> [typ]
+	| other -> raise (TypeError (element_type_error ()))
 
 let save_inferred_type (sym:Symtbl.symbol) inferred = 
 	sym.typ <- inferred
@@ -109,8 +136,6 @@ let traverse fn symt ast =
 
 		
 
-let typeof node = node._derived
-let ast_typeof node = typeof node |> List.hd
 
 
 and typeof_literal = function
@@ -132,11 +157,17 @@ and pass_statement this_symt node = function
 and pass_decl symt node = match node.v with
 | Var(name, lt, Some expr, s) ->
 	let expr' = pass_expr symt expr in
-		assert_match symt node [lt] (typeof expr');
+		assert_match resolve_basic symt node [lt] (typeof expr');
 		assert_redef_match symt node name (typeof expr');
 		Var(name, (ast_typeof expr'), Some expr', s)
 | other -> other (* Type declarations are already analyzed by symtbl *)
 and pass_expr symt node = match node.v with
 | `L lit -> {node with _derived = [typeof_literal lit]}
 | `V var -> {node with _derived = typeof_ident symt var} 
+| `Indexing(arr,idx) -> 
+	let arr' = pass_expr symt arr in
+	let idx' = pass_expr symt idx in
+		let elm_t = element_type symt arr' in
+			assert_match rt symt idx' [`INT] (typeof idx');
+			{node with v = `Indexing(arr',idx'); _derived = elm_t}
 | other -> {node with _derived = [`RUNE; `RUNE; `RUNE]} (* This is a really silly type to warn what's going on *)
