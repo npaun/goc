@@ -259,8 +259,19 @@ and pass_expr symt node = match node.v with
 | other -> {node with _derived = [`RUNE; `RUNE; `RUNE]} (* This is a really silly type to warn what's going on *)
 and pass_call symt node = match node.v with
 | `Call({v = `V "append"},[arr;elm]) -> node
-| `Call({v = `V "len"},[obj]) -> node
-| `Call({v = `V "cap"},[obj]) -> node
+| `Call({v = `V "len"} as fnobj,[obj]) -> 
+	let obj' = pass_expr symt obj in
+		begin try 
+			let _ = element_type symt obj' in ()
+		with 
+		| TypeError _ ->
+			assert_match rt symt obj' [`STRING] (typeof obj');
+		end;
+		{node with v = `Call(fnobj, [obj']); _derived = [`INT]}
+| `Call({v = `V "cap"} as fnobj,[obj]) -> 
+	let obj' = pass_expr symt obj in
+		element_type symt obj';
+		{node with v = `Call(fnobj, [obj']); _derived = [`INT]}
 | `Call({v = `V "init"},_) -> raise (TypeError "The function init must not be called")
 (* todo casts *)
 | `Call(fn,args) ->
