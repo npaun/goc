@@ -34,6 +34,14 @@ let typeof_ident symt var = match (Symtbl.get_symbol symt var true) with
 | Some sym -> sym.typ
 | None -> raise (SyntaxError (sprintf "We are all going to die!!! (%s)" var))
 
+let typeof_var symt var = match (Symtbl.get_symbol symt var true) with
+| Some sym -> 
+	if sym.kind = Symtbl.VarK || sym.kind = Symtbl.ConstK then
+		sym.typ
+	else
+		raise (TypeError (sprintf "%s is not a variable\n" var))
+| None -> raise (SyntaxError (sprintf "We are all going to die!!! (%s)" var))
+
 let resolve_basic symt typs =
 	let rec aux = function
 	| (`Type id) as tref ->
@@ -58,7 +66,7 @@ let rt symt typs =
 	| `TypeLit Array(sz, typ) -> `TypeLit (Array(sz, aux typ))
 	| `TypeLit Struct(ms) -> `TypeLit(Struct(List.map (fun (i,t) -> (i, aux t)) ms))
 	| rest -> rest
-	in List.map aux typs
+	in typs |> List.map aux |> resolve_basic symt
 
 let infer_auto lt rt = match lt with
 | [`AUTO] -> rt
@@ -83,6 +91,39 @@ let element_type symt node =
 	| [`TypeLit Slice typ] -> [typ]
 	| [`TypeLit Array(sz,typ)] -> [typ]
 	| other -> raise (TypeError (element_type_error ()))
+
+let field_type symt node field = 
+	let field_not_found_error () = 
+		let l0,c0 = node._start in
+		let l1,c1 = node._end in 
+		
+		sprintf "Field %s does not exist in struct %s of type %s at line %d, cols %d-%d\n"
+		field
+		(Pretty.string_of_expr node)
+		(Dumpast.dump_types (typeof node))
+		l0 c0 c1
+	in let not_a_struct_error () = 
+		let l0,c0 = node._start in
+		let l1,c1 = node._end in 
+		
+		sprintf "Expression %s of type %s (i.e. %s) is not selectable at line %d, cols %d-%d\n"
+		(Pretty.string_of_expr node)
+		(Dumpast.dump_types (typeof node))
+		(Dumpast.dump_types (rt symt (typeof node)))
+		l0 c0 c1
+	in let search_struct typedef field = 
+		match List.find_opt (fun (name,typ) -> name = field) typedef with
+		| Some (_,typ) -> Some (rt symt [typ])
+		| None -> None
+	in let structtype = (rt symt (typeof node)) in
+		match structtype with
+		| [`TypeLit Struct ms] -> 
+			begin match search_struct ms field with
+			| Some fieldtype -> fieldtype
+			| None -> raise (TypeError (field_not_found_error ()))
+			end
+		| other -> raise (TypeError (not_a_struct_error ()))
+
 
 let save_inferred_type (sym:Symtbl.symbol) inferred = 
 	sym.typ <- inferred
@@ -163,11 +204,16 @@ and pass_decl symt node = match node.v with
 | other -> other (* Type declarations are already analyzed by symtbl *)
 and pass_expr symt node = match node.v with
 | `L lit -> {node with _derived = [typeof_literal lit]}
-| `V var -> {node with _derived = typeof_ident symt var} 
+| `V var -> 
+	{node with _derived = typeof_var symt var} 
 | `Indexing(arr,idx) -> 
 	let arr' = pass_expr symt arr in
 	let idx' = pass_expr symt idx in
 		let elm_t = element_type symt arr' in
 			assert_match rt symt idx' [`INT] (typeof idx');
 			{node with v = `Indexing(arr',idx'); _derived = elm_t}
+| `Selector(obj,field) ->
+	let obj' = pass_expr symt obj in
+		let field_t = field_type symt obj' field in
+			{node with v = `Selector(obj',field); _derived = field_t}
 | other -> {node with _derived = [`RUNE; `RUNE; `RUNE]} (* This is a really silly type to warn what's going on *)
