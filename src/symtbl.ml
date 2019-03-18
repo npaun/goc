@@ -246,12 +246,14 @@ and sym_stmt symtbl stmt = match stmt.v with
         unscope_tbl outer_scope
     )
     | For(stmt_opt, expr_opt, stmt_opt2, block) -> (
-        let _ = sym_stmt_opt symtbl (gen_stmt_opt stmt_opt stmt) in
-        let _ = sym_expr_opt symtbl expr_opt in
-        let _ = sym_stmt_opt symtbl (gen_stmt_opt stmt_opt2 stmt) in
-        let tbl = scope_tbl symtbl in 
+        let for_scope = scope_tbl symtbl in
+        let _ = sym_stmt_opt for_scope (gen_stmt_opt stmt_opt stmt) in
+        let _ = sym_expr_opt for_scope expr_opt in
+        let _ = sym_stmt_opt for_scope (gen_stmt_opt stmt_opt2 stmt) in
+        let tbl = scope_tbl for_scope in 
         sym_block tbl block;
-        unscope_tbl tbl
+        unscope_tbl tbl;
+        unscope_tbl for_scope
     )
     | Break
     | Continue
