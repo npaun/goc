@@ -90,6 +90,7 @@ While performing the type-check phase, the type-checker also performs type infer
 * 3-13-1-switch-bad-init.go : In order for a switch-statement to be well-typed, its init-statement must also be well-typed.
 * 3-12-2-switch-bad-expr.go : In order for a switch-statement to be well-typed, its expression must also be well-typed.
 * 3-13-4-switch-bad-case.go : In order for a switch-statement to be well-typed, all of its cases' expressions must also be well-typed and resolve to the same type as the switch-statement's expression.
+* 4-1-intlit-not-promoted.go : type int cannot be promoted to type float64
 * 4-5-funcall1.go : In order for a function call to be well typed, all the arguments' types must match the function's formal parameters' types.
 * 4-5-funcall2.go : In order for a function call `(<expr>)(a1, ..., an)` to be well-typed, the expression's type must resolve to a function type, in this case, it must be a function name.
 * 4-6-1-indexing-badindex.go : When indexing, the index must be well-typed and resolve to int.
