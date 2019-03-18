@@ -82,6 +82,10 @@ While performing the type-check phase, the type-checker also performs type infer
 * 1-2-1-defined-types.go : In order for two types to be identical, they must have the same underlying type, unless they are user-defined, then they must be the exact same type.
 * 2-1-1-bad-expr-type.go : When declaring a variable, the RHS expression's type must be identical to its declared type if it is present.
 * 2-1-2-decl-defined-type.go : When declaring a variable of a user-defined type, the expression cannot be of its underlying type, it must be cast to the user-defined type.
+* 2-2-alias-not-resolved.go : Even though two types may be aliases of each other, they are not assignment-compatible
+* 2-2-type-shadow.go : Once int is shadowed by a different type, it cannot be used with int literals
+* 2-3b-lisp-1.go : Golite is a Lisp-1 (one name space for functions and variables)
+* 2a-reassign-constant.go : While you can shadow a constant, you can't assign to it
 * 3-4-1-return-noexpr.go : A function declaration is ill-typed if it has a specified return-type but returns no expression.
 * 3-4-2-return-expr1.go : The type of a returned expression must match the function's specified return-type.
 * 3-5-3-short-var-decl-partial-redeclare-to-different-type.go : A variable cannot be redeclared to a different type using a short variable declaration.
@@ -90,6 +94,8 @@ While performing the type-check phase, the type-checker also performs type infer
 * 3-13-1-switch-bad-init.go : In order for a switch-statement to be well-typed, its init-statement must also be well-typed.
 * 3-12-2-switch-bad-expr.go : In order for a switch-statement to be well-typed, its expression must also be well-typed.
 * 3-13-4-switch-bad-case.go : In order for a switch-statement to be well-typed, all of its cases' expressions must also be well-typed and resolve to the same type as the switch-statement's expression.
+* 4-1-intlit-not-promoted.go : you cannot assign an int to a variable of type float64
+* 4-1-lit-no-aliases.go : A literal is not assignment-compatible to an alias of its type
 * 4-5-funcall1.go : In order for a function call to be well typed, all the arguments' types must match the function's formal parameters' types.
 * 4-5-funcall2.go : In order for a function call `(<expr>)(a1, ..., an)` to be well-typed, the expression's type must resolve to a function type, in this case, it must be a function name.
 * 4-6-1-indexing-badindex.go : When indexing, the index must be well-typed and resolve to int.
