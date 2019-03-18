@@ -108,7 +108,8 @@ While performing the type-check phase, the type-checker also performs type infer
 * 4-8-2-cap-return.go : The result of cap is of type int, cannot assign to non-int assignable values. 
 * 4-8-3-len-expr.go : The expression in len must resolve to either an array or slice type.
 * 4-8-3-len-return.go : The result of len is of type int, cannot assign to non-int assignable values. 
-* 4-9-float-into-string.go : float64 cannot be cast into string
+* 4-9-float64-into-string.go : float64 cannot be cast into string
+* 4-9-float64-into-string2.go : float64 cannot be cast into string (even through indirect types)
 
 ## Team Organization
 
