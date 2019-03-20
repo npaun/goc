@@ -7,7 +7,10 @@ debug: prep
 prod: prep
 	ocamlbuild -I prod $(COMMON_OPTS) 
 clean:
-	-rm -r _build goc.native menhir
+	-rm -r _build goc.native
+distclean: clean
+	-rm -r menhir menhir*.tar*
+
 prep: menhir/bin/menhir
 	-mkdir -p _build
 	cp common.mly _build/

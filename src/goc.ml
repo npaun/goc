@@ -16,7 +16,7 @@ let with_error_handling fn ok =
 	| Symtbl.SymbolErr message 
 	| Symtbl.SymbolInvInputErr message 
 	| Symtbl.SymbolUndefinedErr message
-    | Typecheck.TypeError message -> (
+    	| Typelib.TypeError message -> (
 		fprintf stderr "Error: %s\n" message;
 		exit 1
     )

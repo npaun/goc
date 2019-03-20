@@ -14,5 +14,5 @@ _build
 *.mli
 parser.ml
 lexer.ml
-menhir-*.tar
+menhir-*.tar*
 menhir
