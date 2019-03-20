@@ -8,6 +8,17 @@ let maybe fn = function
 | Some arg -> Some (fn arg)
 | None -> None
 
+let default fn if_none = function
+| Some arg -> (fn arg)
+| None -> if_none
+
+let packify fn symt nodes =
+	List.map (fun n -> {v = n; _derived = []; _start = (-100,-100); _end = (-100,-100); _debug = "Packified"}) nodes
+	|> traverse fn symt
+	|> List.map (fun n -> n.v)
+
+
+
 let rec pass_ast symt = function
 | Program(pkg,tops) -> Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops)
 and pass_toplevel this_symt node  = function
@@ -32,7 +43,17 @@ and pass_statement this_symt node = function
 				(maybe (pass_cond this_symt "for loop") cond),
 				(maybe (pass_inner_stmt this_symt) post),
 				pass_block child_symt block
-			)})	
+			)})
+| If(cases) -> same (fun () -> {node with v = If(packify (pass_case "if condition" [`BOOL]) this_symt cases)})
+| Switch(stmt,cond,cases) -> down (fun child_symt ->
+		let cond' = (maybe (pass_expr this_symt) cond) in
+			let cond_t = (default typeof [`BOOL] cond') in
+				{node with v = Switch(
+					(maybe (pass_inner_stmt this_symt) stmt),
+					cond',
+					packify (pass_fallable_case "switch case" cond_t) child_symt cases
+				)}
+		)
 | _ -> same (fun () -> node)
 and pass_decl symt node = match node.v with
 | Var(name, lt, Some expr, s) ->
@@ -41,6 +62,22 @@ and pass_decl symt node = match node.v with
 		Typerules.assert_redef_match symt node name (typeof expr');
 		Var(name, (type_single expr'), Some expr', s)
 | other -> other (* Type declarations are already analyzed by symtbl *)
+and pass_fallable_case ctx expected_t this_symt node = function
+| (case,mode) -> same (fun () -> {node with v = ((packify (pass_case ctx expected_t) this_symt [case] |> List.hd), mode)})
+and pass_case ctx expected_t this_symt node = function
+| Default(block) -> down (fun child_symt -> {node with v = Default(pass_block child_symt block)})
+| Case(pre,conds,block) -> down (fun child_symt ->
+	let conds' = List.map (pass_expr this_symt) conds in
+		List.iter (fun cond' -> 
+			assert_match rt this_symt ctx ("<case>",expected_t) (cond', typeof cond')
+		) conds';
+		{node with v = Case(
+				(maybe (pass_inner_stmt this_symt) pre),
+				conds',
+				(pass_block child_symt block)
+			)
+		}
+	)
 and pass_cond symt ctx cond = 
 	let cond' = pass_expr symt cond in
 		assert_match rt symt ctx ("<condition>",[`BOOL]) (cond', typeof cond');
