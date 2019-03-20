@@ -17,9 +17,30 @@ exception TypeError of string
 	      [return-type; `VOID] **)
 type typesig = gotype list
 
-(** string_of_typesig formats a type signature with sufficient precision
-    to be helpful to a user in resolving type issues. **)
-let string_of_typesig = Dumpast.dump_types
+
+(** string_of_typesig formats a 'formalized' type signature
+    assist a user in resolving type issues. **)
+let string_of_typesig typs =
+	let rec describe_basic = function
+	| `INT -> "INT"
+	| `BOOL -> "BOOL"
+	| `RUNE -> "RUNE"
+	| `STRING -> "STRING"
+	| `FLOAT64 -> "FLOAT64"
+	| `AUTO -> "(Auto)"
+	| `VOID -> "VOID"
+	| `Type id -> sprintf "(Type \"%s\")" id
+	and describe = function
+	| `TypeLit Slice(typ) -> sprintf "(Slice %s)" (describe typ)
+	| `TypeLit Array(sz,typ) -> sprintf "(Array %d %s)" sz (describe typ)
+	| `TypeLit Struct(members) -> sprintf "(Struct [%s])" (List.map describe_member members |> String.concat "; ")
+	| #type_name as basic-> describe_basic basic
+	and describe_member = function
+	| (name, typ) -> sprintf "(%s %s)" name (describe typ)
+	in match typs with
+	| [] -> "<NOTYPE>"
+	| h::t -> List.map describe (t @ [h]) |> String.concat " -> "
+
 
 
 (** typeof: Derived type of any AST node. **)
@@ -220,3 +241,6 @@ let type_single (node:'n annotated):gotype =
 		appropriate node, but oh well. **)
 let fwd_annot (parent:'n annotated) (child:'m):('m annotated) =
 	{parent with v = child}
+
+
+
