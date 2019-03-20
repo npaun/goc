@@ -175,7 +175,7 @@ let get_func_typ iden' siglist ret_typ =
         | [] -> acc
     in
     match iden' with
-        | `V(id) -> if id == "init" then [`AUTO] else ret_typ::(get_sig_typ siglist [])
+        | `V(id) -> if id == "init" then [`AUTO] else ret_typ::(get_sig_typ siglist [] |> List.rev)
         | `Blank -> [`AUTO]
   
 (* identifier' -> symbolkind -> gotype -> astnode -> symtbl -> unit *)
