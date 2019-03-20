@@ -69,7 +69,7 @@ and pass_case ctx expected_t this_symt node = function
 | Case(pre,conds,block) -> down (fun child_symt ->
 	let conds' = List.map (pass_expr this_symt) conds in
 		List.iter (fun cond' -> 
-			assert_match rt this_symt ctx ("<case>",expected_t) (cond', typeof cond')
+			assert_match rt this_symt ctx ("<condition>",expected_t) (cond', typeof cond')
 		) conds';
 		{node with v = Case(
 				(maybe (pass_inner_stmt this_symt) pre),
