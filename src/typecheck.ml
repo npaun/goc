@@ -4,7 +4,9 @@ open Typelib
 
  
 let v_name = Pretty.string_of_lvalue'
-
+let maybe fn = function
+| Some arg -> Some (fn arg)
+| None -> None
 
 let rec pass_ast symt = function
 | Program(pkg,tops) -> Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops)
@@ -12,8 +14,24 @@ and pass_toplevel this_symt node  = function
 | Global(decl) -> same (fun () -> {node with v = Global(decl |> fwd_annot node |> pass_decl this_symt)})
 | Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, pass_block child_symt body)})
 and pass_block this_symt body = traverse pass_statement this_symt body
+and pass_inner_stmt symt parent child = 
+	(* Sorry for the weird-ass function *)
+	(pass_block symt [{parent with v = child}] |> List.hd).v
 and pass_statement this_symt node = function
 | Decl(decls) -> same (fun () -> {node with v = Decl(List.map (fun d -> d |> fwd_annot node |> pass_decl this_symt) decls)})
+| Expr(expr) -> same (fun () -> {node with v = Expr(pass_expr this_symt expr)})
+| Return(expr) -> 
+	(* match with func return later *)
+	same (fun () -> {node with v = Return(maybe (pass_expr this_symt) expr)})
+| Block(stmts) -> down (fun child_symt -> {node with v = Block(pass_block child_symt stmts)})
+| For(pre,cond,post,block) ->
+ 	down (fun child_symt -> 
+			{node with v = For(
+				(maybe (pass_inner_stmt this_symt node) pre),
+				(maybe (pass_cond this_symt "for loop") cond),
+				(maybe (pass_inner_stmt this_symt node) post),
+				pass_block child_symt block
+			)})	
 | _ -> same (fun () -> node)
 and pass_decl symt node = match node.v with
 | Var(name, lt, Some expr, s) ->
@@ -22,6 +40,17 @@ and pass_decl symt node = match node.v with
 		Typerules.assert_redef_match symt node name (typeof expr');
 		Var(name, (type_single expr'), Some expr', s)
 | other -> other (* Type declarations are already analyzed by symtbl *)
+and pass_cond symt ctx cond = 
+	let cond' = pass_expr symt cond in
+		assert_match rt symt ctx ("<condition>",[`BOOL]) (cond', typeof cond');
+		cond'
+and pass_case this_symt node = function
+| Case(pre,conds,block) -> (fun child_symt -> 
+	{node with v = Case(
+		(maybe (pass_inner_stmt this_symt node) pre),
+			
+| Default(block) -> (fun child_symt -> {node with v = Default(pass_block child_symt block)})
+
 and pass_expr symt node = match node.v with
 | `L lit -> {node with _derived = [typeof_literal lit]}
 | `V var -> 
