@@ -6,6 +6,11 @@ open Golite
 let crt_stmt stmt_node = 
 	{v = stmt_node;_debug="";_start=(-1,-1);_end=(-1,-1);_derived=[]}
 
+let crt_stmt_opt stmt =
+	match stmt with
+	| None -> crt_stmt Empty
+	| Some s -> s
+
 let crt_tab d b =
 	if b then (String.make d '\t') else ""
 
@@ -66,7 +71,7 @@ and string_of_switch_case d (c,fmt) = match c with
 		| Case(_, expr_lst, blck) ->  (String.make d '\t') ^ "case " ^ (string_of_lst expr_lst ", " string_of_expr) ^ ":\n" ^ (string_of_lst blck "\n" (string_of_stmt (d+1) true))
 		| Default(blck) -> (String.make d '\t') ^ "default:\n" ^ (string_of_lst blck "\n" (string_of_stmt (d+1) true))
 and string_of_if_case d case = match case with
-		| Case(stmt, expr_lst, blck) -> "if " ^ (string_of_stmt d false (crt_stmt stmt) ^ "; ") ^ (string_of_lst expr_lst ", " string_of_expr) ^ " " ^ (string_of_block d blck)
+		| Case(stmt, expr_lst, blck) -> "if " ^ (string_of_stmt d false (crt_stmt_opt stmt) ^ "; ") ^ (string_of_lst expr_lst ", " string_of_expr) ^ " " ^ (string_of_block d blck)
 		| Default(blck) 						 -> string_of_block d blck
 and string_of_assn assn = 
     let rec split acc lst = match lst with
@@ -85,7 +90,7 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Print(b, expr_lst)                -> (crt_tab d tb) ^ (if b then "println(" else "print(") ^ (string_of_lst expr_lst ", " string_of_expr) ^ ")"
 		| Return(expr_opt)                  -> (crt_tab d tb) ^ "return " ^ string_of_expr_opt expr_opt
 		| If(c_lst)                         -> (crt_tab d tb) ^ string_of_lst c_lst " else " (string_of_if_case d) 
-		| Switch(stm, expr_opt, c_lst)      -> (crt_tab d tb) ^ "switch " ^ (string_of_stmt d false (crt_stmt stm) ^ "; ") ^ (string_of_expr_opt expr_opt) ^ " {\n" ^ (string_of_lst c_lst "\n" (string_of_switch_case (d+1))) ^ "\n" ^ (crt_tab d tb) ^ "}" 
+		| Switch(stm, expr_opt, c_lst)      -> (crt_tab d tb) ^ "switch " ^ (string_of_stmt d false (crt_stmt_opt stm) ^ "; ") ^ (string_of_expr_opt expr_opt) ^ " {\n" ^ (string_of_lst c_lst "\n" (string_of_switch_case (d+1))) ^ "\n" ^ (crt_tab d tb) ^ "}" 
 		| For(s1_opt, e2_opt, s3_opt, blck) -> (crt_tab d tb) ^ "for " ^ (
 			match s1_opt, e2_opt, s3_opt, blck with
 				| None, None, None, _ -> string_of_block d blck
@@ -97,7 +102,7 @@ and string_of_stmt d tb stmt = match stmt.v with
 		| Empty                             -> ""
 		and string_of_stmt_opt stmt = match stmt with 
             | None -> ""
-            | Some s -> string_of_stmt 0 false (crt_stmt s)
+            | Some s -> string_of_stmt 0 false s
 		and string_of_expr expr = match expr.v with
             | `Op1(op, e)      		-> "(" ^ string_of_op1 op ^ string_of_expr e ^ ")"
             | `Op2(op, e1, e2) 		-> "(" ^ string_of_expr e1 ^ " " ^ string_of_op2 op ^ " " ^ string_of_expr e2 ^ ")"

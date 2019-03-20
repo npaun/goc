@@ -240,16 +240,16 @@ and sym_stmt symtbl stmt = match stmt.v with
     | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case stmt outer_scope) clist; unscope_tbl outer_scope
     | Switch(stmtn, expr_opt, fclist) -> (
         let outer_scope = scope_tbl symtbl in 
-        let _ = sym_stmt outer_scope (gen_stmt stmtn stmt) in
+        let _ = sym_stmt_opt outer_scope stmtn in
         let _ = sym_expr_opt outer_scope expr_opt in
         List.iter (fun (c, ftm) -> sym_case stmt outer_scope c) fclist;
         unscope_tbl outer_scope
     )
     | For(stmt_opt, expr_opt, stmt_opt2, block) -> (
         let for_scope = scope_tbl symtbl in
-        let _ = sym_stmt_opt for_scope (gen_stmt_opt stmt_opt stmt) in
+        let _ = sym_stmt_opt for_scope (stmt_opt) in
         let _ = sym_expr_opt for_scope expr_opt in
-        let _ = sym_stmt_opt for_scope (gen_stmt_opt stmt_opt2 stmt) in
+        let _ = sym_stmt_opt for_scope (stmt_opt2) in
         let tbl = scope_tbl for_scope in 
         sym_block tbl block;
         unscope_tbl tbl;
@@ -282,7 +282,7 @@ and sym_lval symtbl lval = match lval.v with
     )
 and sym_case stmt symtbl case = match case with
     | Case(stmtnode, exprlist, block) -> (
-        let _ = sym_stmt symtbl (gen_stmt stmtnode stmt) in
+        let _ = sym_stmt_opt symtbl stmtnode in
         let _ = List.iter (sym_expr symtbl) exprlist in
         let tbl = scope_tbl symtbl in
         sym_block tbl block;

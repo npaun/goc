@@ -14,9 +14,10 @@ and pass_toplevel this_symt node  = function
 | Global(decl) -> same (fun () -> {node with v = Global(decl |> fwd_annot node |> pass_decl this_symt)})
 | Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, pass_block child_symt body)})
 and pass_block this_symt body = traverse pass_statement this_symt body
-and pass_inner_stmt symt parent child = 
+and pass_inner_stmt symt node = 
 	(* Sorry for the weird-ass function *)
-	(pass_block symt [{parent with v = child}] |> List.hd).v
+	(pass_block symt [node] |> List.hd)
+
 and pass_statement this_symt node = function
 | Decl(decls) -> same (fun () -> {node with v = Decl(List.map (fun d -> d |> fwd_annot node |> pass_decl this_symt) decls)})
 | Expr(expr) -> same (fun () -> {node with v = Expr(pass_expr this_symt expr)})
@@ -27,9 +28,9 @@ and pass_statement this_symt node = function
 | For(pre,cond,post,block) ->
  	down (fun child_symt -> 
 			{node with v = For(
-				(maybe (pass_inner_stmt this_symt node) pre),
+				(maybe (pass_inner_stmt this_symt) pre),
 				(maybe (pass_cond this_symt "for loop") cond),
-				(maybe (pass_inner_stmt this_symt node) post),
+				(maybe (pass_inner_stmt this_symt) post),
 				pass_block child_symt block
 			)})	
 | _ -> same (fun () -> node)
@@ -44,13 +45,6 @@ and pass_cond symt ctx cond =
 	let cond' = pass_expr symt cond in
 		assert_match rt symt ctx ("<condition>",[`BOOL]) (cond', typeof cond');
 		cond'
-and pass_case this_symt node = function
-| Case(pre,conds,block) -> (fun child_symt -> 
-	{node with v = Case(
-		(maybe (pass_inner_stmt this_symt node) pre),
-			
-| Default(block) -> (fun child_symt -> {node with v = Default(pass_block child_symt block)})
-
 and pass_expr symt node = match node.v with
 | `L lit -> {node with _derived = [typeof_literal lit]}
 | `V var -> 
