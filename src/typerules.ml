@@ -12,6 +12,17 @@ let return_type symt ident = match ident.v with
 		List.hd (resolve_basic symt (typeof_symbol symt id))
   	| other -> failwith "Mystery meat callable (check return_type function)"
 
+(* Same as element_type, but only accepts a slice. used in append *)    
+let slice_type symt node =    
+	let element_type_error () = 
+		sprintf "Expression %s of type %s (i.e. %s) is not a slice %s\n"
+			(Pretty.string_of_expr node)
+			(string_of_typesig (typeof node))
+			(string_of_typesig (rt symt (typeof node)))
+			(err_loc node)
+    in match (rt symt (typeof node)) with
+	| [`TypeLit Slice typ] -> [typ]
+    | other -> raise (TypeError (element_type_error ()))
 
 let element_type symt node = 
 	let element_type_error () = 

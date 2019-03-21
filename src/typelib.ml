@@ -56,7 +56,16 @@ let typeof_symbol (symt:symtbl) (ident:identifier):typesig =
 	| Some sym -> sym.typ
 	| None -> failwith "Probable bug in Symtbl: Attempt to access non-existent symbol"
 
-
+(* kindof_symbol, returns in the kind of a symbol, currently used for know wheter or not a function call is 
+ * actually a typecast by checking at the kind of the function name's symbol *)
+let kindof_symbol symt ident = 
+    match (Symtbl.get_symbol symt ident true) with
+    | Some sym -> sym.kind
+    | None -> failwith "Probable bug in Symtbl: Attempt to access non-existent symbol"
+    
+let is_type_kind symt ident =
+    (kindof_symbol symt ident = Symtbl.TypeK)
+    
 (** typeof_literal: Maps between the variant of a literal and the corresponding internal type **)
 
 let typeof_literal = function
@@ -161,8 +170,8 @@ let rec rt (symt:symtbl) (typs:typesig):typesig =
 		|> rt symt (* rt will stop once a basic type is hit *)
 		|> resolve_basic symt (* for built-ins which expect the basic types *)
 		|> List.hd (* single value only *)
-	in resolve_visitor aux symt typs
-
+	in resolve_visitor aux symt typs    
+    
 (** err_loc: Provides a textual explanation of the error location to substitute into messages.**)
 let err_loc node =
 	let l0,c0 = node._start in
@@ -207,8 +216,47 @@ let assert_consist resolver symt ident (rnode,rtyp) =
 			raise (TypeError (inconsistency_error id ltyp basic_rtyp))
 	| _ -> failwith (sprintf "Please check if '%s' makes sense with assert_consist and enhance this function" (Pretty.string_of_expr ident))
 
+(** assert_resolves_to_base: Checks whether or not a type resolves to one of Golite's base types:
+    int, float64, bool, rune, string
+    It does not require a resolver as it always has to use rt **)    
+let assert_resolves_to_base symt ctxstring typ node =
+	let match_error () =
+		sprintf "In %s, type %s does not resolve to a base type %s\n" 
+		ctxstring
+		(string_of_typesig typ)
+		(err_loc node)
+	in 
+	match List.hd (rt symt typ) with
+    | `INT | `FLOAT64 | `BOOL | `RUNE | `STRING -> ()
+    | _ -> raise (TypeError (match_error ()))
+    
+(** assert_is_numeric: Checks whether or not a type resolves to one of Golite's base numeric types:
+    int, float64, rune
+    It does not require a resolver as it always uses rt**)    
+let assert_is_numeric symt ctxstring typ node =
+	let match_error () =
+		sprintf "In %s, type %s does not resolve to a numeric type %s\n" 
+		ctxstring
+		(string_of_typesig typ)
+		(err_loc node)
+	in 
+    match List.hd (rt symt typ) with
+    | `INT | `FLOAT64 | `RUNE -> ()
+    | _ -> raise (TypeError (match_error ()))
 
-
+(** assert_is_integral: Checks whether or not a type resolves to one of Golite's base integral types:
+    int, rune
+    It does not require a resolver as it always uses rt**)    
+let assert_is_integral symt ctxstring typ node =
+	let match_error () =
+		sprintf "In %s, type %s does not resolve to an integer type %s\n" 
+		ctxstring
+		(string_of_typesig typ)
+		(err_loc node)
+	in 
+    match List.hd (rt symt typ) with
+    | `INT | `RUNE -> ()
+    | _ -> raise (TypeError (match_error ()))
 (** assert_kinds: Require that the type of some symbol belong to the appropriate kinds. You probably want to use one of the predefined 'kinds'**)
 
 let kind_callable = ("a callable value",[FuncK])

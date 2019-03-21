@@ -237,7 +237,10 @@ and sym_stmt symtbl stmt = match stmt.v with
     | IncDec(expr, _) -> sym_expr symtbl expr
     | Print(_, exprlist) -> List.iter (sym_expr symtbl) exprlist
     | Return (expr_opt) -> sym_expr_opt symtbl expr_opt
-    | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case stmt outer_scope) clist; unscope_tbl outer_scope
+    | If(clist) -> 
+        let outer_scope = scope_tbl symtbl in
+        List.iter (sym_case stmt outer_scope) clist; 
+        unscope_tbl outer_scope
     | Switch(stmtn, expr_opt, fclist) -> (
         let outer_scope = scope_tbl symtbl in 
         let _ = sym_stmt_opt outer_scope stmtn in

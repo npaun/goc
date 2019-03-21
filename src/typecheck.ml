@@ -99,7 +99,13 @@ and pass_expr symt node = match node.v with
 | `Call(_,_) -> pass_call symt node
 | other -> {node with _derived = [`RUNE; `RUNE; `RUNE]} (* This is a really silly type to warn what's going on *)
 and pass_call symt node = match node.v with
-| `Call({v = `V "append"},[arr;elm]) -> node
+| `Call({v = `V "append"} as fn,[arr;elm]) -> 
+    (* TODO: hard to tell this actually works without finishing pass_expr, test later *)
+    let arr' = pass_expr symt arr in
+    let elm' = pass_expr symt elm in
+    let elmtyp = Typerules.slice_type symt arr' in
+    assert_match resolve_basic symt "call to append" ("<slice>", elmtyp) (elm', typeof elm');
+    {node with v = `Call(fn, [arr';elm']); _derived = typeof arr'}
 | `Call({v = `V "len"} as fn,[obj]) -> 
 	let obj' = pass_expr symt obj in
 		begin try 
@@ -114,12 +120,41 @@ and pass_call symt node = match node.v with
 		let _ = Typerules.element_type symt obj' in ();
 		{node with v = `Call(fn, [obj']); _derived = [`INT]}
 | `Call({v = `V "init"},_) -> raise (TypeError "The function init must not be called")
-(* todo casts *)
-| `Call(fn,args) ->
-	let fn' = pass_expr symt fn in
-	let args' = List.map (pass_expr symt) args in
-	let typeof_args' = List.map typeof args' |> List.flatten in
-		let return_t = Typerules.return_type symt fn' in
-			assert_consist resolve_basic symt fn' (node, (return_t::typeof_args'));
-			{node with v = `Call(fn', args'); _derived = [return_t]}
+| `Call({v = `V ident} as fn, args) ->
+    (* check if symbol kind is Symtbl.TypeK *)
+    (* if so, pass_cast instead *)    
+    if is_type_kind symt ident then
+        pass_cast symt node
+    else
+        let fn' = pass_expr symt fn in
+        let args' = List.map (pass_expr symt) args in
+        let typeof_args' = List.map typeof args' |> List.flatten in
+            let return_t = Typerules.return_type symt fn' in
+                assert_consist resolve_basic symt fn' (node, (return_t::typeof_args'));
+                {node with v = `Call(fn', args'); _derived = [return_t]}
 | _ -> failwith "Go away ocaml, not a call"
+and pass_cast symt node = 
+    let bad_cast msg = let (line, col) = node._start in
+        raise (SyntaxError ("in cast expression at line " ^ string_of_int line ^ ", char " ^ string_of_int col ^ ", " ^ msg))
+    in 
+    match node.v with
+    (* might aswell use our cast node *)
+    | `Call({v = `V ident} as typ, [obj]) ->
+        let dest_typ = typeof_symbol symt ident in
+        let obj' = pass_expr symt obj in
+        begin try (
+            assert_resolves_to_base symt "cast expression" dest_typ typ;
+            assert_is_numeric symt "cast expression" dest_typ typ;
+            assert_is_numeric symt "cast expression" (typeof obj') node;
+        )
+        with 
+        | TypeError _ -> (
+            assert_resolves_to_base symt "cast expression" dest_typ typ;
+            assert_match rt symt "cast expression" ("string", [`STRING]) (typ, dest_typ);
+            assert_is_integral symt "cast expression" (typeof obj') node;
+        )
+        end;
+        {node with v = `Cast(List.hd dest_typ, obj'); _derived = dest_typ}
+    | `Call(_, lst) -> (match lst with 
+        | [] -> bad_cast "expected expression"
+        | h::h'::t -> bad_cast "only one expression can be cast")
