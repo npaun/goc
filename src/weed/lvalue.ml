@@ -22,6 +22,8 @@ and pass_statement node = {node with v = match node.v with
 | For(a,b,c,blk) -> For ((maybe pass_statement a),b,(maybe pass_statement c), (pass_block blk))
 | If cases -> If (List.map pass_case cases)
 | Switch(a,b,cases) -> Switch (maybe pass_statement a, b, (List.map pass_fallable_case cases))
+| Assign(assnlst) -> Assign(List.map pass_assn assnlst)
+| OpAssign(lval,op,expr) -> let _ = pass_assn ((lval: lvalue :> lvalue'), expr) in OpAssign(lval, op, expr)
 | any -> any}
 (* Here we could put in some sanitization that there is no repeated assignment *)
 and pass_case = function
@@ -32,4 +34,11 @@ and pass_fallable_case = function
 and pass_decl = function
     | Var({v = `V _}, _,_,false) | Var({v = `Blank},_,_,false) | Var({v = `V _}, _,_,true) | Var({v = `Blank},_,_,true) as ok -> ok
     | Var(any, _, _, false) | Var(any, _, _, true) -> raise (SyntaxError ("In typed/short variable declaration, unexpected " ^ (Pretty.string_of_lvalue' any) ^ " is not an identifier.")) 
-    | any -> any (* other kinds of declarations do not need to be weeded right now *) 
+    | any -> any (* other kinds of declarations do not need to be weeded right now *)
+and pass_assn (lval, expr) = match lval.v with
+    | `Selector( _, _) | `Indexing(_, _) | `V(_) | `Blank -> (lval, expr) (* Assignable expressions *)
+    | any -> (* rest of the expressions are unassignable *)
+        let (line, col) = lval._start in 
+        raise (SyntaxError ("In assignment at line " ^ string_of_int line ^ ", char " ^ string_of_int col ^ 
+        ": unexpected " ^ (Pretty.string_of_lvalue' lval) ^ " is not an lvalue."))
+            
