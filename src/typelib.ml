@@ -249,7 +249,7 @@ let assert_is_numeric symt ctxstring typ node =
     It does not require a resolver as it always uses rt**)    
 let assert_is_integral symt ctxstring typ node =
 	let match_error () =
-		sprintf "In %s, type %s does not resolve to an integer type %s\n" 
+		sprintf "In %s, type %s does not resolve to an integral type %s\n" 
 		ctxstring
 		(string_of_typesig typ)
 		(err_loc node)

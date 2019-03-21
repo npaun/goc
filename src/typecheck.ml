@@ -150,8 +150,13 @@ and pass_cast symt node =
         with 
         | TypeError _ -> (
             assert_resolves_to_base symt "cast expression" dest_typ typ;
-            assert_match rt symt "cast expression" ("string", [`STRING]) (typ, dest_typ);
-            assert_is_integral symt "cast expression" (typeof obj') node;
+            try
+                assert_match rt symt "cast expression" ("<cast>", dest_typ) (node, typeof obj');
+            with
+            | TypeError _ -> (
+                assert_match rt symt "cast expression" ("string", [`STRING]) (typ, dest_typ);
+                assert_is_integral symt "cast expression" (typeof obj') node;
+            )
         )
         end;
         {node with v = `Cast(List.hd dest_typ, obj'); _derived = dest_typ}
