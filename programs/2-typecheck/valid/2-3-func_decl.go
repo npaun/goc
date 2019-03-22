@@ -47,3 +47,7 @@ func f7() num {
 func f8(_ int) {
 
 }
+
+func f9(a int, _ int, _ float64, _ int, b string) {
+	
+}

@@ -36,7 +36,8 @@ let string_of_typesig typs =
 	| `TypeLit Struct(members) -> sprintf "(Struct [%s])" (List.map describe_member members |> String.concat "; ")
 	| #type_name as basic-> describe_basic basic
 	and describe_member = function
-	| (name, typ) -> sprintf "(%s %s)" name (describe typ)
+	| (`V name, typ) -> sprintf "(%s %s)" name (describe typ)
+	| (`Blank, typ) -> sprintf "(_ %s)" (describe typ)
 	in match typs with
 	| [] -> "<NOTYPE>"
 	| h::t -> List.map describe (t @ [h]) |> String.concat " -> "
@@ -290,6 +291,4 @@ let type_single (node:'n annotated):gotype =
 		appropriate node, but oh well. **)
 let fwd_annot (parent:'n annotated) (child:'m):('m annotated) =
 	{parent with v = child}
-
-
 
