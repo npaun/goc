@@ -109,17 +109,6 @@ let down (fn:symtbl -> 'n annotated) (nodes: 'n annotated list) (child:symtbl op
 (** resolve_fn: A type of function which can simplify a typesig according to an inference rule. **)
 type resolve_fn = symtbl -> typesig -> typesig
 
-let resolve_visitor fn symt typs = 
-	let rec aux = function
-	| `Type id -> fn symt id
-	| `TypeLit Slice typ -> `TypeLit (Slice (aux typ))
-	| `TypeLit Array(sz, typ) -> `TypeLit (Array(sz, aux typ))
-	| `TypeLit Struct(members) -> 
-		let members' = List.map (fun (field, typ) -> (field, aux typ)) members
-		in `TypeLit (Struct (members'))
-	|  basic -> basic
-	in List.map aux typs
-
 (** resolve_basic: Determine whether a user-specified type refers to a fundamental basic type. 
 		This function is necessary because special properties of the built-in types are 
 		defined in terms of basic types (like `INT or `RUNE), while users can only refer 
@@ -151,6 +140,16 @@ let resolve_basic (symt:symtbl) (typs:typesig):typesig =
 					(* Identifier is shadowed, kept as reference to type. We could concievably use its definition but not needed *)
 					else `Type id
 		| None -> `Type id (* truly a user-defined type *)
+	in let resolve_visitor fn symt typs = 
+		let rec aux = function
+		| `Type id -> fn symt id
+		| `TypeLit Slice typ -> `TypeLit (Slice (aux typ))
+		| `TypeLit Array(sz, typ) -> `TypeLit (Array(sz, aux typ))
+		| `TypeLit Struct(members) -> 
+			let members' = List.map (fun (field, typ) -> (field, aux typ)) members
+			in `TypeLit (Struct (members'))
+		|  basic -> basic
+		in List.map aux typs
 	in resolve_visitor replace_basic symt typs
 
 (** infer_auto: Replace the LHS type with the RHS type if auto **)
@@ -164,13 +163,15 @@ let infer_auto ltyp rtyp = match ltyp with
 	terms of built-in types and compounds (e.g. structs, arrays).
  	It should be used almost always, only when "RT" is specifically called 
 	for in the specs. **)
-let rec rt (symt:symtbl) (typs:typesig):typesig = 
-	let aux symt id = 
-		typeof_symbol symt id 
-		|> rt symt (* rt will stop once a basic type is hit *)
-		|> resolve_basic symt (* for built-ins which expect the basic types *)
-		|> List.hd (* single value only *)
-	in resolve_visitor aux symt typs    
+let rec rt (symt:symtbl) (typs:typesig):typesig =
+	let rec aux = function
+	| `Type id ->
+		typeof_symbol symt id (* find definition of type *)
+		|> rt symt (* attempt to keep simplifying until forced to stop *)
+		|> List.hd (* Only working on a single value *)
+	| rest -> rest (* Neither basic nor compound types are resolved *)
+	in List.map aux typs 
+	|> resolve_basic symt (* search for identifiers mapping to built-in types *) 
     
 (** err_loc: Provides a textual explanation of the error location to substitute into messages.**)
 let err_loc node =

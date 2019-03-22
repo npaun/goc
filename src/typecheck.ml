@@ -54,6 +54,16 @@ and pass_statement this_symt node = function
 					packify (pass_fallable_case "switch case" cond_t) child_symt cases
 				)}
 		)
+| Print(ln, exps) -> same (fun () ->
+	let exps' = List.map (pass_expr this_symt) exps in
+		List.iter (fun exp' -> assert_resolves_to_base this_symt "print statement" (typeof exp') exp') exps';
+		{node with v = Print(ln, exps')}
+	)
+| IncDec(arg, op) -> same (fun () ->
+	let arg' = pass_expr this_symt arg in
+		assert_is_numeric this_symt "increment or decrement statement" (typeof arg') arg';
+		{node with v = IncDec(arg', op)}
+	)
 | _ -> same (fun () -> node)
 and pass_decl symt node = match node.v with
 | Var(name, lt, Some expr, s) ->
