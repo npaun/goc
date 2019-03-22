@@ -63,7 +63,8 @@ and string_of_typlit typlit = match typlit with
     | Struct(mems)  -> "struct { " ^ (string_of_sigs mems "; ") ^ " }"
 and string_of_sigs sigs sep = 
     let string_of_sig = function
-        | (id, typ) -> id ^ " " ^ string_of_typ VarK typ
+        | (`V id, typ) -> id ^ " " ^ string_of_typ VarK typ
+        | (`Blank, typ) -> "_ " ^ string_of_typ VarK typ
     in
     String.concat sep (List.map string_of_sig sigs)
 
@@ -224,7 +225,12 @@ and sym_toplvl toplvl (symtbl : symtbl ref) = match toplvl.v with
         sym_block csymtbl block;
         unscope_tbl csymtbl
     )
-and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol !symtbl (make_symbol id VarK [typ]) toplvl._start) siglist
+and sym_siglist toplvl siglist symtbl =
+    let sym_sig = function 
+        | (`V id, typ) -> put_symbol !symtbl (make_symbol id VarK [typ]) toplvl._start
+        | (`Blank, typ) -> ()
+    in
+    List.iter sym_sig siglist
 and sym_block symtbl block =
     let Symt(_,_,_,d) = !symtbl in
     List.iter (sym_stmt symtbl) block;

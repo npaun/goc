@@ -160,7 +160,7 @@ signature:
 	| goargs(flatten(separated_list(COMMA,signature_ids))) {$1}
 
 signature_ids: 
-    | golist(IDENT) typ {List.map (fun id -> (id, $2)) $1}
+    | golist(identp) typ {List.map (fun id -> (id, $2)) $1}
     
 /***** VARIABLE DECLARATIONS *****/
 

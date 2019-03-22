@@ -27,7 +27,7 @@ and struct_member = (* delete???? *)
 	| Embed of type_name 
 	| Member of signature
 [@@deriving sexp]
-and signature = identifier * gotype 
+and signature = identifier' * gotype 
 [@@deriving sexp]
 
 (* Add whatever metadata you want to attach to a statement or expression here *)

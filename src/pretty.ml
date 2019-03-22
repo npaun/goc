@@ -62,7 +62,8 @@ and string_of_typlit typlit = match typlit with
     | Struct(mems)  -> "struct {\n" ^ (string_of_sigs mems "\n") ^ "\n}"
 and string_of_sigs sigs sep = 
     let string_of_sig = function
-        | (id, typ) -> id ^ " " ^ string_of_typ typ 
+				| (`V id, typ) -> id ^ " " ^ string_of_typ typ
+				| (`Blank, typ) -> "_ " ^ string_of_typ typ
     in
     string_of_lst sigs sep string_of_sig
 and string_of_block d blck = 

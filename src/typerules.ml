@@ -49,8 +49,11 @@ let field_type symt node field =
 			(string_of_typesig (typeof node))
 			(string_of_typesig (rt symt (typeof node)))
 			(err_loc node)
-	in let search_struct typedef field = 
-		match List.find_opt (fun (name,typ) -> name = field) typedef with
+	in let search_struct typedef field =
+		let find_mem = function
+			| (`V name, typ) -> name = field
+			| (`Blank, typ) -> false
+		in match List.find_opt find_mem typedef with
 		| Some (_,typ) -> Some (rt symt [typ])
 		| None -> None
 	in let structtype = (rt symt (typeof node)) in
