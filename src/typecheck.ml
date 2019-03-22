@@ -24,9 +24,9 @@ let func_ret_check ret symt block =
 	let block_visitor stmt = match stmt.v with
 		| Return(expr_opt) -> (
 			match expr_opt with
-				| Some e -> assert_match resolve_basic symt "return statement" ("<func>", [ret]) (e, e._derived); stmt
+				| Some e -> assert_match resolve_basic symt "return statement" ("<func>", [ret]) (e, e._derived); return_count := !return_count + 1; stmt
 				| None -> (match ret with
-					| `VOID -> stmt
+					| `VOID -> return_count := !return_count + 1; stmt
 					| _ ->
 						let (line, ch) = stmt._start in
 						let msg = sprintf "Empty return statement given when function has return type (%s) at line %d, cols %d\n"
@@ -36,7 +36,10 @@ let func_ret_check ret symt block =
 		)
 		| _ -> stmt
 	in
-	List.map block_visitor block
+	let blck = List.map block_visitor block in match ret, !return_count with
+		| `VOID, _ -> blck
+		| _, 0 -> raise (TypeError "no return stmt present in non-void func")
+		| _, _ -> blck
 
 
 let rec pass_ast symt = function
