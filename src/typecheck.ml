@@ -7,6 +7,9 @@ let v_name = Pretty.string_of_lvalue'
 let maybe fn = function
 | Some arg -> Some (fn arg)
 | None -> None
+let present = function
+| Some _ -> true
+| None -> false
 
 let default fn if_none = function
 | Some arg -> (fn arg)
@@ -23,7 +26,7 @@ let rec pass_ast symt = function
 | Program(pkg,tops) -> Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops)
 and pass_toplevel this_symt node  = function
 | Global(decl) -> same (fun () -> {node with v = Global(decl |> fwd_annot node |> pass_decl this_symt)})
-| Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, pass_block child_symt body)})
+| Func(name,args,ret,body) -> down (fun child_symt -> printf "X %s\nX\n" (Dumpast.dump_symtbl child_symt); {node with v = Func(name,args,ret, pass_block child_symt body)})
 and pass_block this_symt body = traverse pass_statement this_symt body
 and pass_inner_stmt symt node = 
 	(* Sorry for the weird-ass function *)
@@ -108,7 +111,7 @@ and pass_expr symt node = match node.v with
 			{node with v = `Selector(obj',field); _derived = field_t}
 | `Call(_,_) -> pass_call symt node
 | `Op1(_,_) -> pass_op1 symt node
-| other -> {node with _derived = [`RUNE; `RUNE; `RUNE]} (* This is a really silly type to warn what's going on *)
+| `Op2(_,_,_) -> pass_op2 symt node
 and pass_call symt node = match node.v with
 | `Call({v = `V "append"} as fn,[arr;elm]) -> 
     (* TODO: hard to tell this actually works without finishing pass_expr, test later *)
@@ -174,7 +177,6 @@ and pass_cast symt node =
     | `Call(_, lst) -> (match lst with 
         | [] -> bad_cast "expected expression"
         | h::h'::t -> bad_cast "only one expression can be cast")
-
 and pass_op1 symt node =
 	let op1_assertion = function
 	| `POS -> (fun n -> assert_is_numeric symt "unary +" (typeof n) n)
@@ -187,3 +189,19 @@ and pass_op1 symt node =
 			op1_assertion op a';
 			{node with v = `Op1(op,a'); _derived = (typeof a')}
 	| _ -> failwith "Go away ocaml, not an op1" 
+and pass_op2 symt node = 
+	let monotype = function
+	| `OR | `AND -> Some [`BOOL]
+	| `MOD | `BOR | `BAND | `SL | `SR | `BANDNOT | `BXOR -> Some [`BOOL]
+	| _ -> None
+	in match node.v with
+	| `Op2(op,a,b) when present (monotype op) -> 
+		let Some op_t = monotype op in
+		let a' = pass_expr symt a in
+		let b' = pass_expr symt b in
+			assert_match rt symt (Pretty.string_of_op2 op) ("<left operand>", op_t) (a', typeof a');
+			assert_match rt symt (Pretty.string_of_op2 op) ("<right operand>", op_t) (b', typeof b');
+			{node with v = `Op2(op,a',b'); _derived = op_t}
+	| `Op2(`ADD,a,b) -> {node with _derived = [`VOID]} (* string, etc. *)
+	| rest -> {node with _derived = [`VOID]} (* numeric, comparable, ordered operations *)
+

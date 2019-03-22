@@ -54,14 +54,14 @@ let typeof (node:'n annotated):typesig =
 let typeof_symbol (symt:symtbl) (ident:identifier):typesig = 
 	match (Symtbl.get_symbol symt ident true) with
 	| Some sym -> sym.typ
-	| None -> failwith "Probable bug in Symtbl: Attempt to access non-existent symbol"
+	| None -> failwith ("Probable bug in Symtbl: Attempt to access non-existent symbol " ^ ident)
 
 (* kindof_symbol, returns in the kind of a symbol, currently used for know wheter or not a function call is 
  * actually a typecast by checking at the kind of the function name's symbol *)
 let kindof_symbol symt ident = 
     match (Symtbl.get_symbol symt ident true) with
     | Some sym -> sym.kind
-    | None -> failwith "Probable bug in Symtbl: Attempt to access non-existent symbol"
+    | None -> failwith ("Probable bug in Symtbl: Attempt to access non-existent symbol " ^ ident)
     
 let is_type_kind symt ident =
     (kindof_symbol symt ident = Symtbl.TypeK)
@@ -103,7 +103,7 @@ let same (fn:unit -> 'n annotated) (nodes: 'n annotated list) (child:symtbl opti
 (** down: Recurse into a new scope, and remove it from the list of univsited scopes **)
 let down (fn:symtbl -> 'n annotated) (nodes: 'n annotated list) (child:symtbl option) (children:symtbl list):('n annotated list * symtbl list) = 
 	match child with
-	| Some c -> (fn c)::nodes, c::children
+	| Some c -> (fn c)::nodes, children
 	| None -> failwith "Probable bug in Symtbl or Typecheck: Attempt to recurse when no more blocks left in current scope"
 
 (** resolve_fn: A type of function which can simplify a typesig according to an inference rule. **)

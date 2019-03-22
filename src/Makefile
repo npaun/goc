@@ -1,5 +1,5 @@
 MENHIR_OPTS = --explain --stdlib '$(CURDIR)/menhir/share/menhir' -b parser common.mly
-COMMON_OPTS = -I weed -use-ocamlfind -use-menhir -cflags '-g' -lflags -'g' -menhir '$(CURDIR)/menhir/bin/menhir $(MENHIR_OPTS)' goc.native
+COMMON_OPTS = -I weed -use-ocamlfind -use-menhir -cflags '-g' -lflags -'g' -menhir '$(CURDIR)/menhir/bin/menhir $(MENHIR_OPTS)' goc.byte
 default: prod
 
 debug: prep

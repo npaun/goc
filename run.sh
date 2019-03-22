@@ -28,4 +28,4 @@ fi
 #
 # You MUST replace the following command with the command for invoking your compiler
 
-./src/goc.native "$1" < "$2"
+./src/goc.byte "$1" < "$2"
