@@ -42,7 +42,7 @@ and pass_statement this_symt node = function
 | For(pre,cond,post,block) ->
  	down (fun child_symt -> 
 			{node with v = For(
-				(maybe (pass_inner_stmt child_symt) pre),
+				(maybe (pass_inner_stmt child_symt) pre), (* The order in which args are evaluated is whacky *)
 				(maybe (pass_cond child_symt "for loop") cond),
 				(maybe (pass_inner_stmt child_symt) post),
 				pass_block (List.hd (descend child_symt)) block (* probably buggy af FIXME *)
