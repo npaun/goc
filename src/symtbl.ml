@@ -291,7 +291,10 @@ and sym_case stmt symtbl case = match case with
         sym_block tbl block;
         unscope_tbl tbl
     ) 
-    | Default(block)              -> sym_block symtbl block
+    | Default(block) ->
+        let tbl = scope_tbl symtbl in
+        sym_block tbl block;
+        unscope_tbl tbl
 and sym_decl s symtbl hasnew decl = match decl with
     | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v, isshort with
         | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ]) s; sym_expr_opt symtbl expr_opt
