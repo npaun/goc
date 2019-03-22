@@ -69,7 +69,6 @@ and pass_decl symt node = match node.v with
     | Var(name, lt, Some expr, s) ->
         let expr' = pass_expr symt expr in
         let lt' = infer_auto [lt] (typeof expr') in
-        Printf.printf "inferred var to type %s\n" (Pretty.string_of_typ (List.hd lt'));
         assert_match resolve_basic symt "variable declaration" (v_name name, lt') (expr, typeof expr');
         Typerules.assert_redef_match symt node name (typeof expr');
         Var(name, (type_single expr'), Some expr', s)
