@@ -26,7 +26,7 @@ let rec pass_ast symt = function
 | Program(pkg,tops) -> Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops)
 and pass_toplevel this_symt node  = function
 | Global(decl) -> same (fun () -> {node with v = Global(decl |> fwd_annot node |> pass_decl this_symt)})
-| Func(name,args,ret,body) -> down (fun child_symt -> printf "X %s\nX\n" (Dumpast.dump_symtbl child_symt); {node with v = Func(name,args,ret, pass_block child_symt body)})
+| Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, pass_block child_symt body)})
 and pass_block this_symt body = traverse pass_statement this_symt body
 and pass_inner_stmt symt node = 
 	(* Sorry for the weird-ass function *)
@@ -42,17 +42,17 @@ and pass_statement this_symt node = function
 | For(pre,cond,post,block) ->
  	down (fun child_symt -> 
 			{node with v = For(
-				(maybe (pass_inner_stmt this_symt) pre),
-				(maybe (pass_cond this_symt "for loop") cond),
-				(maybe (pass_inner_stmt this_symt) post),
-				pass_block child_symt block
+				(maybe (pass_inner_stmt child_symt) pre),
+				(maybe (pass_cond child_symt "for loop") cond),
+				(maybe (pass_inner_stmt child_symt) post),
+				pass_block (List.hd (descend child_symt)) block (* probably buggy af FIXME *)
 			)})
-| If(cases) -> same (fun () -> {node with v = If(packify (pass_case "if condition" [`BOOL]) this_symt cases)})
+| If(cases) -> down (fun child_symt -> {node with v = If(packify (pass_case "if condition" [`BOOL]) child_symt cases)})
 | Switch(stmt,cond,cases) -> down (fun child_symt ->
-		let cond' = (maybe (pass_expr this_symt) cond) in
+		let cond' = (maybe (pass_expr child_symt) cond) in
 			let cond_t = (default typeof [`BOOL] cond') in
 				{node with v = Switch(
-					(maybe (pass_inner_stmt this_symt) stmt),
+					(maybe (pass_inner_stmt child_symt) stmt),
 					cond',
 					packify (pass_fallable_case "switch case" cond_t) child_symt cases
 				)}
@@ -146,7 +146,7 @@ and pass_call symt node = match node.v with
             let return_t = Typerules.return_type symt fn' in
                 assert_consist resolve_basic symt fn' (node, (return_t::typeof_args'));
                 {node with v = `Call(fn', args'); _derived = [return_t]}
-| _ -> failwith "Go away ocaml, not a call"
+| _ -> raise (TypeError (sprintf "Expression '%s' cannot yield a callable value %s" (Pretty.string_of_expr node) (err_loc node)))
 and pass_cast symt node = 
     let bad_cast msg = let (line, col) = node._start in
         raise (SyntaxError ("in cast expression at line " ^ string_of_int line ^ ", char " ^ string_of_int col ^ ", " ^ msg))
@@ -192,7 +192,7 @@ and pass_op1 symt node =
 and pass_op2 symt node = 
 	let monotype = function
 	| `OR | `AND -> Some [`BOOL]
-	| `MOD | `BOR | `BAND | `SL | `SR | `BANDNOT | `BXOR -> Some [`BOOL]
+	| `MOD | `BOR | `BAND | `SL | `SR | `BANDNOT | `BXOR -> Some [`INT]
 	| _ -> None
 	in match node.v with
 	| `Op2(op,a,b) when present (monotype op) -> 
