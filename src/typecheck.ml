@@ -19,11 +19,34 @@ let packify fn symt nodes =
 	|> traverse fn symt
 	|> List.map (fun n -> n.v)
 
+let func_ret_check ret symt block =
+	let block_visitor stmt = match stmt.v with
+		| Return(expr_opt) -> (
+			match expr_opt with
+				| Some e -> printf "in func_ret_check: %d\n" (List.length e._derived); assert_match resolve_basic symt "return statement" ("<func>", [ret]) (e, e._derived); stmt
+				| None -> (match ret with
+					| `VOID -> stmt
+					| _ ->
+						let (line, ch) = stmt._start in
+						let msg = sprintf "Empty return statement given when function has return type (%s) at line %d, cols %d\n"
+						(string_of_typesig [ret]) line ch in
+						raise (TypeError msg)
+				)
+		)
+		| _ -> stmt
+	in
+	List.map block_visitor block
+
+
+let length_opt = function
+	| Some e -> List.length e._derived
+	| None -> 0
+
 let rec pass_ast symt = function
     | Program(pkg,tops) -> Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops)
 and pass_toplevel this_symt node  = function
     | Global(decl) -> same (fun () -> {node with v = Global(decl |> fwd_annot node |> pass_decl this_symt)})
-    | Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, pass_block child_symt body)})
+    | Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, func_ret_check ret this_symt (pass_block child_symt body))})
 and pass_block this_symt body = traverse pass_statement this_symt body
 and pass_inner_stmt symt node = 
 	(* Sorry for the weird-ass function *)
@@ -34,7 +57,7 @@ and pass_statement this_symt node = function
     | Expr(expr) -> same (fun () -> {node with v = Expr(pass_expr this_symt expr)})
     | Return(expr) -> 
         (* match with func return later *)
-        same (fun () -> {node with v = Return(maybe (pass_expr this_symt) expr)})
+        same (fun () -> let e' = maybe (pass_expr this_symt) expr in printf "in pass_statement: %d\n" (length_opt e'); {node with v = Return(e')})
     | Block(stmts) -> down (fun child_symt -> {node with v = Block(pass_block child_symt stmts)})
     | For(pre,cond,post,block) ->
         down (fun child_symt -> 
@@ -121,7 +144,7 @@ and pass_lval symt node = match node.v with
                 {node with v = `Selector(obj',field); _derived = field_t}
     | _ -> failwith "non-value used on lhs of assignment, weeder failed"
 and pass_expr symt node = match node.v with
-    | `L lit -> {node with _derived = [typeof_literal lit]}
+    | `L lit -> printf "IN pass_expr %s\n" (Pretty.string_of_typ (typeof_literal lit)); {node with _derived = [typeof_literal lit]}
     | `V var -> 
         {node with _derived = typeof_symbol symt var} 
     | `Indexing(arr,idx) -> 
