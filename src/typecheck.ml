@@ -107,6 +107,7 @@ and pass_expr symt node = match node.v with
 		let field_t = Typerules.field_type symt obj' field in
 			{node with v = `Selector(obj',field); _derived = field_t}
 | `Call(_,_) -> pass_call symt node
+| `Op1(_,_) -> pass_op1 symt node
 | other -> {node with _derived = [`RUNE; `RUNE; `RUNE]} (* This is a really silly type to warn what's going on *)
 and pass_call symt node = match node.v with
 | `Call({v = `V "append"} as fn,[arr;elm]) -> 
@@ -173,3 +174,16 @@ and pass_cast symt node =
     | `Call(_, lst) -> (match lst with 
         | [] -> bad_cast "expected expression"
         | h::h'::t -> bad_cast "only one expression can be cast")
+
+and pass_op1 symt node =
+	let op1_assertion = function
+	| `POS -> (fun n -> assert_is_numeric symt "unary +" (typeof n) n)
+	| `NEG -> (fun n -> assert_is_numeric symt "unary -" (typeof n) n)
+	| `NOT -> (fun n -> assert_match rt symt "negation (!)" ("<operand>", [`BOOL]) (n, typeof n))
+	| `BNOT -> (fun n -> assert_is_integral symt "bitwise negation" (typeof n) n)
+	in match node.v with
+	| `Op1(op,a) ->
+		let a' = pass_expr symt a in
+			op1_assertion op a';
+			{node with v = `Op1(op,a'); _derived = (typeof a')}
+	| _ -> failwith "Go away ocaml, not an op1" 
