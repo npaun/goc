@@ -103,7 +103,7 @@ and pass_assn symt (lval, expr) = match (lval.v, expr.v) with
         let lval' = pass_lval symt lval in
         let expr' = pass_expr symt expr in
         assert_match resolve_basic symt "assignment" ("<lvalue>", typeof lval') (expr', typeof expr');
-        ({lval with v = lval'.v; _derived = typeof lval'}, {expr with v = oper; _derived = typeof expr'})
+        (lval', expr')
     )
     | _ -> failwith "non-lvalue expression on lhs of assignment"
 and pass_fallable_case ctx expected_t this_symt node = function
@@ -118,12 +118,7 @@ and pass_case ctx expected_t this_symt node = function
             List.iter (fun cond' -> 
                 assert_match rt this_symt ctx ("<condition>",expected_t) (cond', typeof cond')
             ) conds';
-            {node with v = Case(
-                    pre',
-                    conds',
-                    block'
-                )
-            }
+            {node with v = Case(pre',conds',block')}
         )
 and pass_cond symt ctx cond = 
 	let cond' = pass_expr symt cond in
