@@ -44,7 +44,7 @@ let func_ret_check ret symt block =
 
 let rec pass_ast symt = function
     | Program(pkg,tops) -> let p' = Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops) in
-		printf ">%s<\n" (Dumpast.dump p');
+		(* printf ">%s<\n" (Dumpast.dump p'); *)
 		p'
 and pass_toplevel this_symt node  = function
     | Global(decl) -> same (fun () -> {node with v = Global(decl |> fwd_annot node |> pass_decl this_symt)})
@@ -57,26 +57,23 @@ and pass_statement this_symt node = function
 | Decl(decls) -> same (fun () -> {node with v = Decl(List.map (fun d -> d |> fwd_annot node |> pass_decl this_symt) decls)})
 | Expr(expr) -> same (fun () -> {node with v = Expr(pass_expr this_symt expr)})
 | Return(expr) -> 
-	(* match with func return later *)
 	same (fun () -> {node with v = Return(maybe (pass_expr this_symt) expr)})
 | Block(stmts) -> down (fun child_symt -> {node with v = Block(pass_block child_symt stmts)})
-| For(pre,cond,post,block) ->
- 	down (fun child_symt -> 
-			{node with v = For(
-				(maybe (pass_inner_stmt child_symt) pre), (* The order in which args are evaluated is whacky *)
-				(maybe (pass_cond child_symt "for loop") cond),
-				(maybe (pass_inner_stmt child_symt) post),
-				pass_block (List.hd (descend child_symt)) block (* probably buggy af FIXME *)
-			)})
-| If(cases) -> down (fun child_symt -> {node with v = If(packify (pass_case "if condition" [`BOOL]) child_symt cases)})
+| For(pre,cond,post,block) -> down (fun child_symt -> 
+			let pre' = maybe (pass_inner_stmt child_symt) pre  in
+			let cond' = maybe (pass_cond child_symt "for loop") cond in
+			let post' = maybe (pass_inner_stmt child_symt) post in (* should this run after block' ??? *)
+			let block' = pass_block (List.hd (descend child_symt)) block in (* probably buggy af FIXME *)
+				{node with v = For(pre',cond',post',block')}
+	)
+| If(cases) -> down (fun child_symt -> 
+	{node with v = If(packify (pass_case "if condition" [`BOOL]) child_symt cases)})
 | Switch(stmt,cond,cases) -> down (fun child_symt ->
+		let stmt' = maybe (pass_inner_stmt child_symt) stmt in
 		let cond' = (maybe (pass_expr child_symt) cond) in
-			let cond_t = (default typeof [`BOOL] cond') in
-				{node with v = Switch(
-					(maybe (pass_inner_stmt child_symt) stmt),
-					cond',
-					packify (pass_fallable_case "switch case" cond_t) child_symt cases
-				)}
+		let cond_t = (default typeof [`BOOL] cond') in
+		let cases' = packify (pass_fallable_case "switch case" cond_t) child_symt cases in 
+			{node with v = Switch(stmt',cond',cases')}
 		)
 | Print(ln, exps) -> same (fun () ->
 	let exps' = List.map (pass_expr this_symt) exps in
@@ -114,16 +111,17 @@ and pass_fallable_case ctx expected_t this_symt node = function
 and pass_case ctx expected_t this_symt node = function
     | Default(block) -> down (fun child_symt -> {node with v = Default(pass_block child_symt block)})
     | Case(pre,conds,block) -> 
-        let pre' = (maybe (pass_inner_stmt this_symt) pre) in
         down (fun child_symt ->
+        let pre' = (maybe (pass_inner_stmt this_symt) pre) in
         let conds' = List.map (pass_expr this_symt) conds in
+	let block' = pass_block child_symt block in
             List.iter (fun cond' -> 
                 assert_match rt this_symt ctx ("<condition>",expected_t) (cond', typeof cond')
             ) conds';
             {node with v = Case(
                     pre',
                     conds',
-                    (pass_block child_symt block)
+                    block'
                 )
             }
         )
