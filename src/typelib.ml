@@ -85,15 +85,15 @@ let descend = function
 type 'n traverse_scheme = symtbl -> 'n annotated -> 'n -> 'n annotated list -> symtbl option -> symtbl list -> ('n annotated list * symtbl list)
 
 
-let traverse (fn:'n traverse_scheme) (symt:symtbl) (nodes:'n annotated list):'n annotated list = 
-	let aux this_symt (node, child_symts) node =
+let traverse (fn:'n traverse_scheme) (symt:symtbl) (nodes_in:'n annotated list):'n annotated list = 
+	let aux this_symt (nodes, child_symts) node =
 		match child_symts with
 		| h::t -> (fn this_symt node node.v) nodes (Some h) t
 		| [] -> 
 			(** no more children in this block. Can only use same for the rest of the nodes **)
 			(fn this_symt node node.v) nodes None []
-	in let nodes, _ = List.fold_left (aux symt) ([], (descend symt)) nodes
-	in nodes |> List.rev
+	in let nodes', _ = List.fold_left (aux symt) ([], (descend symt)) nodes_in
+	in nodes' |> List.rev
 
 (** same: Process a node which does not create a new scope **)
 let same (fn:unit -> 'n annotated) (nodes: 'n annotated list) (child:symtbl option) (children:symtbl list):('n annotated list * symtbl list) = 

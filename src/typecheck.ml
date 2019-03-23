@@ -43,10 +43,12 @@ let func_ret_check ret symt block =
 
 
 let rec pass_ast symt = function
-    | Program(pkg,tops) -> Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops)
+    | Program(pkg,tops) -> let p' = Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops) in
+		printf ">%s<\n" (Dumpast.dump p');
+		p'
 and pass_toplevel this_symt node  = function
     | Global(decl) -> same (fun () -> {node with v = Global(decl |> fwd_annot node |> pass_decl this_symt)})
-    | Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, func_ret_check ret this_symt (pass_block child_symt body))})
+    | Func(name,args,ret,body) -> down (fun child_symt -> {node with v = Func(name,args,ret, pass_block child_symt body |> func_ret_check ret child_symt )})
 and pass_block this_symt body = traverse pass_statement this_symt body
 and pass_inner_stmt symt node = 
 	(* Sorry for the weird-ass function *)
