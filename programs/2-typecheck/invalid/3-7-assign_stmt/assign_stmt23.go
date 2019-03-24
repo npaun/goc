@@ -7,4 +7,5 @@ func f() [10]int {
 
 func main() {
     f()[0] = 1
-} 
+}
+
