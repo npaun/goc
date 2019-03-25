@@ -313,7 +313,7 @@ let assert_same_if_user_defined symt ctxstring (e1, t1) (e2, t2) =
     let id1 = find_ident_lval e1 in
     let id2 = find_ident_expr e2 in
     (*Printf.printf "checking symbols %s and %s of types: %s and %s\n" id1 id2 (Pretty.string_of_typ t1) (Pretty.string_of_typ t2);*)
-    if is_user_defined symt t1 && is_user_defined symt t2 then (
+    if (is_user_defined symt t1 && is_user_defined symt t2) && (type_name t1 = type_name t2) then (
         match Symtbl.get_symbol symt id1 true, Symtbl.get_symbol symt id2 true with
         | Some s1, Some s2 -> (
             (*Symtbl.print_symbol s1 symt;
