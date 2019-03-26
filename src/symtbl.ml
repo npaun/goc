@@ -63,7 +63,8 @@ and string_of_typlit typlit = match typlit with
     | Struct(mems)  -> "struct { " ^ (string_of_sigs mems "; ") ^ " }"
 and string_of_sigs sigs sep = 
     let string_of_sig = function
-        | (id, typ) -> id ^ " " ^ string_of_typ VarK typ
+        | (`V id, typ) -> id ^ " " ^ string_of_typ VarK typ
+        | (`Blank, typ) -> "_ " ^ string_of_typ VarK typ
     in
     String.concat sep (List.map string_of_sig sigs)
 
@@ -175,7 +176,7 @@ let get_func_typ iden' siglist ret_typ =
         | [] -> acc
     in
     match iden' with
-        | `V(id) -> if id == "init" then [`AUTO] else ret_typ::(get_sig_typ siglist [])
+        | `V(id) -> if id == "init" then [`AUTO] else ret_typ::(get_sig_typ siglist [] |> List.rev)
         | `Blank -> [`AUTO]
   
 (* identifier' -> symbolkind -> gotype -> astnode -> symtbl -> unit *)
@@ -224,7 +225,12 @@ and sym_toplvl toplvl (symtbl : symtbl ref) = match toplvl.v with
         sym_block csymtbl block;
         unscope_tbl csymtbl
     )
-and sym_siglist toplvl siglist symtbl = List.iter (fun (id, typ) -> put_symbol !symtbl (make_symbol id VarK [typ]) toplvl._start) siglist
+and sym_siglist toplvl siglist symtbl =
+    let sym_sig = function 
+        | (`V id, typ) -> put_symbol !symtbl (make_symbol id VarK [typ]) toplvl._start
+        | (`Blank, typ) -> ()
+    in
+    List.iter sym_sig siglist
 and sym_block symtbl block =
     let Symt(_,_,_,d) = !symtbl in
     List.iter (sym_stmt symtbl) block;
@@ -237,19 +243,22 @@ and sym_stmt symtbl stmt = match stmt.v with
     | IncDec(expr, _) -> sym_expr symtbl expr
     | Print(_, exprlist) -> List.iter (sym_expr symtbl) exprlist
     | Return (expr_opt) -> sym_expr_opt symtbl expr_opt
-    | If(clist) -> let outer_scope = scope_tbl symtbl in List.iter (sym_case stmt outer_scope) clist; unscope_tbl outer_scope
+    | If(clist) -> 
+        let outer_scope = scope_tbl symtbl in
+        List.iter (sym_case stmt outer_scope) clist; 
+        unscope_tbl outer_scope
     | Switch(stmtn, expr_opt, fclist) -> (
         let outer_scope = scope_tbl symtbl in 
-        let _ = sym_stmt outer_scope (gen_stmt stmtn stmt) in
+        let _ = sym_stmt_opt outer_scope stmtn in
         let _ = sym_expr_opt outer_scope expr_opt in
         List.iter (fun (c, ftm) -> sym_case stmt outer_scope c) fclist;
         unscope_tbl outer_scope
     )
     | For(stmt_opt, expr_opt, stmt_opt2, block) -> (
         let for_scope = scope_tbl symtbl in
-        let _ = sym_stmt_opt for_scope (gen_stmt_opt stmt_opt stmt) in
+        let _ = sym_stmt_opt for_scope (stmt_opt) in
         let _ = sym_expr_opt for_scope expr_opt in
-        let _ = sym_stmt_opt for_scope (gen_stmt_opt stmt_opt2 stmt) in
+        let _ = sym_stmt_opt for_scope (stmt_opt2) in
         let tbl = scope_tbl for_scope in 
         sym_block tbl block;
         unscope_tbl tbl;
@@ -282,13 +291,16 @@ and sym_lval symtbl lval = match lval.v with
     )
 and sym_case stmt symtbl case = match case with
     | Case(stmtnode, exprlist, block) -> (
-        let _ = sym_stmt symtbl (gen_stmt stmtnode stmt) in
+        let _ = sym_stmt_opt symtbl stmtnode in
         let _ = List.iter (sym_expr symtbl) exprlist in
         let tbl = scope_tbl symtbl in
         sym_block tbl block;
         unscope_tbl tbl
     ) 
-    | Default(block)              -> sym_block symtbl block
+    | Default(block) ->
+        let tbl = scope_tbl symtbl in
+        sym_block tbl block;
+        unscope_tbl tbl
 and sym_decl s symtbl hasnew decl = match decl with
     | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v, isshort with
         | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ]) s; sym_expr_opt symtbl expr_opt

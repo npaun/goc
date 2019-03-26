@@ -27,7 +27,7 @@ and struct_member = (* delete???? *)
 	| Embed of type_name 
 	| Member of signature
 [@@deriving sexp]
-and signature = identifier * gotype 
+and signature = identifier' * gotype 
 [@@deriving sexp]
 
 (* Add whatever metadata you want to attach to a statement or expression here *)
@@ -49,7 +49,7 @@ and operand = [
 	| `Cast of (gotype * expression)
 	| `Selector of (expression * identifier)
 	| `L of literal
-    	| `Indexing of (expression * expression)
+    | `Indexing of (expression * expression)
 	|  tagged_identifier ]
 [@@deriving sexp]
 and literal =
@@ -91,8 +91,8 @@ and statement_node =
 	| Print of bool * expression list
 	| Return of expression option
 	| If of case list
-	| Switch of statement_node * expression option * fallable_case list
-	| For of statement_node option * expression option * statement_node option * block
+	| Switch of statement option * expression option * fallable_case list
+	| For of statement option * expression option * statement option * block
 	| Break
 	| Continue
 	| Empty
@@ -100,7 +100,7 @@ and statement_node =
 and fallable_case = case * fallthrough_mode
 [@@deriving sexp]
 and case = 
-	| Case of statement_node * expression list * block
+	| Case of statement option * expression list * block
 	| Default of block
 [@@deriving sexp]
 

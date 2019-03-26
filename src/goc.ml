@@ -16,7 +16,7 @@ let with_error_handling fn ok =
 	| Symtbl.SymbolErr message 
 	| Symtbl.SymbolInvInputErr message 
 	| Symtbl.SymbolUndefinedErr message
-    | Typecheck.TypeError message -> (
+    	| Typelib.TypeError message -> (
 		fprintf stderr "Error: %s\n" message;
 		exit 1
     )
@@ -30,6 +30,7 @@ let build_symtbl print ast = Symtbl.init_tbl print ast
 let do_typecheck lexbuf = 
 	let ast = parse lexbuf in
 		let symt = Symtbl.init_tbl false ast in
+			(* printf "%s\n\n\n" (Dumpast.dump_symtbl !symt); *)
 			Typecheck.pass_ast !symt ast
 
 

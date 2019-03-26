@@ -160,7 +160,7 @@ signature:
 	| goargs(flatten(separated_list(COMMA,signature_ids))) {$1}
 
 signature_ids: 
-    | golist(IDENT) typ {List.map (fun id -> (id, $2)) $1}
+    | golist(identp) typ {List.map (fun id -> (id, $2)) $1}
     
 /***** VARIABLE DECLARATIONS *****/
 
@@ -297,9 +297,9 @@ if_head:
     | IF if_cond block if_tail	{let (c1,c2) = $2 in (Case (c1,c2,$3))::$4}
 
 if_cond:
-    | simple_stmt SEMI expr	{($1, [$3])}
-    | SEMI expr             {(Empty, [$2])}
-    | expr      			{(Empty, [$1])}
+    | annot(simple_stmt) SEMI expr	{(Some $1, [$3])}
+    | SEMI expr             		{(None, [$2])}
+    | expr      			{(None, [$1])}
     | error SEMI			{throw_error "Only a simple statement may be used in if initialization" $startpos($1)}
 if_tail:
     | ELSE if_head  {$2}
@@ -312,13 +312,13 @@ switch_stmt:
     | SWITCH switch_cond delimited(LBLOCK,switch_case*,RBLOCK) {let (c1,c2) = $2 in Switch(c1,c2,$3)}
 
 switch_cond:
-    | expr      		        {(Empty, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
-    | simple_stmt SEMI expr?    {($1,$3)}
-    | error SEMI		{throw_error "Only a simple statement may be used in switch-initialization" $startpos}
-    | {(Empty,None)}
+    | expr      		        {(None, Some $1)} (* Will be handled by the weeder, as it is going to be less work than fixing the parser *)
+    | annot(simple_stmt) SEMI expr?    	{(Some $1,$3)}
+    | error SEMI			{throw_error "Only a simple statement may be used in switch-initialization" $startpos}
+    | 					{(None,None)}
 
 switch_case:
-    | CASE golist(expr) COLON switch_body {let (b,ftm) = $4 in ((Case(Empty, $2, b)), ftm)}
+    | CASE golist(expr) COLON switch_body {let (b,ftm) = $4 in ((Case(None, $2, b)), ftm)}
     | DEFAULT COLON statements {((Default($3)), ENDBREAK)}
     | CASE error | DEFAULT error {throw_error "Ill-formed switch case, expected expression" $startpos($1)}
 switch_body:
@@ -332,7 +332,7 @@ for_stmt:
 
 for_conds:
     | expr? 		{(None,$1,None)}
-    | simple_stmt? SEMI expr? SEMI post_stmt? {($1,$3,$5)}
+    | annot(simple_stmt)? SEMI expr? SEMI annot(post_stmt)? {($1,$3,$5)}
 
 /****** EXPRESSIONS ********/
 
