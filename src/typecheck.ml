@@ -36,7 +36,31 @@ let func_ret_check ret symt block =
 		)
 		| _ -> stmt
 	in
-	let blck = List.map block_visitor block in match ret, !return_count with
+	let final_is_terminal blk = match ret with (* TODO - checks to see that last stmt is return if non void return type *)
+		| `VOID -> ()
+		| _ -> (match block with
+			| [] ->
+				let msg = sprintf "Error: non-void function does not end with terminating statement\n" in (* TODO get line info *)
+				raise (TypeError msg)
+			| _ ->(
+				let stmt = List.hd (List.rev block) in
+				match stmt.v with 
+				| Return(expr_opt) -> () (* types are checked in above func *)
+				| If(casel) -> ()
+				| Switch(stmt_opt, expr_opt, fcasel) -> ()
+				| For(stmt_opt, expr_opt, fstmt_opt, block) -> ()
+				| Block(_blk) -> ()
+				| _ ->
+					let (line, ch) = stmt._start in
+					let msg = sprintf "Error: non-void function does not end with terminating statement at line %d chr %d\n"
+					line ch in
+					raise (TypeError msg)
+			)
+		)
+	in
+	let blck = List.map block_visitor block in
+	final_is_terminal blck; 
+	match ret, !return_count with (* TODO: HANDLE IF/SWITCH/FOR stmts *)
 		| `VOID, _ -> blck
 		| _, 0 -> raise (TypeError "no return stmt present in non-void func")
 		| _, _ -> blck
