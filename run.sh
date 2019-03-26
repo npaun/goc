@@ -28,4 +28,9 @@ fi
 #
 # You MUST replace the following command with the command for invoking your compiler
 
+# https://stackoverflow.com/questions/38746/how-to-detect-file-ends-in-newline
+last_ch=`tail -c 1 $2`
+if [ "$last_ch" != "" ]; then echo >> "$2"; fi
+
 ./src/goc.byte "$1" < "$2"
+
