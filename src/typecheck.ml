@@ -43,7 +43,7 @@ let func_ret_check ret symt block =
     in
     let term_error start xmsg = 
         let (line, ch) = start in
-        let msg = sprintf "Error: non-void function does not end with terminating statement at line %d chr %d - %s"
+        let msg = sprintf "non-void function does not end with terminating statement at line %d chr %d - %s"
         line ch xmsg in
         raise (TypeError msg)
     in
@@ -68,7 +68,7 @@ let func_ret_check ret symt block =
                     | Case(_,_,_),_ -> false
                     | Default(_),_ -> true
                 in match List.exists is_default fcases with
-                    | true -> List.iter fcase_no_break fcases
+                    | true -> List.iter fcase_no_break fcases; List.iter (fcase_is_term stmt._start) fcases
                     | false -> term_error stmt._start "switch statement doesn't have a default case"
         )
         | For(_, expr_opt, _, block) -> (match expr_opt with
