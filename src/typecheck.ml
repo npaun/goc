@@ -19,6 +19,11 @@ let packify fn symt nodes =
 	|> traverse fn symt
 	|> List.map (fun n -> n.v)
 
+(* This function performs two operations:
+    1) it ensures that the return types in a function match the functions return type
+    2) it ensures that if the function is not void, then it ends with a terminating statement
+       as defined by the golang spec: https://golang.org/ref/spec#Terminating_statements
+*)
 let func_ret_check ret symt block =
 	let return_count = ref 0 in
 	let block_visitor stmt = match stmt.v with
@@ -35,35 +40,57 @@ let func_ret_check ret symt block =
 				)
 		)
 		| _ -> stmt
-	in
-	let final_is_terminal blk = match ret with (* TODO - checks to see that last stmt is return if non void return type *)
-		| `VOID -> ()
-		| _ -> (match block with
-			| [] ->
-				let msg = sprintf "Error: non-void function does not end with terminating statement\n" in (* TODO get line info *)
-				raise (TypeError msg)
-			| _ ->(
-				let stmt = List.hd (List.rev block) in
-				match stmt.v with 
-				| Return(expr_opt) -> () (* types are checked in above func *)
-				| If(casel) -> ()
-				| Switch(stmt_opt, expr_opt, fcasel) -> ()
-				| For(stmt_opt, expr_opt, fstmt_opt, block) -> ()
-				| Block(_blk) -> ()
-				| _ ->
-					let (line, ch) = stmt._start in
-					let msg = sprintf "Error: non-void function does not end with terminating statement at line %d chr %d\n"
-					line ch in
-					raise (TypeError msg)
-			)
-		)
+    in
+    let term_error start xmsg = 
+        let (line, ch) = start in
+        let msg = sprintf "Error: non-void function does not end with terminating statement at line %d chr %d - %s"
+        line ch xmsg in
+        raise (TypeError msg)
+    in
+    let no_break xmsg stmt = match stmt.v with
+        | Break -> term_error stmt._start (sprintf "%s contains break statement" xmsg)
+        | _ -> ()
+    in
+    let fcase_no_break fcase = match fcase with
+    | Case(_,_,block),_ -> List.iter (no_break "switch statement") block
+    | Default(block),_ -> List.iter (no_break "switch statement") block
+    in
+    let rec stmt_is_term stmt = match stmt.v with
+        | Return(expr_opt) -> () (* types are checked in above func *)
+        | If(cases) -> (match List.hd (List.rev cases) with 
+            | Case(_, _, _) -> term_error stmt._start "if statement doesn't have an else branch"
+            | Default(else_block) -> List.iter case_is_term cases
+        )
+        | Switch(_, _, fcases) ->(
+            if (List.length fcases) == 0 then term_error stmt._start "switch statement doesn't have a default case"
+            else
+                let is_default = function
+                    | Case(_,_,_),_ -> false
+                    | Default(_),_ -> true
+                in match List.exists is_default fcases with
+                    | true -> List.iter fcase_no_break fcases
+                    | false -> term_error stmt._start "switch statement doesn't have a default case"
+        )
+        | For(_, expr_opt, _, block) -> (match expr_opt with
+            | Some expr -> term_error stmt._start "for loop contains loop condition"
+            | None -> List.iter (no_break "for loop") block
+        )
+        | Block(_blk) -> final_is_term _blk
+        | _ -> term_error stmt._start ""
+    and fcase_is_term fcase = match fcase with
+        | case,FALLTHROUGH -> ()
+        | case,ENDBREAK -> case_is_term case
+    and case_is_term case = match case with
+        | Case(_, _, block) -> final_is_term block
+        | Default(block) -> final_is_term block
+	and final_is_term blk = match blk with 
+        | [] -> term_error (-1, -1) "no return statement given to non-void function" 
+        | _ -> stmt_is_term (List.hd (List.rev block))
 	in
 	let blck = List.map block_visitor block in
-	final_is_terminal blck; 
-	match ret, !return_count with (* TODO: HANDLE IF/SWITCH/FOR stmts *)
-		| `VOID, _ -> blck
-		| _, 0 -> raise (TypeError "no return stmt present in non-void func")
-		| _, _ -> blck
+    match ret with
+        | `VOID -> blck
+        | _ -> final_is_term blck; blck
 
 
 let rec pass_ast symt = function
