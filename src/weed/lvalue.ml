@@ -36,9 +36,9 @@ and pass_decl = function
     | Var(any, _, _, false) | Var(any, _, _, true) -> raise (SyntaxError ("In typed/short variable declaration, unexpected " ^ (Pretty.string_of_lvalue' any) ^ " is not an identifier.")) 
     | any -> any (* other kinds of declarations do not need to be weeded right now *)
 and pass_assn (lval, expr) = match lval.v with
-    | `Selector( _, _) | `Indexing(_, _) | `V(_) | `Blank -> (lval, expr) (* Assignable expressions *)
-    | any -> (* rest of the expressions are unassignable *)
-        let (line, col) = lval._start in 
+    | `Selector(_, _) | `Indexing(_, _) | `V(_) | `Blank -> (lval, expr)
+    | any -> (* rest of the expressions are unassignable *) (lval, expr)
+        (*let (line, col) = lval._start in 
         raise (SyntaxError ("In assignment at line " ^ string_of_int line ^ ", char " ^ string_of_int col ^ 
-        ": unexpected " ^ (Pretty.string_of_lvalue' lval) ^ " is not an lvalue."))
+        ": unexpected " ^ (Pretty.string_of_lvalue' lval) ^ " is not an lvalue."))*)
             

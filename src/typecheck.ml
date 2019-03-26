@@ -137,6 +137,28 @@ and pass_statement this_symt node = function
 		{node with v = IncDec(arg', op)}
 	)
 | Assign(assnlst) -> same (fun () -> {node with v = Assign(List.map (fun assn -> pass_assn this_symt assn) assnlst)})
+| OpAssign(lval, op, expr) -> same (fun () -> 
+        let get_op2 = function
+            | `SET      -> failwith "bad"
+            | `ADD      -> let op:op2 = `ADD in op
+            | `BAND     -> let op:op2 = `BAND in op
+            | `BANDNOT  -> let op:op2 = `BANDNOT in op
+            | `BOR      -> let op:op2 = `BOR in op
+            | `BXOR     -> let op:op2 = `BXOR in op
+            | `DIV      -> let op:op2 = `DIV in op
+            | `MOD      -> let op:op2 = `MOD in op
+            | `MUL      -> let op:op2 = `MUL in op
+            | `SL       -> let op:op2 = `SL in op
+            | `SR       -> let op:op2 = `SR in op
+            | `SUB      -> let op:op2 = `SUB in op
+        in
+        let lval' = pass_expr this_symt lval in
+        let expr' = pass_expr this_symt expr in
+        let expr'' = pass_op2 this_symt {expr with v = `Op2(get_op2 op, lval', expr')} in
+        let assn = pass_assn this_symt ((lval':lvalue :> lvalue'), expr'') in
+        (* We could convert it to an Assign(lval, Op2(...)), but I think it's better leave that to
+         * codegen in order to avoid messing up the AST *)
+        {node with v = OpAssign(lval', op, expr')})
 | _ -> same (fun () -> node)
 and pass_decl symt node = match node.v with
     | Var(name, lt, Some expr, s) ->
@@ -147,14 +169,37 @@ and pass_decl symt node = match node.v with
         Var(name, (type_single expr'), Some expr', s)
     | other -> other (* Type declarations are already analyzed by symtbl *)
 and pass_assn symt (lval, expr) = match (lval.v, expr.v) with
-    | (`Blank, oper)
+    | (`Indexing(lval'',_), oper)
+    | (`Selector(lval'',_), oper) -> (
+        match lval''.v with
+        | `Call(_, _) -> 
+                assert_is_slice symt "assignment" (typeof (pass_call symt lval'')) lval'';
+                pass_assn_inner symt (lval, expr)
+        | any -> pass_assn_inner symt (lval, expr)
+    )
+    | (`Blank, oper) -> pass_assn_inner symt (lval, expr)
+    | (`V ident, oper) -> (
+        assert_kinds symt "assignment" ident kind_nonconst;
+        pass_assn_inner symt (lval, expr)
+    )
+    | _ -> let (line, col) = lval._start in 
+        raise (SyntaxError ("In assignment at line " ^ string_of_int line ^ ", char " ^ string_of_int col ^ 
+        ": unexpected " ^ (Pretty.string_of_lvalue' lval) ^ " is not an lvalue."))
+and pass_assn_inner symt (lval, expr) = match (lval.v, expr.v) with
     | (`Indexing(_,_), oper)
     | (`Selector(_,_), oper)
+    | (`Blank, oper)
     | (`V _, oper) -> (
         let lval' = pass_lval symt lval in
         let expr' = pass_expr symt expr in
         assert_match resolve_basic symt "assignment" ("<lvalue>", typeof lval') (expr', typeof expr');
-        (lval', expr')
+        begin try
+            assert_same_if_user_defined symt "assignment" (lval', List.hd (typeof lval')) ((expr'), List.hd (typeof expr'));
+            (lval', expr')
+        with
+        | Good -> (lval', expr')
+        | TypeError msg -> raise (TypeError msg)
+        end;
     )
     | _ -> failwith "non-lvalue expression on lhs of assignment"
 and pass_fallable_case ctx expected_t this_symt node = function
@@ -165,11 +210,11 @@ and pass_case ctx expected_t this_symt node = function
         down (fun child_symt ->
         let pre' = (maybe (pass_inner_stmt this_symt) pre) in
         let conds' = List.map (pass_expr this_symt) conds in
-	let block' = pass_block child_symt block in
-            List.iter (fun cond' -> 
-                assert_match rt this_symt ctx ("<condition>",expected_t) (cond', typeof cond')
-            ) conds';
-            {node with v = Case(pre',conds',block')}
+        let block' = pass_block child_symt block in
+        List.iter (fun cond' -> 
+            assert_match rt this_symt ctx ("<condition>",expected_t) (cond', typeof cond')
+        ) conds';
+        {node with v = Case(pre',conds',block')}
         )
 and pass_cond symt ctx cond = 
 	let cond' = pass_expr symt cond in
@@ -181,13 +226,13 @@ and pass_lval symt node = match node.v with
     | `Indexing(arr,idx) -> 
         let arr' = pass_expr symt arr in
         let idx' = pass_expr symt idx in
-            let elm_t = Typerules.element_type symt arr' in
-                assert_match rt symt "indexing" ("<index>", [`INT]) (idx', typeof idx');
-                {node with v = `Indexing(arr',idx'); _derived = elm_t}
+        let elm_t = Typerules.element_type symt arr' in
+        assert_match rt symt "indexing" ("<index>", [`INT]) (idx', typeof idx');
+        {node with v = `Indexing(arr',idx'); _derived = elm_t}
     | `Selector(obj,field) ->
         let obj' = pass_expr symt obj in
-            let field_t = Typerules.field_type symt obj' field in
-                {node with v = `Selector(obj',field); _derived = field_t}
+        let field_t = Typerules.field_type symt obj' field in
+        {node with v = `Selector(obj',field); _derived = field_t}
     | _ -> failwith "non-value used on lhs of assignment, weeder failed"
 and pass_expr symt node = match node.v with
     | `L lit -> {node with _derived = [typeof_literal lit]}
@@ -248,7 +293,7 @@ and pass_cast symt node =
     match node.v with
     (* might aswell use our cast node *)
     | `Call({v = `V ident} as typ, [obj]) ->
-        let dest_typ = typeof_symbol symt ident in
+        let dest_typ = [`Type ident] in
         let obj' = pass_expr symt obj in
         begin try (
             assert_resolves_to_base symt "cast expression" dest_typ typ;

@@ -54,13 +54,13 @@ let field_type symt node field =
 			| (`V name, typ) -> name = field
 			| (`Blank, typ) -> false
 		in match List.find_opt find_mem typedef with
-		| Some (_,typ) -> Some (rt symt [typ])
+		| Some (_,typ) -> Some (resolve_basic symt [typ])
 		| None -> None
 	in let structtype = (rt symt (typeof node)) in
 		match structtype with
 		| [`TypeLit Struct ms] -> 
 			begin match search_struct ms field with
-			| Some fieldtype -> fieldtype
+            | Some fieldtype -> fieldtype
 			| None -> raise (TypeError (field_not_found_error ()))
 			end
 		| other -> raise (TypeError (not_a_struct_error ()))

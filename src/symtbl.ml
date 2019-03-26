@@ -18,6 +18,7 @@ type symbol = {
     mutable name : string; (* or identifier'? *)
     mutable kind : symbolkind;
     mutable typ  : gotype list;
+    mutable depth: int;
     }
     
 (* hashtbl(name, sym) * parent (optional) * children * depth *)
@@ -99,9 +100,9 @@ let gen_stmt_opt stmt_node_opt stmt = match stmt_node_opt with
     | Some stmt_node -> Some(gen_stmt stmt_node stmt)
     | None -> None
 
-(* string -> symbolkind -> gotype list -> astnode -> symbol *)    
-let make_symbol n k t = {
-    name = n; kind = k; typ = t
+(* string -> symbolkind -> gotype list -> astnode -> int -> symbol *)    
+let make_symbol n k t d = {
+    name = n; kind = k; typ = t; depth = d
 }
 
 (* ref symtbl -> symtbl *)
@@ -117,6 +118,9 @@ let get_parent tbl = match tbl with
 (* Adds tbl2 to tbl1's children, returns copy of tbl1 *)
 let add_child (tbl1 : symtbl ref) (tbl2 : symtbl ref) = match !tbl1 with
     | Symt(tbl, parent, children, d) -> tbl1 := Symt(tbl, parent, children @ [tbl2], d); !tbl1
+    
+let get_depth tbl = match tbl with
+| Symt(_, _, _, d) -> d
 
 (* symtbl -> string -> symbol option -> bool*)
 (* searches through the current scope, then through parent scopes until global (no parents left) *)
@@ -131,8 +135,22 @@ let rec get_symbol tbl name rc = match tbl with
             match parent with
             | Some p -> get_symbol !p name true
             | None -> None
-        )
-
+        )        
+        
+let rec symbol_exists tbl name = match tbl with       
+    | Symt(table, parent, _, _) ->
+        let found = Hashtbl.find_opt table name in
+        match found  with
+        | Some s -> true
+        | None -> false 
+        
+let rec get_table_of symtbl sym = 
+    match (get_symbol symtbl sym.name false) with
+    | Some s -> symtbl
+    | None -> match (get_parent symtbl) with
+        | None -> raise (SymbolErr "bad")
+        | Some t -> get_table_of !t sym
+    
 
 let unbound_getandinc = unboundfunc_count := !unboundfunc_count + 1; !unboundfunc_count - 1
 let handle_unbound_func tbl sym = match tbl with
@@ -182,9 +200,9 @@ let get_func_typ iden' siglist ret_typ =
 (* identifier' -> symbolkind -> gotype -> astnode -> symtbl -> unit *)
 (* puts an indentifier' into the given symtbl *)
 let put_iden iden' kind typ start symtbl = match iden' with
-    | `V(id) -> put_symbol symtbl (make_symbol id kind typ) start
+    | `V(id) -> put_symbol symtbl (make_symbol id kind typ (get_depth symtbl)) start
     | `Blank -> match kind with
-        | FuncK -> put_symbol symtbl (make_symbol "_" kind typ) start
+        | FuncK -> put_symbol symtbl (make_symbol "_" kind typ (get_depth symtbl)) start
         | _ -> ()
 
 let invalid_maininit_check iden' siglist typ start = match iden' with
@@ -227,7 +245,7 @@ and sym_toplvl toplvl (symtbl : symtbl ref) = match toplvl.v with
     )
 and sym_siglist toplvl siglist symtbl =
     let sym_sig = function 
-        | (`V id, typ) -> put_symbol !symtbl (make_symbol id VarK [typ]) toplvl._start
+        | (`V id, typ) -> put_symbol !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) toplvl._start
         | (`Blank, typ) -> ()
     in
     List.iter sym_sig siglist
@@ -303,8 +321,8 @@ and sym_case stmt symtbl case = match case with
         unscope_tbl tbl
 and sym_decl s symtbl hasnew decl = match decl with
     | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v, isshort with
-        | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ]) s; sym_expr_opt symtbl expr_opt
-        | `V(id), true  -> put_symbol_short_decl !symtbl (make_symbol id VarK [typ]) s hasnew; sym_expr_opt symtbl expr_opt
+        | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s; sym_expr_opt symtbl expr_opt
+        | `V(id), true  -> put_symbol_short_decl !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s hasnew; sym_expr_opt symtbl expr_opt
         | `Blank, _ -> sym_expr_opt symtbl expr_opt
         | _, _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
@@ -332,16 +350,16 @@ let init_tbl print ast =
     let root_tbl = ref (Symt(Hashtbl.create 500, None, [], 0)) in
     print_sym := print;
     if !print_sym then Printf.printf "{\n";
-    put_symbol !root_tbl (make_symbol "int" TypeK [`INT]) (-1,-1);
-    put_symbol !root_tbl (make_symbol "float64" TypeK [`FLOAT64]) (-1, -1);
-    put_symbol !root_tbl (make_symbol "bool" TypeK [`BOOL]) (-1,-1);
-    put_symbol !root_tbl (make_symbol "rune" TypeK [`RUNE]) (-1,-1);
-    put_symbol !root_tbl (make_symbol "string" TypeK [`STRING]) (-1,-1);
-    put_symbol !root_tbl (make_symbol "true" ConstK [`BOOL]) (-1,-1);
-    put_symbol !root_tbl (make_symbol "false" ConstK [`BOOL]) (-1,-1);
-    put_symbol !root_tbl (make_symbol "append" FuncK [`AUTO; `AUTO; `AUTO]) (-1,-1);
-    put_symbol !root_tbl (make_symbol "len" FuncK [`AUTO; `INT]) (-1,-1);
-    put_symbol !root_tbl (make_symbol "cap" FuncK [`AUTO; `INT]) (-1,-1);
+    put_symbol !root_tbl (make_symbol "int" TypeK [`INT] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol "float64" TypeK [`FLOAT64] 0) (-1, -1);
+    put_symbol !root_tbl (make_symbol "bool" TypeK [`BOOL] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol "rune" TypeK [`RUNE] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol "string" TypeK [`STRING] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol "true" ConstK [`BOOL] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol "false" ConstK [`BOOL] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol "append" FuncK [`AUTO; `AUTO; `AUTO] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol "len" FuncK [`AUTO; `INT] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol "cap" FuncK [`AUTO; `INT] 0) (-1,-1);
     let tbl = scope_tbl root_tbl in
     sym_ast ast tbl;
     unscope_tbl tbl;
