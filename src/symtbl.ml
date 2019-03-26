@@ -228,12 +228,28 @@ let rec has_new_vars symtbl decllst = match decllst with
     )
     | []   -> false
 
+let maininit_decl_check start decl = 
+    let err id = 
+        let (line,ch) = start in
+        raise (SymbolInvInputErr (Printf.sprintf "Error: (line %d) %s must be a function" line id))
+    in
+    match decl with
+    | Var(lhs, _, _, _) -> (match lhs.v with
+        | `V(id) -> if (id = "main" || id = "init") then err id
+        | _ -> ()
+    )
+    | Type(iden', _) -> (match iden' with
+        | `V(id) -> if (id = "main" || id = "init") then err id
+        | _ -> ()
+    )
+    | _ -> ()
+
 (* SYMBOL GENERATION *)
 (*********************)
 let rec sym_ast ast (symtbl : symtbl ref) = match ast with
     | Program(pkg, toplvllist) -> List.iter (fun t -> (sym_toplvl t symtbl)) toplvllist
 and sym_toplvl toplvl (symtbl : symtbl ref) = match toplvl.v with
-    | Global(decl) -> sym_decl toplvl._start symtbl false decl
+    | Global(decl) -> maininit_decl_check toplvl._start decl; sym_decl toplvl._start symtbl false decl
     | Func(iden', siglst, typ, block) -> (
         invalid_maininit_check iden' siglst typ toplvl._start;
         let func_typ = get_func_typ iden' siglst typ in
