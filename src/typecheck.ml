@@ -59,7 +59,7 @@ let func_ret_check ret symt block =
         | Return(expr_opt) -> () (* types are checked in above func *)
         | If(cases) -> (match List.hd (List.rev cases) with 
             | Case(_, _, _) -> term_error stmt._start "if statement doesn't have an else branch"
-            | Default(else_block) -> List.iter case_is_term cases
+            | Default(else_block) -> List.iter (case_is_term stmt._start) cases (* TODO line info here is technically wrong *)
         )
         | Switch(_, _, fcases) ->(
             if (List.length fcases) == 0 then term_error stmt._start "switch statement doesn't have a default case"
@@ -75,22 +75,22 @@ let func_ret_check ret symt block =
             | Some expr -> term_error stmt._start "for loop contains loop condition"
             | None -> List.iter (no_break "for loop") block
         )
-        | Block(_blk) -> final_is_term _blk
+        | Block(_blk) -> final_is_term stmt._start _blk
         | _ -> term_error stmt._start ""
-    and fcase_is_term fcase = match fcase with
+    and fcase_is_term start fcase = match fcase with
         | case,FALLTHROUGH -> ()
-        | case,ENDBREAK -> case_is_term case
-    and case_is_term case = match case with
-        | Case(_, _, block) -> final_is_term block
-        | Default(block) -> final_is_term block
-	and final_is_term blk = match blk with 
-        | [] -> term_error (-1, -1) "no return statement given to non-void function" 
-        | _ -> stmt_is_term (List.hd (List.rev block))
+        | case,ENDBREAK -> case_is_term start case
+    and case_is_term start case = match case with
+        | Case(_, _, block) -> final_is_term start block
+        | Default(block) -> final_is_term start block
+	and final_is_term start blk = match blk with 
+        | [] -> term_error start "no return statement given to non-void function" 
+        | _ -> stmt_is_term (List.hd (List.rev blk))
 	in
 	let blck = List.map block_visitor block in
     match ret with
         | `VOID -> blck
-        | _ -> final_is_term blck; blck
+        | _ -> final_is_term (-1,1) blck; blck (* TODO get line info for this case *)
 
 
 let rec pass_ast symt = function
