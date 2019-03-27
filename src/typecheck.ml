@@ -109,7 +109,15 @@ and pass_inner_stmt symt node =
 	(pass_block symt [node] |> List.hd)
 and pass_statement this_symt node = function
 | Decl(decls) -> same (fun () -> {node with v = Decl(List.map (fun d -> d |> fwd_annot node |> pass_decl this_symt) decls)})
-| Expr(expr) -> same (fun () -> {node with v = Expr(pass_expr this_symt expr)})
+| Expr(expr) -> same (fun () -> 
+        {node with v = Expr(
+            match pass_expr this_symt expr with 
+            | {v = `Cast(_,_)} as expr' -> let (line, col) = expr'._start in 
+                raise (SyntaxError ("In expression statement at line " ^ string_of_int line 
+                ^ ", col " ^ string_of_int col ^ ": unexpected " ^ (Pretty.string_of_expr expr')
+                ^ ": cast expressions cannot be used as expression statements."))
+            | any -> any
+        )})
 | Return(expr) -> 
 	same (fun () -> {node with v = Return(maybe (pass_expr this_symt) expr)})
 | Block(stmts) -> down (fun child_symt -> {node with v = Block(pass_block child_symt stmts)})
@@ -121,7 +129,7 @@ and pass_statement this_symt node = function
 				{node with v = For(pre',cond',post',block')}
 	)
 | If(cases) -> down (fun child_symt -> 
-	{node with v = If(packify (pass_case "if condition" [`BOOL]) child_symt cases)})
+    {node with v = If(packify (pass_case true "if condition" [`BOOL]) child_symt cases)})
 | Switch(stmt,cond,cases) -> down (fun child_symt ->
 		let stmt' = maybe (pass_inner_stmt child_symt) stmt in
 		let cond' = (maybe (pass_expr child_symt) cond) in
@@ -150,15 +158,15 @@ and pass_statement this_symt node = function
         let lval' = pass_expr this_symt lval in
         let expr' = pass_expr this_symt expr in
 		Typerules.assert_not_void "op-assignment" this_symt (expr', typeof expr');
-        	let expr'' = pass_op2 this_symt {expr with v = `Op2(get_op2 op, lval', expr')} in
-        	let assn = pass_assn this_symt ((lval':lvalue :> lvalue'), expr'') in
-        	{node with v = OpAssign(lval', op, expr')})
+        let expr'' = pass_op2 this_symt {expr with v = `Op2(get_op2 op, lval', expr')} in
+        let assn = pass_assn this_symt ((lval':lvalue :> lvalue'), expr'') in
+        {node with v = OpAssign(lval', op, expr')})
 | _ -> same (fun () -> node)
 and pass_decl symt node = match node.v with
     | Var(name, lt, Some expr, s) ->
         let expr' = pass_expr symt expr in
         let lt' = infer_auto [lt] (typeof expr') in
-	Typerules.assert_not_void "variable declaration" symt (expr', typeof expr');
+        Typerules.assert_not_void "variable declaration" symt (expr', typeof expr');
         assert_match resolve_basic symt "variable declaration" (v_name name, lt') (expr, typeof expr');
         Typerules.assert_redef_match symt node name (typeof expr');
         Var(name, (type_single expr'), Some expr', s)
@@ -168,8 +176,8 @@ and pass_assn symt (lval, expr) = match (lval.v, expr.v) with
     | (`Selector(lval'',_), oper) -> (
         match lval''.v with
         | `Call(_, _) -> 
-                assert_is_slice symt "assignment" (typeof (pass_call symt lval'')) lval'';
-                pass_assn_inner symt (lval, expr)
+        assert_is_slice symt "assignment" (typeof (pass_call symt lval'')) lval'';
+            pass_assn_inner symt (lval, expr)
         | any -> pass_assn_inner symt (lval, expr)
     )
     | (`Blank, oper) -> pass_assn_inner symt (lval, expr)
@@ -178,7 +186,7 @@ and pass_assn symt (lval, expr) = match (lval.v, expr.v) with
         pass_assn_inner symt (lval, expr)
     )
     | _ -> let (line, col) = lval._start in 
-        raise (SyntaxError ("In assignment at line " ^ string_of_int line ^ ", char " ^ string_of_int col ^ 
+        raise (SyntaxError ("In assignment at line " ^ string_of_int line ^ ", col " ^ string_of_int col ^ 
         ": unexpected " ^ (Pretty.string_of_lvalue' lval) ^ " is not an lvalue."))
 and pass_assn_inner symt (lval, expr) = match (lval.v, expr.v) with
     | (`Indexing(_,_), oper)
@@ -187,7 +195,7 @@ and pass_assn_inner symt (lval, expr) = match (lval.v, expr.v) with
     | (`V _, oper) -> (
         let lval' = pass_lval symt lval in
         let expr' = pass_expr symt expr in
-	Typerules.assert_not_void "assignment" symt (expr', typeof expr');
+        Typerules.assert_not_void "assignment" symt (expr', typeof expr');
         assert_match resolve_basic symt "assignment" ("<lvalue>", typeof lval') (expr', typeof expr');
         begin try
             assert_same_if_user_defined symt "assignment" (lval', List.hd (typeof lval')) ((expr'), List.hd (typeof expr'));
@@ -199,8 +207,8 @@ and pass_assn_inner symt (lval, expr) = match (lval.v, expr.v) with
     )
     | _ -> failwith "non-lvalue expression on lhs of assignment"
 and pass_fallable_case ctx expected_t this_symt node = function
-    | (case, mode) -> same (fun () -> {node with v = ((packify (pass_case ctx expected_t) this_symt [case] |> List.hd), mode)})
-and pass_case ctx expected_t this_symt node = function
+    | (case, mode) -> same (fun () -> {node with v = ((packify (pass_case false ctx expected_t) this_symt [case] |> List.hd), mode)})
+and pass_case is_if ctx expected_t this_symt node = function
     | Default(block) -> down (fun child_symt -> {node with v = Default(pass_block child_symt block)})
     | Case(pre,conds,block) -> 
         down (fun child_symt ->
@@ -208,7 +216,7 @@ and pass_case ctx expected_t this_symt node = function
         let conds' = List.map (pass_expr this_symt) conds in
         let block' = pass_block child_symt block in
         List.iter (fun cond' -> 
-            assert_match rt this_symt ctx ("<condition>",expected_t) (cond', typeof cond')
+            assert_match (if is_if then rt else resolve_basic) this_symt ctx ("<condition>",expected_t) (cond', typeof cond')
         ) conds';
         {node with v = Case(pre',conds',block')}
         )
@@ -284,7 +292,7 @@ and pass_call symt node = match node.v with
     | _ -> raise (TypeError (sprintf "Expression '%s' cannot yield a callable value %s" (Pretty.string_of_expr node) (err_loc node)))
 and pass_cast symt node = 
     let bad_cast msg = let (line, col) = node._start in
-        raise (SyntaxError ("in cast expression at line " ^ string_of_int line ^ ", char " ^ string_of_int col ^ ", " ^ msg))
+        raise (SyntaxError ("in cast expression at line " ^ string_of_int line ^ ", col " ^ string_of_int col ^ ", " ^ msg))
     in 
     match node.v with
     (* might aswell use our cast node *)
