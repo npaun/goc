@@ -322,34 +322,32 @@ and pass_op1 symt node =
 			{node with v = `Op1(op,a'); _derived = (typeof a')}
 	| _ -> failwith "Go away ocaml, not an op1" 
 and pass_op2 symt node = 
-	let monotype = function
-	| `OR | `AND -> Some [`BOOL]
-	| `MOD | `BOR | `BAND | `SL | `SR | `BANDNOT | `BXOR -> Some [`INT]
-	| _ -> None
-	in match node.v with
-	| `Op2(op,a,b) when present (monotype op) -> 
-		let Some op_t = monotype op in
+	let check_cond_and_consist node assert_fn = begin match node.v with
+	| `Op2(op,a,b) ->
 		let a' = pass_expr symt a in
 		let b' = pass_expr symt b in
-			assert_match rt symt (Pretty.string_of_op2 op) ("<left operand>", op_t) (a', typeof a');
-			assert_match rt symt (Pretty.string_of_op2 op) ("<right operand>", op_t) (b', typeof b');
-			{node with v = `Op2(op,a',b'); _derived = op_t}
+			assert_fn a';
+			assert_match resolve_basic symt (Pretty.string_of_op2 op) ("<right operand>", typeof a') (b', typeof b');
+			{node with v = `Op2(op,a',b'); _derived = (typeof a')}
+	| _ -> failwith "Probable bug in Typecheck, how did a non-op2 get into this fn?"
+	end
+	in match node.v with
+	| `Op2(`AND as op,_,_) | `Op2(`OR as op,_,_) -> 
+		check_cond_and_consist node (fun a' -> assert_match rt symt (Pretty.string_of_op2 op) ("<left operand", [`BOOL]) (a', typeof a'))
+	| `Op2(`MOD as op,_,_) | `Op2(`BOR as op,_,_) | `Op2(`BAND as op,_,_)
+	| `Op2(`SL as op, _,_) | `Op2(`SR as op,_,_) | `Op2(`BANDNOT as op,_,_) | `Op2(`BXOR as op, _,_) ->
+		check_cond_and_consist node (fun a' -> assert_is_integral symt (Pretty.string_of_op2 op) (typeof a') a') 
 	| `Op2(`ADD,a,b) -> 
 		let a' = pass_expr symt a in
 		let b' = pass_expr symt b in
 			begin match (rt symt (typeof a')) with
 			| [`STRING] -> 
-				assert_match rt symt "inferred concatenation (+)" ("<left operand>", [`STRING])  (b', typeof b')
+				assert_match resolve_basic symt "inferred concatenation (+)" ("<left operand>", typeof a')  (b', typeof b')
 			| _ ->
 				assert_is_numeric symt "inferred addition (+)" (typeof a') a';
-				assert_match rt symt "inferred addition (+)" ("<left operand>", typeof a') (b', typeof b')
+				assert_match resolve_basic symt "inferred addition (+)" ("<left operand>", typeof a') (b', typeof b')
 			end;
 			{node with v = `Op2(`ADD,a',b'); _derived = (typeof a')}
 	| `Op2(`MUL as op,a,b) | `Op2(`SUB as op,a,b) | `Op2(`DIV as op, a, b) ->
-		let a' = pass_expr symt a in
-		let b' = pass_expr symt b in
-			assert_is_numeric symt (Pretty.string_of_op2 op) (typeof a') a';
-			assert_match rt symt (Pretty.string_of_op2 op) ("<left operand>", typeof a') (b', typeof b');
-			{node with v = `Op2(op,a',b'); _derived = (typeof a')}
-	
-	| rest -> {node with _derived = [`VOID]} (* comparable, ordered operations *)
+		check_cond_and_consist node (fun a' -> assert_is_numeric symt (Pretty.string_of_op2 op) (typeof a') a')
+	| rest -> {node with _derived = [`VOID]}
