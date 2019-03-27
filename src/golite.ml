@@ -63,7 +63,8 @@ and literal =
 type lvalue = expression (* No further inspection for now *)
 [@@deriving sexp]
 and ident'' = identifier' annotated
-and lvalue' = [operand | identifier'] annotated
+and lvalinner = [operand | identifier']
+and lvalue' = lvalinner annotated
 [@@deriving sexp]
 
 (* Program AST *)

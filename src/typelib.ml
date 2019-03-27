@@ -246,6 +246,7 @@ let assert_is_numeric symt ctxstring typ node =
     | `INT | `FLOAT64 | `RUNE -> ()
     | _ -> raise (TypeError (match_error ()))
 
+
 (** assert_is_integral: Checks whether or not a type resolves to one of Golite's base integral types:
     int, rune
     It does not require a resolver as it always uses rt**)    
@@ -398,3 +399,38 @@ let distinguish_void = function
 | [] -> [`VOID]
 | rest -> rest
 
+let get_value_type = function
+| [typ] -> typ
+| _ -> failwith "Probable bug in Typecheck: [GVT] Attempt to obtain a single type for a function or unprocessed object"
+
+let assert_is_comparable symt ctxstring (node,typ) =
+	let not_comparable_error () =
+		sprintf "In %s, type %s does not resolve to a comparable type %s\n" 
+		ctxstring
+		(string_of_typesig typ)
+		(err_loc node)
+	in 
+	let rec aux = function
+	| `INT | `BOOL | `RUNE | `FLOAT64 | `STRING -> true
+ 	| `TypeLit Array(sz,typ) -> aux (get_value_type (rt symt [typ])) (* inner type may resolve to comparable *)
+	| `TypeLit Slice(typ) -> false
+	| `TypeLit Struct(ms) -> List.for_all (fun (field,typ) -> aux (get_value_type (rt symt [typ]))) ms
+	| `AUTO | `VOID  | `Type _ -> false
+	in if (aux (get_value_type (rt symt typ)))
+		then true
+		else raise (TypeError (not_comparable_error ()))
+
+
+let assert_is_ordered symt ctxstring (node,typ) =
+	let not_ordered_error () =
+		sprintf "In %s, type %s does not resolve to an ordered type %s\n" 
+		ctxstring
+		(string_of_typesig typ)
+		(err_loc node)
+	in 
+	let rec aux = function
+	| `INT | `RUNE | `FLOAT64 | `STRING -> true
+	| `AUTO | `VOID | `BOOL | `Type _ | `TypeLit _ -> false
+	in if (aux (get_value_type (rt symt typ)))
+		then true
+		else raise (TypeError (not_ordered_error ()))

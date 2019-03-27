@@ -1,7 +1,10 @@
 open Golite
 open Printf
 open Typelib
- 
+
+let lvalify node = match node.v with
+| something -> {node with v = (something:operand :> lvalinner)}
+
 let v_name = Pretty.string_of_lvalue'
 let maybe fn = function
     | Some arg -> Some (fn arg)
@@ -123,8 +126,9 @@ and pass_statement this_symt node = function
 		let stmt' = maybe (pass_inner_stmt child_symt) stmt in
 		let cond' = (maybe (pass_expr child_symt) cond) in
 		let cond_t = (default typeof [`BOOL] cond') in
-		let cases' = packify (pass_fallable_case "switch case" cond_t) child_symt cases in 
-			{node with v = Switch(stmt',cond',cases')}
+			let _ = (maybe (fun c' -> assert_is_comparable child_symt "switch condition" (c', cond_t)) cond') in
+			let cases' = packify (pass_fallable_case "switch case" cond_t) child_symt cases in 
+				{node with v = Switch(stmt',cond',cases')}
 		)
 | Print(ln, exps) -> same (fun () ->
 	let exps' = List.map (pass_expr this_symt) exps in
@@ -132,8 +136,8 @@ and pass_statement this_symt node = function
 		{node with v = Print(ln, exps')}
 	)
 | IncDec(arg, op) -> same (fun () ->
-	(* TODO perform the lvalue check, this is on me - NP *)
 	let arg' = pass_expr this_symt arg in
+		let _ = pass_assn this_symt (lvalify arg', arg') in (* this sucks but works fuck it *)
 		assert_is_numeric this_symt "increment or decrement statement" (typeof arg') arg';
 		{node with v = IncDec(arg', op)}
 	)
@@ -326,17 +330,17 @@ and pass_op2 symt node =
 	| `Op2(op,a,b) ->
 		let a' = pass_expr symt a in
 		let b' = pass_expr symt b in
-			assert_fn a';
-			assert_match resolve_basic symt (Pretty.string_of_op2 op) ("<right operand>", typeof a') (b', typeof b');
-			{node with v = `Op2(op,a',b'); _derived = (typeof a')}
+			let op_t = assert_fn a' in
+				assert_match resolve_basic symt (Pretty.string_of_op2 op) ("<right operand>", typeof a') (b', typeof b');
+				{node with v = `Op2(op,a',b'); _derived = op_t}
 	| _ -> failwith "Probable bug in Typecheck, how did a non-op2 get into this fn?"
 	end
 	in match node.v with
 	| `Op2(`AND as op,_,_) | `Op2(`OR as op,_,_) -> 
-		check_cond_and_consist node (fun a' -> assert_match rt symt (Pretty.string_of_op2 op) ("<left operand", [`BOOL]) (a', typeof a'))
+		check_cond_and_consist node (fun a' -> assert_match rt symt (Pretty.string_of_op2 op) ("<left operand", [`BOOL]) (a', typeof a'); typeof a')
 	| `Op2(`MOD as op,_,_) | `Op2(`BOR as op,_,_) | `Op2(`BAND as op,_,_)
 	| `Op2(`SL as op, _,_) | `Op2(`SR as op,_,_) | `Op2(`BANDNOT as op,_,_) | `Op2(`BXOR as op, _,_) ->
-		check_cond_and_consist node (fun a' -> assert_is_integral symt (Pretty.string_of_op2 op) (typeof a') a') 
+		check_cond_and_consist node (fun a' -> assert_is_integral symt (Pretty.string_of_op2 op) (typeof a') a'; typeof a')
 	| `Op2(`ADD,a,b) -> 
 		let a' = pass_expr symt a in
 		let b' = pass_expr symt b in
@@ -349,5 +353,9 @@ and pass_op2 symt node =
 			end;
 			{node with v = `Op2(`ADD,a',b'); _derived = (typeof a')}
 	| `Op2(`MUL as op,a,b) | `Op2(`SUB as op,a,b) | `Op2(`DIV as op, a, b) ->
-		check_cond_and_consist node (fun a' -> assert_is_numeric symt (Pretty.string_of_op2 op) (typeof a') a')
-	| rest -> {node with _derived = [`VOID]}
+		check_cond_and_consist node (fun a' -> assert_is_numeric symt (Pretty.string_of_op2 op) (typeof a') a'; typeof a')
+	| `Op2(`EQ as op,a,b) | `Op2(`NEQ as op,a,b) ->
+		check_cond_and_consist node (fun a' -> assert_is_comparable symt (Pretty.string_of_op2 op) (a', typeof a'); [`BOOL])
+	| `Op2(`LEQ as op,a,b) | `Op2(`LT as op,a,b)
+	| `Op2(`GEQ as op,a,b) | `Op2(`GT as op,a,b) ->
+		check_cond_and_consist node (fun a' -> assert_is_ordered symt (Pretty.string_of_op2 op) (a', typeof a'); [`BOOL])
