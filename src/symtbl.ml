@@ -192,9 +192,11 @@ let get_func_typ iden' siglist ret_typ =
     let rec get_sig_typ sigl acc = match sigl with
         | (iden, got)::t -> get_sig_typ t (got::acc)
         | [] -> acc
-    in
-    match iden' with
-        | `V(id) -> if id == "init" then [`AUTO] else ret_typ::(get_sig_typ siglist [] |> List.rev)
+    in let replace_void = function
+    | [] -> [`VOID]
+    | rest -> rest
+    in match iden' with
+        | `V(id) -> if id == "init" then [`AUTO] else ret_typ::(get_sig_typ siglist [] |> List.rev |> replace_void)
         | `Blank -> [`AUTO]
   
 (* identifier' -> symbolkind -> gotype -> astnode -> symtbl -> unit *)

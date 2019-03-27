@@ -139,31 +139,21 @@ and pass_statement this_symt node = function
 | Assign(assnlst) -> same (fun () -> {node with v = Assign(List.map (fun assn -> pass_assn this_symt assn) assnlst)})
 | OpAssign(lval, op, expr) -> same (fun () -> 
         let get_op2 = function
-            | `SET      -> failwith "bad"
-            | `ADD      -> let op:op2 = `ADD in op
-            | `BAND     -> let op:op2 = `BAND in op
-            | `BANDNOT  -> let op:op2 = `BANDNOT in op
-            | `BOR      -> let op:op2 = `BOR in op
-            | `BXOR     -> let op:op2 = `BXOR in op
-            | `DIV      -> let op:op2 = `DIV in op
-            | `MOD      -> let op:op2 = `MOD in op
-            | `MUL      -> let op:op2 = `MUL in op
-            | `SL       -> let op:op2 = `SL in op
-            | `SR       -> let op:op2 = `SR in op
-            | `SUB      -> let op:op2 = `SUB in op
+	| `SET      -> failwith "Possible error in Parser or Ocaml, as `SET should not appear in op-assign"
+	| #op2 as rest -> rest
         in
         let lval' = pass_expr this_symt lval in
         let expr' = pass_expr this_symt expr in
-        let expr'' = pass_op2 this_symt {expr with v = `Op2(get_op2 op, lval', expr')} in
-        let assn = pass_assn this_symt ((lval':lvalue :> lvalue'), expr'') in
-        (* We could convert it to an Assign(lval, Op2(...)), but I think it's better leave that to
-         * codegen in order to avoid messing up the AST *)
-        {node with v = OpAssign(lval', op, expr')})
+		Typerules.assert_not_void "op-assignment" this_symt (expr', typeof expr');
+        	let expr'' = pass_op2 this_symt {expr with v = `Op2(get_op2 op, lval', expr')} in
+        	let assn = pass_assn this_symt ((lval':lvalue :> lvalue'), expr'') in
+        	{node with v = OpAssign(lval', op, expr')})
 | _ -> same (fun () -> node)
 and pass_decl symt node = match node.v with
     | Var(name, lt, Some expr, s) ->
         let expr' = pass_expr symt expr in
         let lt' = infer_auto [lt] (typeof expr') in
+	Typerules.assert_not_void "variable declaration" symt (expr', typeof expr');
         assert_match resolve_basic symt "variable declaration" (v_name name, lt') (expr, typeof expr');
         Typerules.assert_redef_match symt node name (typeof expr');
         Var(name, (type_single expr'), Some expr', s)
@@ -192,6 +182,7 @@ and pass_assn_inner symt (lval, expr) = match (lval.v, expr.v) with
     | (`V _, oper) -> (
         let lval' = pass_lval symt lval in
         let expr' = pass_expr symt expr in
+	Typerules.assert_not_void "assignment" symt (expr', typeof expr');
         assert_match resolve_basic symt "assignment" ("<lvalue>", typeof lval') (expr', typeof expr');
         begin try
             assert_same_if_user_defined symt "assignment" (lval', List.hd (typeof lval')) ((expr'), List.hd (typeof expr'));
@@ -281,7 +272,7 @@ and pass_call symt node = match node.v with
         else
             let fn' = pass_expr symt fn in
             let args' = List.map (pass_expr symt) args in
-            let typeof_args' = List.map typeof args' |> List.flatten in
+            let typeof_args' = List.map typeof args' |> List.flatten |> Typelib.distinguish_void in
                 let return_t = Typerules.return_type symt fn' in
                     assert_consist resolve_basic symt fn' (node, (return_t::typeof_args'));
                     {node with v = `Call(fn', args'); _derived = [return_t]}

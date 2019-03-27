@@ -388,3 +388,12 @@ let type_single (node:'n annotated):gotype =
 let fwd_annot (parent:'n annotated) (child:'m):('m annotated) =
 	{parent with v = child}
 
+
+(** distinguish_void: Makes it possible to tell a no-argument function from a value,
+	merely by signature, by pretending that the function accepts an argument of type `VOID,
+	as Ocaml would. This is helpful because some checks only have the typesig available, and cannot look for the kind.
+**)
+let distinguish_void = function
+| [] -> [`VOID]
+| rest -> rest
+

@@ -65,6 +65,23 @@ let field_type symt node field =
 			end
 		| other -> raise (TypeError (not_a_struct_error ()))
 
+let assert_not_void ctx symt (node, typ) =
+	let void_invalid_error () =
+		sprintf "In %s, expression %s has type VOID, but a non-void expression is required %s"
+		ctx
+		(Pretty.string_of_expr node)
+		(err_loc node)
+	in let non_value_error () = 
+		sprintf "In %s, expression %s has function type %s, but a value-typed expression is required %s"
+		ctx
+		(Pretty.string_of_expr node)
+		(Typelib.string_of_typesig typ)
+		(err_loc node)
+	in if  List.length typ <> 1 then
+		raise (TypeError (non_value_error ()))
+	else if (resolve_basic symt typ) = [`VOID] then
+		raise (TypeError (void_invalid_error ()))
+
 
 
 
