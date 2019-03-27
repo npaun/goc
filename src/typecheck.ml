@@ -244,7 +244,6 @@ and pass_expr symt node = match node.v with
     | `Op2(_,_,_) -> pass_op2 symt node
 and pass_call symt node = match node.v with
     | `Call({v = `V "append"} as fn,[arr;elm]) -> 
-        (* TODO: hard to tell this actually works without finishing pass_expr, test later *)
         let arr' = pass_expr symt arr in
         let elm' = pass_expr symt elm in
         let elmtyp = Typerules.slice_type symt arr' in
@@ -333,5 +332,22 @@ and pass_op2 symt node =
 			assert_match rt symt (Pretty.string_of_op2 op) ("<left operand>", op_t) (a', typeof a');
 			assert_match rt symt (Pretty.string_of_op2 op) ("<right operand>", op_t) (b', typeof b');
 			{node with v = `Op2(op,a',b'); _derived = op_t}
-	| `Op2(`ADD,a,b) -> {node with _derived = [`VOID]} (* string, etc. *)
-	| rest -> {node with _derived = [`VOID]} (* numeric, comparable, ordered operations *)
+	| `Op2(`ADD,a,b) -> 
+		let a' = pass_expr symt a in
+		let b' = pass_expr symt b in
+			begin match (typeof a') with
+			| [`STRING] -> 
+				assert_match rt symt "inferred concatenation (+)" ("<left operand>", [`STRING])  (b', typeof b')
+			| _ ->
+				assert_is_numeric symt "inferred addition (+)" (typeof a') a';
+				assert_match rt symt "inferred addition (+)" ("<left operand>", typeof a') (b', typeof b')
+			end;
+			{node with v = `Op2(`ADD,a',b'); _derived = (typeof a')}
+	| `Op2(`MUL as op,a,b) | `Op2(`SUB as op,a,b) | `Op2(`DIV as op, a, b) ->
+		let a' = pass_expr symt a in
+		let b' = pass_expr symt b in
+			assert_is_numeric symt (Pretty.string_of_op2 op) (typeof a') a';
+			assert_match rt symt (Pretty.string_of_op2 op) ("<left operand>", typeof a') (b', typeof b');
+			{node with v = `Op2(op,a',b'); _derived = (typeof a')}
+	
+	| rest -> {node with _derived = [`VOID]} (* comparable, ordered operations *)
