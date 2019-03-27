@@ -132,6 +132,7 @@ and pass_statement this_symt node = function
 		{node with v = Print(ln, exps')}
 	)
 | IncDec(arg, op) -> same (fun () ->
+	(* TODO perform the lvalue check, this is on me - NP *)
 	let arg' = pass_expr this_symt arg in
 		assert_is_numeric this_symt "increment or decrement statement" (typeof arg') arg';
 		{node with v = IncDec(arg', op)}
@@ -227,7 +228,8 @@ and pass_lval symt node = match node.v with
     | _ -> failwith "non-value used on lhs of assignment, weeder failed"
 and pass_expr symt node = match node.v with
     | `L lit -> {node with _derived = [typeof_literal lit]}
-    | `V var -> 
+    | `V var ->
+	assert_kinds symt "expression" var kind_value; 
         {node with _derived = typeof_symbol symt var} 
     | `Indexing(arr,idx) -> 
         let arr' = pass_expr symt arr in
@@ -335,7 +337,7 @@ and pass_op2 symt node =
 	| `Op2(`ADD,a,b) -> 
 		let a' = pass_expr symt a in
 		let b' = pass_expr symt b in
-			begin match (typeof a') with
+			begin match (rt symt (typeof a')) with
 			| [`STRING] -> 
 				assert_match rt symt "inferred concatenation (+)" ("<left operand>", [`STRING])  (b', typeof b')
 			| _ ->

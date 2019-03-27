@@ -359,6 +359,7 @@ let assert_same_if_user_defined symt ctxstring (e1, t1) (e2, t2) =
 
 let kind_callable = ("a callable value",[FuncK])
 let kind_var = ("a variable",[VarK;ConstK])
+let kind_value = ("a variable or function", [VarK;ConstK;FuncK])
 let kind_nonconst = ("a non-constant variable",[VarK])
 
 let assert_kinds symt ctxstring id (class_name,class_members) = 
