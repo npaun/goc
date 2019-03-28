@@ -32,5 +32,5 @@ fi
 last_ch=`tail -c 1 $2`
 if [ "$last_ch" != "" ]; then echo >> "$2"; fi
 
-./src/goc.byte "$1" < "$2"
+./src/goc.byte "$1" "$2"
 
