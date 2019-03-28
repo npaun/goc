@@ -3,18 +3,26 @@ open Golite
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n\n" 
 
 let rec gen_ast ast = match ast with
-  | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> acc ^ (gen_toplvl toplvl)) toplvllist ""
+  | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
-  | Global(decl) -> gen_decl decl
+  | Global(decl) -> gen_decl decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
       | `V id -> gen_type typ ^ " " ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block block
       | `Blank -> ""
   )
 and gen_siglist siglst = ""
-and gen_decl decl = match decl with
-  | Var(lhs, typ, expr_opt, isshort) -> ""
-  | Type(iden', typ) -> ""
+and gen_decl decl =
+  let decl_end expr_opt typ = match expr_opt with
+    | Some expr -> " = " ^ gen_expr expr
+    | None -> ""
+  in
+  match decl with
+    | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v with
+      | `V id -> gen_type typ ^ " " ^ id ^ (decl_end expr_opt typ)
+      | `Blank -> gen_expr_opt expr_opt
+    )
+    | Type(iden', typ) -> ""
 and gen_block block = "{\n" ^ (List.fold_right (fun stmt acc -> acc ^ (gen_stmt stmt)) block "") ^ "}\n"
 and gen_type typ = match typ with
   | `BOOL
@@ -22,7 +30,7 @@ and gen_type typ = match typ with
   | `RUNE         -> "char"
   | `FLOAT64      -> "float"
   | `STRING       -> "char*"
-  | `Type(id)     -> id
+  | `Type(id)     -> id (* TODO: we want to print the resolved type here *)
   | `AUTO         -> "" (* this shouldn't be reached, probably want to throw an error *)
   | `VOID         -> "void"
   | `TypeLit(t)   -> gen_typelit t
@@ -32,11 +40,11 @@ and gen_typelit typlit = match typlit with
   | Struct(mems)  -> "struct" (* TODO *)
 and gen_stmt stmt = match stmt.v with
   | Decl(decllst) -> ""
-  | Expr(expr) -> ""
-  | Block(block) -> ""
+  | Expr(expr) -> gen_expr expr
+  | Block(block) -> gen_block block
   | Assign(alist) -> ""
   | OpAssign(lvalue, _, expr) -> ""
-  | IncDec(expr, _) -> ""
+  | IncDec(expr, op) -> gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--")
   | Print(_, exprlist) -> ""
   | Return (expr_opt) -> ""
   | If(clist) -> ""
@@ -51,9 +59,18 @@ and gen_expr expr = match expr.v with
   | `Call(exp, explist)  -> ""
   | `Cast(typ, exp)      -> ""
   | `Selector(exp, id)   -> ""
-  | `L(lit)              -> ""
+  | `L(lit)              -> (match lit with
+    | Bool(b) -> if b then "1" else "0"
+    | Rune(r) -> r
+    | Int(i)  -> string_of_int i
+    | Float64(f) -> string_of_float f
+    | String(s) -> s
+    )
   | `Indexing(exp,exp2)  -> ""
   | `V(id)               -> ""
+and gen_expr_opt expr_opt = match expr_opt with
+  | Some expr -> gen_expr expr
+  | None -> ""
 
 let gen_c_code filename ast = 
   let code = gen_file_header ^ (gen_ast ast) in
