@@ -150,16 +150,53 @@ let rec get_table_of symtbl sym =
     | None -> match (get_parent symtbl) with
         | None -> raise (SymbolErr "bad")
         | Some t -> get_table_of !t sym
+        
+let rec get_iden_str = function
+    | `V(id) -> id
+    | `Blank -> ""
     
-
+exception Found
+let assert_no_dup pos lst =
+  let hash = Hashtbl.create (List.length lst) in
+  try
+    begin
+      List.iter (function (x, _) ->
+                  if (Hashtbl.mem hash x)
+                  then (raise Found)
+                  else (Hashtbl.add hash x true))
+                lst;
+    end
+  with Found -> let (line, col) = pos in
+      raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", duplicated struct member")) 
+    
+let rec lookup_typ symtbl pos symname = function
+    | `AUTO -> ()
+    | `TypeLit _ as lit -> lookup_lit symtbl pos symname lit 
+    | `Type id -> (
+        match get_symbol symtbl id true with
+        | None -> if id <> symname then (* the symname thing is for "recursive" types and doesn't really work, even the TA is surprised we have to do that *)
+            let (line, col) = pos in 
+            raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", unknown type " ^ id)) 
+            else ()
+        | Some s -> if s.kind <> TypeK then 
+            let (line, col) = pos in
+            raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", invalid type " ^ id)) 
+            else ()
+    )
+    | any -> ()
+and lookup_lit symtbl pos symname = function
+    | `TypeLit Slice typ as slice -> lookup_typ symtbl pos symname typ 
+    | `TypeLit Array (n, typ) as arr -> lookup_typ symtbl pos symname typ
+    | `TypeLit Struct members as ret -> 
+            assert_no_dup pos members; 
+            List.iter (fun (iden, typ) -> lookup_typ symtbl pos "" typ) members
 let unbound_getandinc = unboundfunc_count := !unboundfunc_count + 1; !unboundfunc_count - 1
 let handle_unbound_func tbl sym = match tbl with
     | Symt(table, _, _, _) -> Hashtbl.add table ("$" ^ sym.name ^ string_of_int unbound_getandinc) sym; if !print_sym then print_symbol sym tbl
 
-
 (* symbol -> symtbl -> unit *)
 let put_symbol tbl sym start =
-    if (sym.name = "init" || sym.name = "_") &&  sym.kind = FuncK then handle_unbound_func tbl sym
+    if (sym.name = "init" || sym.name = "_") && sym.kind = FuncK then handle_unbound_func tbl sym
     else (
         match tbl with
             | Symt(table, _, _, _) ->
@@ -174,7 +211,7 @@ let put_symbol_short_decl tbl sym start hasnew = match tbl with
         | Some s, true -> () (* if we have new vars in short decl we ignore redeclares *)
         | Some s, false -> 
             let (line,chr) = start in 
-            raise (SymbolErr ("At line: " ^ string_of_int line ^ " char: " ^ string_of_int chr ^ ", short declaration contains no new variables"))
+            raise (SymbolErr ("At line: " ^ string_of_int line ^ " col: " ^ string_of_int chr ^ ", short declaration contains no new variables"))
 
 (* ref symtbl -> ref symtbl *)        
 (* makes new table with arg as parent, adds it to the parent's children and returns it *)        
@@ -193,8 +230,8 @@ let get_func_typ iden' siglist ret_typ =
         | (iden, got)::t -> get_sig_typ t (got::acc)
         | [] -> acc
     in let replace_void = function
-    | [] -> [`VOID]
-    | rest -> rest
+        | [] -> [`VOID]
+        | rest -> rest
     in match iden' with
         | `V(id) -> if id == "init" then [`AUTO] else ret_typ::(get_sig_typ siglist [] |> List.rev |> replace_void)
         | `Blank -> [`AUTO]
@@ -255,6 +292,7 @@ and sym_toplvl toplvl (symtbl : symtbl ref) = match toplvl.v with
     | Func(iden', siglst, typ, block) -> (
         invalid_maininit_check iden' siglst typ toplvl._start;
         let func_typ = get_func_typ iden' siglst typ in
+        List.iter (lookup_typ !symtbl toplvl._start "") func_typ;
         put_iden iden' FuncK func_typ toplvl._start !symtbl;
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
@@ -339,12 +377,12 @@ and sym_case stmt symtbl case = match case with
         unscope_tbl tbl
 and sym_decl s symtbl hasnew decl = match decl with
     | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v, isshort with
-        | `V(id), false -> put_symbol !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s; sym_expr_opt symtbl expr_opt
-        | `V(id), true  -> put_symbol_short_decl !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s hasnew; sym_expr_opt symtbl expr_opt
+        | `V(id), false -> (lookup_typ !symtbl s "" typ); put_symbol !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s; sym_expr_opt symtbl expr_opt
+        | `V(id), true  -> (lookup_typ !symtbl s "" typ); put_symbol_short_decl !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s hasnew; sym_expr_opt symtbl expr_opt
         | `Blank, _ -> sym_expr_opt symtbl expr_opt
         | _, _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
-    | Type(iden', typ) -> put_iden iden' TypeK [typ] s !symtbl
+    | Type(iden', typ) -> (lookup_typ !symtbl s (get_iden_str iden') typ); put_iden iden' TypeK [typ] s !symtbl
 and sym_expr symtbl expr = match expr.v with
     | `Op1(op1,exp)        -> sym_expr symtbl exp
     | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
