@@ -174,10 +174,12 @@ let rec lookup_typ symtbl pos symname = function
     | `TypeLit _ as lit -> lookup_lit symtbl pos symname lit 
     | `Type id -> (
         match get_symbol symtbl id true with
-        | None -> if id <> symname then (* the symname thing is for "recursive" types and doesn't really work, even the TA is surprised we have to do that *)
+        | None -> 
             let (line, col) = pos in 
+            if id <> symname then (* the symname thing is for "recursive" types and doesn't really work, even the TA is surprised we have to do that *)
             raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", unknown type " ^ id)) 
-            else ()
+            else 
+            raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", invalid recursive type " ^ id))
         | Some s -> if s.kind <> TypeK then 
             let (line, col) = pos in
             raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", invalid type " ^ id)) 
