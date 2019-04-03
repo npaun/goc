@@ -169,29 +169,31 @@ let assert_no_dup pos lst =
   with Found -> let (line, col) = pos in
       raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", duplicated struct member")) 
     
-let rec lookup_typ symtbl pos symname = function
+let rec lookup_typ symtbl pos symname rec_allowed = function
     | `AUTO -> ()
-    | `TypeLit _ as lit -> lookup_lit symtbl pos symname lit 
+    | `TypeLit _ as lit -> lookup_lit symtbl pos symname rec_allowed lit
     | `Type id -> (
         match get_symbol symtbl id true with
         | None -> 
             let (line, col) = pos in 
             if id <> symname then (* the symname thing is for "recursive" types and doesn't really work, even the TA is surprised we have to do that *)
             raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", unknown type " ^ id)) 
-            else 
-            raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", invalid recursive type " ^ id))
+            else begin
+                if rec_allowed then ()
+                else raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", invalid recursive type " ^ id))
+            end
         | Some s -> if s.kind <> TypeK then 
             let (line, col) = pos in
             raise (SymbolErr ("At line: " ^ string_of_int line ^ ", col: " ^ string_of_int col ^ ", invalid type " ^ id)) 
             else ()
     )
     | any -> ()
-and lookup_lit symtbl pos symname = function
-    | `TypeLit Slice typ as slice -> lookup_typ symtbl pos symname typ 
-    | `TypeLit Array (n, typ) as arr -> lookup_typ symtbl pos symname typ
+and lookup_lit symtbl pos symname rec_allowed = function
+    | `TypeLit Slice typ as slice -> lookup_typ symtbl pos symname true typ
+    | `TypeLit Array (n, typ) as arr -> lookup_typ symtbl pos symname rec_allowed typ
     | `TypeLit Struct members as ret -> 
             assert_no_dup pos members; 
-            List.iter (fun (iden, typ) -> lookup_typ symtbl pos "" typ) members
+            List.iter (fun (iden, typ) -> lookup_typ symtbl pos symname false typ) members
 let unbound_getandinc = unboundfunc_count := !unboundfunc_count + 1; !unboundfunc_count - 1
 let handle_unbound_func tbl sym = match tbl with
     | Symt(table, _, _, _) -> Hashtbl.add table ("$" ^ sym.name ^ string_of_int unbound_getandinc) sym; if !print_sym then print_symbol sym tbl
@@ -294,7 +296,7 @@ and sym_toplvl toplvl (symtbl : symtbl ref) = match toplvl.v with
     | Func(iden', siglst, typ, block) -> (
         invalid_maininit_check iden' siglst typ toplvl._start;
         let func_typ = get_func_typ iden' siglst typ in
-        List.iter (lookup_typ !symtbl toplvl._start "") func_typ;
+        List.iter (lookup_typ !symtbl toplvl._start "" false) func_typ;
         put_iden iden' FuncK func_typ toplvl._start !symtbl;
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
@@ -379,12 +381,12 @@ and sym_case stmt symtbl case = match case with
         unscope_tbl tbl
 and sym_decl s symtbl hasnew decl = match decl with
     | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v, isshort with
-        | `V(id), false -> (lookup_typ !symtbl s "" typ); put_symbol !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s; sym_expr_opt symtbl expr_opt
-        | `V(id), true  -> (lookup_typ !symtbl s "" typ); put_symbol_short_decl !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s hasnew; sym_expr_opt symtbl expr_opt
+        | `V(id), false -> (lookup_typ !symtbl s "" false typ); put_symbol !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s; sym_expr_opt symtbl expr_opt
+        | `V(id), true  -> (lookup_typ !symtbl s "" false typ); put_symbol_short_decl !symtbl (make_symbol id VarK [typ] (get_depth !symtbl)) s hasnew; sym_expr_opt symtbl expr_opt
         | `Blank, _ -> sym_expr_opt symtbl expr_opt
         | _, _      -> symbol_invalid_input_error s "invalid lhs given in declaration - can only be identifier"
     )
-    | Type(iden', typ) -> (lookup_typ !symtbl s (get_iden_str iden') typ); put_iden iden' TypeK [typ] s !symtbl
+    | Type(iden', typ) -> (lookup_typ !symtbl s (get_iden_str iden') false typ); put_iden iden' TypeK [typ] s !symtbl
 and sym_expr symtbl expr = match expr.v with
     | `Op1(op1,exp)        -> sym_expr symtbl exp
     | `Op2(op2, exp, exp2) -> sym_expr symtbl exp; sym_expr symtbl exp2 
