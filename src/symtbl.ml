@@ -322,8 +322,8 @@ and sym_toplvl toplvl (symtbl : symtbl ref) = match toplvl.v with
     | Func(iden', siglst, typ, block) -> (
         invalid_maininit_check iden' siglst typ toplvl._start;
         let func_typ = get_func_typ iden' siglst typ in
-        List.iter (lookup_typ !symtbl toplvl._start "" false) func_typ;
         put_iden iden' FuncK func_typ toplvl._start !symtbl;
+        List.iter (lookup_typ !symtbl toplvl._start "" false) func_typ;
         let csymtbl = scope_tbl symtbl in
         sym_siglist toplvl siglst csymtbl;
         sym_block csymtbl block;
