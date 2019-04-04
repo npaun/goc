@@ -41,12 +41,12 @@ and gen_decl decl =
       | `Blank -> gen_expr_opt expr_opt
     )
     | Type(iden', typ) -> "" (* I don't think we need to typedef type decls, so we can probably just ignore them *)
-and gen_assignlist alist =
+and gen_assignlist d alist =
   let start_val = int_of_string(tmp_count ()) in
   let counter = ref 0 in
   let gen_tmps assign = 
     let (lval', exp) = assign in
-    gen_type (List.hd exp._derived) ^ " __golite_tmp__" ^ (tmp_count ()) ^ " = " ^ gen_expr exp
+    (Pretty.crt_tab d true) ^ gen_type (List.hd exp._derived) ^ " __golite_tmp__" ^ (tmp_count ()) ^ " = " ^ gen_expr exp
   in
   let gen_assign assign = 
     let (lval', exp) = assign in
@@ -54,7 +54,7 @@ and gen_assignlist alist =
       | `Blank -> ""
       | _ -> 
         incr counter;
-        gen_lvalue' lval' ^ " = __golite_tmp__" ^ string_of_int (start_val + !counter)
+        (Pretty.crt_tab d true) ^ gen_lvalue' lval' ^ " = __golite_tmp__" ^ string_of_int (start_val + !counter)
   in
   Pretty.string_of_lst alist ";\n" gen_tmps ^ ";\n" ^ 
   Pretty.string_of_lst alist ";\n" gen_assign
@@ -94,10 +94,10 @@ and gen_typelit typlit = match typlit with
   | Array(i, typ) -> gen_type typ ^ Printf.sprintf "[%d]" i
   | Struct(mems)  -> "struct" (* TODO *)
 and gen_stmt d stmt = match stmt.v with
-  | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat ";\n" (List.map gen_decl decllst) ^ ";\n"
+  | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map gen_decl decllst) ^ ";\n"
   | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
   | Block(block) -> gen_block (d+1) block
-  | Assign(alist) -> Pretty.crt_tab d true ^ gen_assignlist alist ^ ";\n"
+  | Assign(alist) -> gen_assignlist d alist ^ ";\n"
   | OpAssign(lvalue, op, expr) -> Pretty.crt_tab d true ^ gen_expr lvalue ^ Pretty.string_of_op_assign op ^ gen_expr expr ^ ";\n"
   | IncDec(expr, op) -> Pretty.crt_tab d true ^ gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--") ^ ";\n"
   | Print(ln, exprlist) -> Pretty.crt_tab d true ^ gen_print ln exprlist
