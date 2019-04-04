@@ -1,7 +1,13 @@
 open Golite
 
-let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n\n" 
-
+let slice_header = 
+  "typedef struct {\n" ^
+  "\tunsigned int __size;\n" ^
+  "\tunsigned int __capacity;\n" ^
+  "\tsize_t __el_size;\n" ^
+  "\t void* __contents ;\n" ^
+  "}__golite_builtin__slice;\n"
+let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
 
 let temp_var_count = ref 0
 let get_count =
@@ -33,8 +39,8 @@ and gen_decl decl =
       | `V id -> gen_type typ ^ " " ^ id ^ (decl_end expr_opt typ)
       | `Blank -> gen_expr_opt expr_opt
     )
-    | Type(iden', typ) -> ""
-and gen_block block = "{\n" ^ (List.fold_right (fun stmt acc -> acc ^ (gen_stmt stmt)) block "") ^ "}\n"
+    | Type(iden', typ) -> "" (* I don't think we need to typedef type decls, so we can probably just ignore them *)
+and gen_block block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt stmt) ^ acc) block "") ^ "}\n"
 and gen_type typ = match typ with
   | `BOOL
   | `INT          -> "int"
@@ -46,11 +52,11 @@ and gen_type typ = match typ with
   | `VOID         -> "void"
   | `TypeLit(t)   -> gen_typelit t
 and gen_typelit typlit = match typlit with
-  | Slice(typ)    -> "[]" ^ gen_type typ 
+  | Slice(typ)    -> "__golite_builtin__slice" (* TODO *)
   | Array(i, typ) -> gen_type typ ^ Printf.sprintf "[%d]" i
   | Struct(mems)  -> "struct" (* TODO *)
 and gen_stmt stmt = match stmt.v with
-  | Decl(decllst) -> ""
+  | Decl(decllst) -> String.concat ";\n" (List.map gen_decl decllst) ^ ";\n"
   | Expr(expr) -> gen_expr expr
   | Block(block) -> gen_block block
   | Assign(alist) -> ""
@@ -65,11 +71,11 @@ and gen_stmt stmt = match stmt.v with
   | Continue
   | Empty -> ""
 and gen_expr expr = match expr.v with
-  | `Op1(op1,exp)        -> ""
-  | `Op2(op2, exp, exp2) -> ""
-  | `Call(exp, explist)  -> ""
-  | `Cast(typ, exp)      -> ""
-  | `Selector(exp, id)   -> ""
+  | `Op1(op1,exp)        -> "(" ^ Pretty.string_of_op1 op1 ^ gen_expr exp ^ ")"
+  | `Op2(op2, exp, exp2) -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
+  | `Call(exp, explist)  -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
+  | `Cast(typ, exp)      -> "(" ^ gen_type typ ^ ")" ^ gen_expr exp
+  | `Selector(exp, id)   -> gen_expr expr ^ "." ^ id
   | `L(lit)              -> (match lit with
     | Bool(b) -> if b then "1" else "0"
     | Rune(r) -> r
@@ -77,13 +83,14 @@ and gen_expr expr = match expr.v with
     | Float64(f) -> string_of_float f
     | String(s) -> s
     )
-  | `Indexing(exp,exp2)  -> ""
-  | `V(id)               -> ""
+  | `Indexing(id,exp)  -> gen_expr id ^ "[" ^ gen_expr exp ^ "]" (* TODO indexing for slices cant use [] *)
+  | `V(id)               -> id
 and gen_expr_opt expr_opt = match expr_opt with
   | Some expr -> gen_expr expr
   | None -> ""
 
+
 let gen_c_code filename ast = 
-  let code = gen_file_header ^ (gen_ast ast) in
+  let code = gen_file_header ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
