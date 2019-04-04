@@ -58,7 +58,23 @@ and gen_assignlist alist =
   in
   Pretty.string_of_lst alist ";\n" gen_tmps ^ ";\n" ^ 
   Pretty.string_of_lst alist ";\n" gen_assign
-
+and gen_print ln exprlist = 
+    let symbol exp = match List.hd exp._derived with
+      | `INT
+      | `RUNE -> "%d"
+      | `BOOL
+      | `STRING -> "%s"
+      | `FLOAT64 -> "%.6e"
+      | _ -> "-not base type-"
+    in
+    let expr_arg exp = match List.hd exp._derived with
+      | `BOOL -> gen_expr exp ^ " ? \"true\" : \"false\""
+      | _ -> gen_expr exp
+    in
+    if ln then
+      let str = Pretty.string_of_lst exprlist " " symbol in
+      "printf(\"" ^ str ^ "\\n\"," ^ Pretty.string_of_lst exprlist "," expr_arg ^ ");\n"
+    else let str = Pretty.string_of_lst exprlist "" symbol in       "printf(\"" ^ str ^ "\"," ^ Pretty.string_of_lst exprlist "," expr_arg ^ ");\n"
 and gen_lvalue' e = match e.v with
   | `Blank -> "__golite__tmp" ^ tmp_count ()
   |  #operand as x ->  gen_expr (Pretty.crt_stmt x)
@@ -79,13 +95,13 @@ and gen_typelit typlit = match typlit with
   | Struct(mems)  -> "struct" (* TODO *)
 and gen_stmt stmt = match stmt.v with
   | Decl(decllst) -> String.concat ";\n" (List.map gen_decl decllst) ^ ";\n"
-  | Expr(expr) -> gen_expr expr
+  | Expr(expr) -> gen_expr expr ^ ";\n"
   | Block(block) -> gen_block block
   | Assign(alist) -> gen_assignlist alist ^ ";\n"
-  | OpAssign(lvalue, _, expr) -> ""
-  | IncDec(expr, op) -> gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--")
-  | Print(_, exprlist) -> ""
-  | Return (expr_opt) -> ""
+  | OpAssign(lvalue, op, expr) -> gen_expr lvalue ^ Pretty.string_of_op_assign op ^ gen_expr expr ^ ";\n"
+  | IncDec(expr, op) -> gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--") ^ ";\n"
+  | Print(ln, exprlist) -> gen_print ln exprlist
+  | Return (expr_opt) -> "return " ^ gen_expr_opt expr_opt ^ ";\n"
   | If(clist) -> ""
   | Switch(stmtn, expr_opt, fclist) -> ""
   | For(stmt_opt, expr_opt, stmt_opt2, block) -> ""
