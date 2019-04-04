@@ -1,5 +1,10 @@
 open Golite
 
+let temp_var_count = ref 0
+let tmp_count () =
+  incr temp_var_count;
+  string_of_int !temp_var_count
+
 let slice_header = 
   "typedef struct {\n" ^
   "\tunsigned int __size;\n" ^
@@ -9,10 +14,6 @@ let slice_header =
   "}__golite_builtin__slice;\n"
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
 
-let temp_var_count = ref 0
-let get_count =
-  temp_var_count := !temp_var_count + 1;
-  !temp_var_count
 
 let rec gen_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
@@ -26,7 +27,7 @@ and gen_toplvl toplvl = match toplvl.v with
 and gen_siglist siglst = 
   let gen_sig = function
     | (`V id, typ) -> gen_type typ ^ " " ^ "__golite__" ^ id
-    | (`Blank, typ) -> gen_type typ ^ " " ^ "_golite_garbage" ^ string_of_int get_count
+    | (`Blank, typ) -> gen_type typ ^ " " ^ "_golite_tmp" ^ tmp_count ()
   in
   String.concat ", " (List.map gen_sig siglst)
 and gen_decl decl =
@@ -40,6 +41,27 @@ and gen_decl decl =
       | `Blank -> gen_expr_opt expr_opt
     )
     | Type(iden', typ) -> "" (* I don't think we need to typedef type decls, so we can probably just ignore them *)
+and gen_assignlist alist =
+  let start_val = int_of_string(tmp_count ()) in
+  let counter = ref 0 in
+  let gen_tmps assign = 
+    let (lval', exp) = assign in
+    gen_type (List.hd exp._derived) ^ " __golite_tmp__" ^ (tmp_count ()) ^ " = " ^ gen_expr exp
+  in
+  let gen_assign assign = 
+    let (lval', exp) = assign in
+    match lval'.v with
+      | `Blank -> ""
+      | _ -> 
+        incr counter;
+        gen_lvalue' lval' ^ " = __golite_tmp__" ^ string_of_int (start_val + !counter)
+  in
+  Pretty.string_of_lst alist ";\n" gen_tmps ^ ";\n" ^ 
+  Pretty.string_of_lst alist ";\n" gen_assign
+
+and gen_lvalue' e = match e.v with
+  | `Blank -> "__golite__tmp" ^ tmp_count ()
+  |  #operand as x ->  gen_expr (Pretty.crt_stmt x)
 and gen_block block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt stmt) ^ acc) block "") ^ "}\n"
 and gen_type typ = match typ with
   | `BOOL
@@ -59,7 +81,7 @@ and gen_stmt stmt = match stmt.v with
   | Decl(decllst) -> String.concat ";\n" (List.map gen_decl decllst) ^ ";\n"
   | Expr(expr) -> gen_expr expr
   | Block(block) -> gen_block block
-  | Assign(alist) -> ""
+  | Assign(alist) -> gen_assignlist alist ^ ";\n"
   | OpAssign(lvalue, _, expr) -> ""
   | IncDec(expr, op) -> gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--")
   | Print(_, exprlist) -> ""
