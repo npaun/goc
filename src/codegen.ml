@@ -21,7 +21,7 @@ and gen_toplvl toplvl = match toplvl.v with
   | Global(decl) -> gen_decl decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
-      | `V id -> gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block block
+      | `V id -> gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 1 block ^ "\n"
       | `Blank -> ""
   )
 and gen_siglist siglst = 
@@ -78,7 +78,7 @@ and gen_print ln exprlist =
 and gen_lvalue' e = match e.v with
   | `Blank -> "__golite__tmp" ^ tmp_count ()
   |  #operand as x ->  gen_expr (Pretty.crt_stmt x)
-and gen_block block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt stmt) ^ acc) block "") ^ "}\n"
+and gen_block d block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt d stmt) ^ acc) block "") ^ "}\n"
 and gen_type typ = match typ with
   | `BOOL
   | `INT          -> "int"
@@ -93,15 +93,15 @@ and gen_typelit typlit = match typlit with
   | Slice(typ)    -> "__golite_builtin__slice" (* TODO *)
   | Array(i, typ) -> gen_type typ ^ Printf.sprintf "[%d]" i
   | Struct(mems)  -> "struct" (* TODO *)
-and gen_stmt stmt = match stmt.v with
-  | Decl(decllst) -> String.concat ";\n" (List.map gen_decl decllst) ^ ";\n"
-  | Expr(expr) -> gen_expr expr ^ ";\n"
-  | Block(block) -> gen_block block
-  | Assign(alist) -> gen_assignlist alist ^ ";\n"
-  | OpAssign(lvalue, op, expr) -> gen_expr lvalue ^ Pretty.string_of_op_assign op ^ gen_expr expr ^ ";\n"
-  | IncDec(expr, op) -> gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--") ^ ";\n"
-  | Print(ln, exprlist) -> gen_print ln exprlist
-  | Return (expr_opt) -> "return " ^ gen_expr_opt expr_opt ^ ";\n"
+and gen_stmt d stmt = match stmt.v with
+  | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat ";\n" (List.map gen_decl decllst) ^ ";\n"
+  | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
+  | Block(block) -> gen_block (d+1) block
+  | Assign(alist) -> Pretty.crt_tab d true ^ gen_assignlist alist ^ ";\n"
+  | OpAssign(lvalue, op, expr) -> Pretty.crt_tab d true ^ gen_expr lvalue ^ Pretty.string_of_op_assign op ^ gen_expr expr ^ ";\n"
+  | IncDec(expr, op) -> Pretty.crt_tab d true ^ gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--") ^ ";\n"
+  | Print(ln, exprlist) -> Pretty.crt_tab d true ^ gen_print ln exprlist
+  | Return (expr_opt) -> Pretty.crt_tab d true ^ "return " ^ gen_expr_opt expr_opt ^ ";\n"
   | If(clist) -> ""
   | Switch(stmtn, expr_opt, fclist) -> ""
   | For(stmt_opt, expr_opt, stmt_opt2, block) -> ""
