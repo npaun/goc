@@ -9,6 +9,7 @@ typedef struct {
 	size_t __el_size;
 	 void* __contents ;
 }__golite_builtin__slice;
+
 int x;
 float y = 2.1;
 char* z = "wow";

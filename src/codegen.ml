@@ -11,7 +11,7 @@ let slice_header =
   "\tunsigned int __capacity;\n" ^
   "\tsize_t __el_size;\n" ^
   "\t void* __contents ;\n" ^
-  "}__golite_builtin__slice;\n"
+  "}__golite_builtin__slice;\n\n"
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
 
 
