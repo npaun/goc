@@ -2,16 +2,27 @@ open Golite
 
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n\n" 
 
+
+let temp_var_count = ref 0
+let get_count =
+  temp_var_count := !temp_var_count + 1;
+  !temp_var_count
+
 let rec gen_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
   | Global(decl) -> gen_decl decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
-      | `V id -> gen_type typ ^ " " ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block block
+      | `V id -> gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block block
       | `Blank -> ""
   )
-and gen_siglist siglst = ""
+and gen_siglist siglst = 
+  let gen_sig = function
+    | (`V id, typ) -> gen_type typ ^ " " ^ "__golite__" ^ id
+    | (`Blank, typ) -> gen_type typ ^ " " ^ "_golite_garbage" ^ string_of_int get_count
+  in
+  String.concat ", " (List.map gen_sig siglst)
 and gen_decl decl =
   let decl_end expr_opt typ = match expr_opt with
     | Some expr -> " = " ^ gen_expr expr
