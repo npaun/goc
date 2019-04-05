@@ -21,7 +21,7 @@ and gen_toplvl toplvl = match toplvl.v with
   | Global(decl) -> gen_decl decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
-      | `V id -> gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 1 block ^ "\n"
+      | `V id -> gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 0 block ^ "\n"
       | `Blank -> ""
   )
 and gen_siglist siglst = 
@@ -78,7 +78,7 @@ and gen_print ln exprlist =
 and gen_lvalue' e = match e.v with
   | `Blank -> "__golite__tmp" ^ tmp_count ()
   |  #operand as x ->  gen_expr (Pretty.crt_stmt x)
-and gen_block d block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt d stmt) ^ acc) block "") ^ "}\n"
+and gen_block d block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt (d + 1) stmt) ^ acc) block "") ^ Pretty.crt_tab (d) true ^ "}\n"
 and gen_type typ = match typ with
   | `BOOL
   | `INT          -> "int"
@@ -102,8 +102,8 @@ and gen_stmt d stmt = match stmt.v with
   | IncDec(expr, op) -> Pretty.crt_tab d true ^ gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--") ^ ";\n"
   | Print(ln, exprlist) -> Pretty.crt_tab d true ^ gen_print ln exprlist
   | Return (expr_opt) -> Pretty.crt_tab d true ^ "return " ^ gen_expr_opt expr_opt ^ ";\n"
-  | If(clist) -> ""
-  | Switch(stmtn, expr_opt, fclist) -> ""
+  | If(clist) -> gen_if_stmt d clist
+  | Switch(stmtn, expr_opt, fclist) -> gen_switch_stmt d stmtn expr_opt fclist
   | For(stmt_opt, expr_opt, stmt_opt2, block) -> ""
   | Break
   | Continue
@@ -124,11 +124,50 @@ and gen_expr expr = match expr.v with
   | `Indexing(id,exp)  -> gen_expr id ^ "[" ^ gen_expr exp ^ "]" (* TODO indexing for slices cant use [] *)
   | `V(id)               -> id
 and gen_expr_opt expr_opt = match expr_opt with
-  | Some expr -> gen_expr expr
-  | None -> ""
-
+    | Some expr -> gen_expr expr
+    | None -> ""
+and gen_stmt_opt d stmt_opt = match stmt_opt with
+    | Some stmt -> gen_stmt d stmt
+    | None -> ""
+and close_scopes d n = 
+    let rec c_s_rec d n acc = match n with
+        | 0 -> acc
+        | _ -> c_s_rec (d-1) (n-1) (acc ^ (Pretty.crt_tab (if d >= 0 then d else 0) true) ^ "}\n")
+    in
+    c_s_rec d n ""
+and gen_if_stmt d clist =
+    let tab = ref (d) in
+    let gen_case case acc = match case with
+        | Case(stmt_opt, exprlst, block) -> 
+            acc ^ gen_stmt_opt (!tab) stmt_opt ^ Pretty.crt_tab !tab true ^ "if (" 
+            ^ gen_expr (List.hd exprlst) ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab !tab true ^ "else {\n"
+        | Default(block) -> acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
+    in
+    let gen = (List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev clist) (Pretty.crt_tab !tab true ^ "{\n"))
+    in gen
+    ^ (close_scopes (!tab-1) (List.length clist))
+and gen_switch_stmt d stmtopt expropt fclist =
+    let tab = ref (d) in
+    let switch_gen_expr_opt expropt = match expropt with
+        | Some expr -> gen_expr expr
+        | None -> "1"
+    in
+    let gen_case case acc = match case with
+        | (Case(stmt_opt, exprlst, block), _) -> 
+            acc ^ Pretty.crt_tab !tab true ^ "if (" 
+            ^ (List.fold_right 
+              (fun expr acc -> acc ^ " || " ^ switch_gen_expr_opt expropt ^ "==" ^ gen_expr expr) exprlst "0") 
+            ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
+        | (Default(block), _) -> acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
+    in
+    let gen =(List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
+    in
+    Pretty.crt_tab d true ^ "{\n" 
+    ^ gen_stmt_opt (d+1) stmtopt 
+    ^ gen ^ close_scopes (!tab-1) (List.length fclist)
 
 let gen_c_code filename ast = 
   let code = gen_file_header ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
+

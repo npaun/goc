@@ -51,6 +51,33 @@ func inctest() int {
 	return x
 }
 
+func iftest() {
+    var x = 10
+    var y = 5
+
+    if z := 15; x > z {
+        y = x
+    } else if yy := "swag"; false {
+        println(yy)
+    } else if zz, zzz := 15, 20; y == 5 {
+        y = z
+    } else {
+        x = y
+    }
+}
+
+func switchtest() {
+    var x int
+    switch y := 5; x {
+        case 1, 2, 3:
+            iftest()
+        case 4, 5:
+            y = 10
+        default:
+            y += 10
+    }
+}
+
 func print_test() {
 	var i = 5
 	var s = "string"

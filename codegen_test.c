@@ -38,22 +38,22 @@ void __golite__exp_test() {
 void __golite__assign_test() {
 	int x;
 	int y;
-	int __golite_tmp__12 = y;
-	x = __golite_tmp__12;
-	int __golite_tmp__10 = (10 + y);
+	int __golite_tmp__20 = y;
+	x = __golite_tmp__20;
+	int __golite_tmp__18 = (10 + y);
+	x = __golite_tmp__18;
+	int __golite_tmp__14 = x;
+	int __golite_tmp__15 = 10;
+	int __golite_tmp__16 = 0;
+	y = __golite_tmp__14;
+;
+	x = __golite_tmp__15;
+	int __golite_tmp__10 = y;
+	int __golite_tmp__11 = 100;
+	int __golite_tmp__12 = 1;
 	x = __golite_tmp__10;
-	int __golite_tmp__6 = x;
-	int __golite_tmp__7 = 10;
-	int __golite_tmp__8 = 0;
-	y = __golite_tmp__6;
 ;
-	x = __golite_tmp__7;
-	int __golite_tmp__2 = y;
-	int __golite_tmp__3 = 100;
-	int __golite_tmp__4 = 1;
-	x = __golite_tmp__2;
-;
-	y = __golite_tmp__3;
+	y = __golite_tmp__11;
 }
 
 void __golite__opassign_test() {
@@ -70,6 +70,59 @@ int __golite__inctest() {
 	x++;
 	x--;
 	return x;
+}
+
+void __golite__iftest() {
+	int x = 10;
+	int y = 5;
+	{
+		int z = 15;
+		if ((x > z)) {
+			int __golite_tmp__4 = x;
+			y = __golite_tmp__4;
+		}
+		else {
+			char* yy = "swag";
+			if (false) {
+				printf("%s\n",yy);
+			}
+			else {
+				int zz = 15;
+				int zzz = 20;
+				if ((y == 5)) {
+					int __golite_tmp__6 = z;
+					y = __golite_tmp__6;
+				}
+				else {
+					{
+						int __golite_tmp__8 = y;
+						x = __golite_tmp__8;
+					}
+				}
+			}
+		}
+	}
+}
+
+void __golite__switchtest() {
+	int x;
+	{
+		int y = 5;
+		if (0 || x==3 || x==2 || x==1) {
+			__golite__iftest();
+		}
+		else {
+			if (0 || x==5 || x==4) {
+				int __golite_tmp__2 = 10;
+				y = __golite_tmp__2;
+			}
+			else {
+				{
+					y+=10;
+				}
+			}
+		}
+	}
 }
 
 void __golite__print_test() {
