@@ -55,6 +55,10 @@ func iftest() {
     var x = 10
     var y = 5
 
+    if true {
+        println("fun")
+    }
+
     if z := 15; x > z {
         y = x
     } else if yy := "swag"; false {
@@ -75,6 +79,25 @@ func switchtest() {
             y = 10
         default:
             y += 10
+    }
+}
+
+func fortest() {
+    var x = 0
+    for {
+        x++
+    }
+
+    var y = 0
+    for y < 1000 {
+        y++
+    }
+
+    for i := 1; i < 1000; i = i + 1 {
+        if (i % 2 == 0) {
+            continue
+        }
+        y--
     }
 }
 
