@@ -187,6 +187,7 @@ and gen_for_stmt d initopt expropt stmtopt block =
     ^ gen_stmt_opt (d+1) initopt 
     ^ Pretty.crt_tab (d+1) true ^ "while (" ^ gen_cond_expr expropt ^ ") {\n"
     ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt (d+2) stmt) (List.rev block) "" 
+    (* the ";" is so that it doesn't go crazy if there is no statement after the label *)
     ^ Pretty.crt_tab (d+1) true ^ continue_label ^ ":;\n"
     ^ gen_stmt_opt (d+2) stmtopt
     ^ Pretty.crt_tab (d+1) true ^ "}\n"
