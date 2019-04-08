@@ -22,9 +22,11 @@ let slice_header =
   "}__golite_builtin__slice;\n\n"
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
 
-
+(* note: adding the codegen call here is just a hack so I can force
+   the compiler to run on the codegenpre.ml file. I'll change it later
+*)
 let rec gen_ast ast = match ast with
-  | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
+  | Program(pkg, toplvllist) -> Codegenpre.codepre_ast ast; List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
   | Global(decl) -> gen_decl decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (

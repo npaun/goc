@@ -16,3 +16,4 @@ parser.ml
 lexer.ml
 menhir-*.tar*
 menhir
+.vscode/*
