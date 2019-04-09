@@ -21,16 +21,19 @@ let slice_header =
   "\t void* __contents ;\n" ^
   "} __golite_builtin__slice;\n\n"
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
+
+(* splits struct string into a list of field strings - type~id *)
+let get_fields struct_string = List.filter (fun s -> String.length s <> 0) (String.split_on_char ',' struct_string) 
+
+(* splits a field string into a tuple (type,id) *)
+let split_field field = 
+  let split = String.split_on_char '~' field in
+  (List.nth split 0, List.nth split 1)
+
+(* given a list of field strings it returns a list of (type,id) tuples *)
+let tup_fields fields = List.map split_field fields 
+
 let gen_structs () =
-  (* splits struct string into a list of field strings - type~id *)
-  let get_fields struct_string = List.filter (fun s -> String.length s <> 0) (String.split_on_char ',' struct_string) in
-  (* splits a field string into a tuple (type,id) *)
-  let split_field field = 
-    let split = String.split_on_char '~' field in
-    (List.nth split 0, List.nth split 1)
-  in
-  (* given a list of field strings it returns a list of (type,id) tuples *)
-  let tup_fields fields = List.map split_field fields in
   let gen_struct struct_string struct_name =
     let fields = tup_fields (get_fields struct_string) in
     "typedef struct {\n" ^
@@ -38,6 +41,37 @@ let gen_structs () =
     ";\n} " ^ struct_name ^ ";\n\n"
   in
   Hashtbl.fold  (fun s name acc -> (gen_struct s name) ^ acc) Codegenpre.struct_map ""
+
+(*
+    generates a comparison function for each generated struct. Ex:
+
+    typedef struct {
+      int i;
+      float f;
+      char* s;
+      __golite__arr_int_100 arr;
+    } struct_1;
+
+    bool struct_1_cmp(struct_1* p, struct_1* q) {
+      return (p->i == q-> i) && (p->f == q->f) && (strcmp(p->s,q->s) == 0) && __golite__arr_int_100_cmp(&p->arr,&q->arr);
+    }
+*)
+let gen_struct_cmps () =
+  let get_cmp_string (typ,id) =
+    if String.length typ >= 13 then (
+      if String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+      else if String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+      else Printf.sprintf "(p->%s == q->%s)" id id
+    )
+    else Printf.sprintf "(p->%s == q->%s)" id id
+  in
+  let gen_struct_cmp struct_string struct_name =
+    let fields = tup_fields (get_fields struct_string) in
+    (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^ 
+    "\treturn " ^ String.concat " && " (List.map get_cmp_string fields) ^
+    ";\n}\n\n"
+  in
+  Hashtbl.fold  (fun s name acc -> (gen_struct_cmp s name) ^ acc) Codegenpre.struct_map ""
 
 
 (* note: adding the codegen call here is just a hack so I can force
@@ -219,7 +253,7 @@ and gen_cond_expr expropt = match expropt with
 
 let gen_c_code filename ast =
   Codegenpre.codepre_ast ast;
-  let code = gen_file_header ^ (gen_structs ()) ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
+  let code = gen_file_header ^ (gen_structs ()) ^ (gen_struct_cmps ()) ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 

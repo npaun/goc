@@ -13,18 +13,30 @@ typedef struct {
 typedef struct {
 	string name;
 	int age;
-} struct_1;
+} __golite__struct_1;
 
 typedef struct {
 	int age;
 	string st;
-} struct_2;
+} __golite__struct_2;
 
 typedef struct {
 	int i;
 	float64 f;
-	struct_2 s2;
-} struct_3;
+	__golite__struct_2 s2;
+} __golite__struct_3;
+
+bool __golite__struct_1_cmp(__golite__struct_1* p, __golite__struct_1* q) { 
+	return (p->name == q->name) && (p->age == q->age);
+}
+
+bool __golite__struct_2_cmp(__golite__struct_2* p, __golite__struct_2* q) { 
+	return (p->age == q->age) && (p->st == q->st);
+}
+
+bool __golite__struct_3_cmp(__golite__struct_3* p, __golite__struct_3* q) { 
+	return (p->i == q->i) && (p->f == q->f) && __golite__struct_2_cmp(&p->s2,&q->s2);
+}
 
 int x;
 float y = 2.1;

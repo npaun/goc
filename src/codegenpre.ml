@@ -70,7 +70,7 @@ and structg_typ typ = match typ with
   | _ -> ()
 and add_struct_entry fields =
   let struct_string = hash_struct fields in
-  let struct_name = "struct_" ^ tmp_count () in
+  let struct_name = "__golite__struct_" ^ tmp_count () in
   Printf.printf "%s - > %s\n" struct_string struct_name; Hashtbl.add struct_map struct_string struct_name
 and hash_struct fields = List.fold_right (fun field acc -> (hash_field field) ^ "," ^ acc) fields ""
 and hash_field field = match field with
