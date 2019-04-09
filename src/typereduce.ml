@@ -38,7 +38,10 @@ and pass_statement this_symt node = function
 	| Print(ln, exps) -> same (fun () ->
 		let exps' = List.map (pass_expr this_symt) exps in
 			{node with v = Print(ln, exps')})
-	(* TODO: IncDec, Assign, OpAssign *)
+	| IncDec(expr, op) -> same (fun () -> 
+		let expr' = pass_expr this_symt expr in
+			{node with v = IncDec(expr', op)})
+	(* TODO: Assign, OpAssign *)
 	| Break | Continue | Empty -> same (fun () -> node)
 and pass_decl symt = function
 | Var(name, ltyp, init, shortp) ->
