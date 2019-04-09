@@ -35,6 +35,13 @@ and pass_statement this_symt node = function
 		let block' = pass_block (List.hd (descend child_symt)) block in
 			{node with v = For(pre', cond', post', block')})
 	(* TODO: If, Switch fuck it *)
+	| If(cases) -> down (fun child_symt ->
+		{node with v = If(packify pass_case child_symt cases)})
+	| Switch(pre,cond,cases) -> down (fun child_symt ->
+		let pre' = maybe (pass_inner_stmt child_symt) pre in
+		let cond' = maybe (pass_expr child_symt) cond in
+		let cases' = packify pass_fallable_case child_symt cases in
+		{node with v = Switch(pre',cond',cases')})
 	| Print(ln, exps) -> same (fun () ->
 		let exps' = List.map (pass_expr this_symt) exps in
 			{node with v = Print(ln, exps')})
@@ -59,6 +66,15 @@ and pass_decl symt = function
 			(maybe (pass_expr symt) init),
 			shortp)
 | Type(name, def) -> Type(name, resolve_reduce symt [def] |> List.hd)
+and pass_fallable_case this_symt node = function
+| (case,mode) -> same (fun () -> {node with v = (packify pass_case this_symt [case] |> List.hd, mode)}) (* It is best not to ask *)
+and pass_case this_symt node = function
+| Default(block) -> down (fun child_symt -> {node with v = Default(pass_block child_symt block)})
+| Case(pre,conds,block) -> down (fun child_symt ->
+		let pre' = maybe (pass_inner_stmt this_symt) pre in
+		let conds' = List.map (pass_expr this_symt) conds in
+		let block' = pass_block child_symt block in
+			{node with v = Case(pre',conds',block')})
 and pass_lval symt node = pass_expr symt node 
 and pass_lval' symt node = match node.v with
 	| `Blank -> {node with _derived = [`AUTO]} (* FIXME Probably already this way, but let's force it *)
