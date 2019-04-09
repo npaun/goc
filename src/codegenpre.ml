@@ -68,6 +68,9 @@ and typelit_string typlit = match typlit with
     | Some s -> s
     | None -> raise (CodePreErr (Printf.sprintf "Unable to find entry in struct_map: %s" (hash_struct fields)))
   )
+and typ_string_arr typ = match typ with
+  | `STRING -> "string"
+  | _ -> typ_string typ
 and add_struct_entry fields =
   let struct_string = hash_struct fields in
   let struct_name = "__golite__struct_" ^ tmp_count () in
@@ -93,7 +96,7 @@ and hash_field field = match field with
   )
 and add_arr_entry size typ = 
   let struct_string = hash_array size typ in
-  let struct_name = Printf.sprintf "__golite_arr_%s_%d" (typ_string typ) size in
+  let struct_name = Printf.sprintf "__golite_arr_%s_%d" (typ_string_arr typ) size in
   Printf.printf "%s - > %s\n" struct_string struct_name; Hashtbl.add arr_map struct_string struct_name
 and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
 
