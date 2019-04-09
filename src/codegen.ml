@@ -58,11 +58,9 @@ let gen_structs () =
 *)
 let gen_struct_cmps () =
   let get_cmp_string (typ,id) =
-    if String.length typ >= 13 then (
-      if String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
-      else if String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
-      else Printf.sprintf "(p->%s == q->%s)" id id
-    )
+    if String.length typ >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+    else if String.length typ >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+    else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->%s,q->%s) == 0)" id id
     else Printf.sprintf "(p->%s == q->%s)" id id
   in
   let gen_struct_cmp struct_string struct_name =

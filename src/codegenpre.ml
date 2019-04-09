@@ -90,10 +90,15 @@ and hash_field field = match field with
 let rec codepre_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.iter codepre_toplvl toplvllist
 and codepre_toplvl toplvl = match toplvl.v with
-  | Global(decl) -> structg_decl decl
+  | Global(decl) -> codepre_decl decl
   | Func(iden', siglst, typ, block) -> codepre_block block
 and codepre_block block = List.iter codepre_stmt block
 and codepre_stmt stmt = match stmt.v with
-  | Decl(declist) -> List.iter structg_decl declist
+  | Decl(declist) -> List.iter codepre_decl declist
   | _ -> ()
-
+and codepre_decl decl = match decl with
+  | Var(_,typ,_,_) -> codepre_typ typ
+  | Type(iden', typ) -> codepre_typ typ
+and codepre_typ typ = match typ with
+  | `TypeLit(Struct(fields)) -> add_struct_entry fields
+  | _ -> ()
