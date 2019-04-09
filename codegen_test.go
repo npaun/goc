@@ -7,6 +7,7 @@ var z = "wow"
 type person struct {
     name string
     age int
+    friend_names [100]string
 }
 
 func struct_test() {
@@ -18,6 +19,17 @@ func struct_test() {
             st string
         }
     }
+}
+
+func array_test() {
+    var x [100]int
+    var y [100]float64
+    var z [20]string
+    var x2 [10]int
+    var p [20]person
+
+    type arr [10]int
+    var a [30]arr
 }
 
 func f(a int) int {

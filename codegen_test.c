@@ -13,6 +13,7 @@ typedef struct {
 typedef struct {
 	string name;
 	int age;
+	__golite_arr_string_100 friend_names;
 } __golite__struct_1;
 
 typedef struct {
@@ -27,7 +28,7 @@ typedef struct {
 } __golite__struct_3;
 
 bool __golite__struct_1_cmp(__golite__struct_1* p, __golite__struct_1* q) { 
-	return (p->name == q->name) && (p->age == q->age);
+	return (p->name == q->name) && (p->age == q->age) && (p->friend_names == q->friend_names);
 }
 
 bool __golite__struct_2_cmp(__golite__struct_2* p, __golite__struct_2* q) { 
@@ -38,12 +39,54 @@ bool __golite__struct_3_cmp(__golite__struct_3* p, __golite__struct_3* q) {
 	return (p->i == q->i) && (p->f == q->f) && __golite__struct_2_cmp(&p->s2,&q->s2);
 }
 
+typedef struct {
+	arr data[30];
+} __golite_arr_arr_30;
+
+typedef struct {
+	person data[20];
+} __golite_arr_person_20;
+
+typedef struct {
+	string data[100];
+} __golite_arr_string_100;
+
+typedef struct {
+	string data[20];
+} __golite_arr_string_20;
+
+typedef struct {
+	int data[10];
+} __golite_arr_int_10;
+
+typedef struct {
+	int data[10];
+} __golite_arr_int_10;
+
+typedef struct {
+	float64 data[100];
+} __golite_arr_float64_100;
+
+typedef struct {
+	int data[100];
+} __golite_arr_int_100;
+
 int x;
 float y = 2.1;
 char* z = "wow";
 ;
 void __golite__struct_test() {
 	;
+}
+
+void __golite__array_test() {
+	__golite_arr_int_100 x;
+	__golite_arr_float64_100 y;
+	__golite_arr_string_20 z;
+	__golite_arr_int_10 x2;
+	__golite_arr_person_20 p;
+	;
+	__golite_arr_arr_30 a;
 }
 
 int __golite__f(int __golite__a) {

@@ -42,6 +42,14 @@ let gen_structs () =
   in
   Hashtbl.fold  (fun s name acc -> (gen_struct s name) ^ acc) Codegenpre.struct_map ""
 
+let gen_arrays () = 
+  let gen_array struct_string struct_name =
+    let (typ,size) = split_field struct_string in
+    "typedef struct {\n" ^
+    Printf.sprintf "\t%s data[%s];\n} %s;\n\n" typ size struct_name
+  in
+  Hashtbl.fold (fun s name acc -> (gen_array s name) ^ acc) Codegenpre.arr_map ""
+
 (*
     generates a comparison function for each generated struct. Ex:
 
@@ -151,8 +159,8 @@ and gen_type typ = match typ with
   | `TypeLit(t)   -> gen_typelit t
 and gen_typelit typlit = match typlit with
   | Slice(typ)    -> "__golite_builtin__slice" (* TODO *)
-  | Array(i, typ) -> gen_type typ ^ Printf.sprintf "[%d]" i
-  | Struct(mems)  -> "struct" (* TODO *)
+  | Array(i, typ) -> Hashtbl.find Codegenpre.arr_map (Codegenpre.hash_array i typ)
+  | Struct(fields)  -> Hashtbl.find Codegenpre.struct_map (Codegenpre.hash_struct fields)
 and gen_stmt d stmt = match stmt.v with
   | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map gen_decl decllst) ^ ";\n"
   | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
@@ -251,7 +259,8 @@ and gen_cond_expr expropt = match expropt with
 
 let gen_c_code filename ast =
   Codegenpre.codepre_ast ast;
-  let code = gen_file_header ^ (gen_structs ()) ^ (gen_struct_cmps ()) ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
+  let code = gen_file_header ^ (gen_structs ()) ^ (gen_struct_cmps ()) ^ 
+  (gen_arrays ()) ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 

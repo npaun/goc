@@ -38,11 +38,16 @@ open Golite
 *)
 
 let struct_map : (string,string) Hashtbl.t = Hashtbl.create 50
-let struct_map2 : (gotype, string) Hashtbl.t = Hashtbl.create 50
+let arr_map : (string,string) Hashtbl.t = Hashtbl.create 50
+
+let temp_var_count = ref 0
+let tmp_count () =
+  incr temp_var_count;
+  string_of_int !temp_var_count
 
 (* had to copy this from Codegen because I was getting weird
 circular dep errors - can look into fixing this later *)
-let rec gen_typ typ = match typ with
+let rec typ_string typ = match typ with
   | `BOOL
   | `INT          -> "int"
   | `RUNE         -> "char"
@@ -51,23 +56,11 @@ let rec gen_typ typ = match typ with
   | `Type(id)     -> id (* TODO: we want to print the resolved type here *)
   | `AUTO         -> "" (* this shouldn't be reached, probably want to throw an error *)
   | `VOID         -> "void"
-  | `TypeLit(t)   -> gen_typelit t
-and gen_typelit typlit = match typlit with
+  | `TypeLit(t)   -> typelit_string t
+and typelit_string typlit = match typlit with
   | Slice(typ)    -> "__golite_builtin__slice"
-  | Array(i, typ) -> gen_typ typ ^ Printf.sprintf "[%d]" i
-  | Struct(mems)  -> "struct" (* TODO *)
-
-let temp_var_count = ref 0
-let tmp_count () =
-  incr temp_var_count;
-  string_of_int !temp_var_count
-
-let rec structg_decl decl = match decl with
-  | Var(_,typ,_,_) -> structg_typ typ
-  | Type(iden', typ) -> structg_typ typ
-and structg_typ typ = match typ with
-  | `TypeLit(Struct(fields)) -> add_struct_entry fields
-  | _ -> ()
+  | Array(i, typ) -> Hashtbl.find struct_map (hash_array i typ)
+  | Struct(fields)  -> Hashtbl.find struct_map (hash_struct fields)
 and add_struct_entry fields =
   let struct_string = hash_struct fields in
   let struct_name = "__golite__struct_" ^ tmp_count () in
@@ -81,11 +74,22 @@ and hash_field field = match field with
         let struct_string = hash_struct fields in
         let struct_name = Hashtbl.find struct_map struct_string in
         Printf.sprintf "%s~%s" struct_name id
-      | _ -> Printf.sprintf "%s~%s" (gen_typelit typlit) id
+      | Array(size,typ) ->
+        add_arr_entry size typ;
+        let struct_string = hash_array size typ in
+        let struct_name = Hashtbl.find arr_map struct_string in
+        Printf.sprintf "%s~%s" struct_name id
+      | _ -> Printf.sprintf "%s~%s" (typelit_string typlit) id
     )
-    | `V(id), _ -> Printf.sprintf "%s~%s" (gen_typ typ) id
+    | `V(id), _ -> Printf.sprintf "%s~%s" (typ_string typ) id
     | _,_ -> "" (* this shouldn't be reached, might want to throw an error *)
   )
+and add_arr_entry size typ = 
+  let struct_string = hash_array size typ in
+  let struct_name = Printf.sprintf "__golite_arr_%s_%d" (typ_string typ) size in
+  Printf.printf "%s - > %s\n" struct_string struct_name; Hashtbl.add arr_map struct_string struct_name
+and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
+
 
 let rec codepre_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.iter codepre_toplvl toplvllist
@@ -101,4 +105,5 @@ and codepre_decl decl = match decl with
   | Type(iden', typ) -> codepre_typ typ
 and codepre_typ typ = match typ with
   | `TypeLit(Struct(fields)) -> add_struct_entry fields
+  | `TypeLit(Array(size,typ)) -> add_arr_entry size typ
   | _ -> ()
