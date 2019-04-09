@@ -41,7 +41,16 @@ and pass_statement this_symt node = function
 	| IncDec(expr, op) -> same (fun () -> 
 		let expr' = pass_expr this_symt expr in
 			{node with v = IncDec(expr', op)})
-	(* TODO: Assign, OpAssign *)
+	| Assign(assments) -> same (fun () ->
+		let assments' = List.map (fun (lhs, rhs) -> 
+				(pass_lval' this_symt lhs, pass_expr this_symt rhs)
+			) assments in
+			{node with v = Assign(assments')})
+	| OpAssign(lval,op,expr) -> same (fun () ->
+		let lval' = pass_lval this_symt lval in
+		let expr' = pass_expr this_symt expr in
+			{node with v = OpAssign(lval',op,expr')}
+	)
 	| Break | Continue | Empty -> same (fun () -> node)
 and pass_decl symt = function
 | Var(name, ltyp, init, shortp) ->
@@ -50,6 +59,13 @@ and pass_decl symt = function
 			(maybe (pass_expr symt) init),
 			shortp)
 | Type(name, def) -> Type(name, resolve_reduce symt [def] |> List.hd)
+and pass_lval symt node = pass_expr symt node 
+and pass_lval' symt node = match node.v with
+	| `Blank -> {node with _derived = [`AUTO]} (* FIXME Probably already this way, but let's force it *)
+	| #operand as oper ->  (* This is an ordinary expression: convert back and forth *)
+		let oper' = (pass_expr symt {node with v = oper}) in 
+			{oper' with v = (oper'.v:operand :> lvalinner) }
+
 and pass_expr symt node = match node.v with
 	| `L _ -> node (* Literals already basic *)
 	| `V _ -> reduce symt node (* Lower variable declaration to a basic type if we can *)
