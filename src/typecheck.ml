@@ -15,10 +15,6 @@ let lvalify node = match node.v with
 let v_name = Pretty.string_of_lvalue'
 
 
-let packify fn symt nodes =
-	List.map (fun n -> {v = n; _derived = []; _start = (-100,-100); _end = (-100,-100); _debug = "Packified"}) nodes
-	|> traverse fn symt
-	|> List.map (fun n -> n.v)
 
 
 let func_ret_check ret symt block =

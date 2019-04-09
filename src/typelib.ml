@@ -483,3 +483,10 @@ let default fn if_none = function
     | Some arg -> (fn arg)
     | None -> if_none
 
+(** packify: This unholy function lets you pretend to use the symbol table traverser even on unannotated things like cases **)
+
+
+let packify fn symt nodes =
+	List.map (fun n -> {v = n; _derived = []; _start = (-100,-100); _end = (-100,-100); _debug = "Packified"}) nodes
+	|> traverse fn symt
+	|> List.map (fun n -> n.v)
