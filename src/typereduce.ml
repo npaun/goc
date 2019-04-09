@@ -46,7 +46,7 @@ and pass_decl symt = function
 			(resolve_reduce symt [ltyp] |> List.hd),
 			(maybe (pass_expr symt) init),
 			shortp)
-(* TODO:  Type declarations *)
+| Type(name, def) -> Type(name, resolve_reduce symt [def] |> List.hd)
 and pass_expr symt node = match node.v with
 	| `L _ -> node (* Literals already basic *)
 	| `V _ -> reduce symt node (* Lower variable declaration to a basic type if we can *)
