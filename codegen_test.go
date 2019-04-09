@@ -4,6 +4,22 @@ var x int
 var y = 2.1
 var z = "wow"
 
+type person struct {
+    name string
+    age int
+}
+
+func struct_test() {
+    type s1 struct {
+        i int
+        f float64
+        s2 struct {
+            age int
+            st string
+        }
+    }
+}
+
 func f(a int) int {
 	var x, y int
 	return 0

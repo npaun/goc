@@ -38,6 +38,7 @@ open Golite
 *)
 
 let struct_map : (string,string) Hashtbl.t = Hashtbl.create 50
+let struct_map2 : (gotype, string) Hashtbl.t = Hashtbl.create 50
 
 (* had to copy this from Codegen because I was getting weird
 circular dep errors - can look into fixing this later *)
@@ -70,13 +71,20 @@ and structg_typ typ = match typ with
 and add_struct_entry fields =
   let struct_string = hash_struct fields in
   let struct_name = "struct_" ^ tmp_count () in
-  Printf.printf "%s\n" struct_string; Hashtbl.add struct_map struct_string struct_name
+  Printf.printf "%s - > %s\n" struct_string struct_name; Hashtbl.add struct_map struct_string struct_name
 and hash_struct fields = List.fold_right (fun field acc -> (hash_field field) ^ "," ^ acc) fields ""
 and hash_field field = match field with
   | (iden', typ) -> (match iden', typ with
-    | _, `TypeLit typlit -> "" (* TODO *)
+    | `V(id), `TypeLit typlit -> (match typlit with
+      | Struct(fields) ->
+        add_struct_entry fields;
+        let struct_string = hash_struct fields in
+        let struct_name = Hashtbl.find struct_map struct_string in
+        Printf.sprintf "%s~%s" struct_name id
+      | _ -> Printf.sprintf "%s~%s" (gen_typelit typlit) id
+    )
     | `V(id), _ -> Printf.sprintf "%s~%s" (gen_typ typ) id
-    | _,_ -> ""
+    | _,_ -> "" (* this shouldn't be reached, might want to throw an error *)
   )
 
 let rec codepre_ast ast = match ast with

@@ -19,14 +19,32 @@ let slice_header =
   "\tunsigned int __capacity;\n" ^
   "\tsize_t __el_size;\n" ^
   "\t void* __contents ;\n" ^
-  "}__golite_builtin__slice;\n\n"
+  "} __golite_builtin__slice;\n\n"
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
+let gen_structs () =
+  (* splits struct string into a list of field strings - type~id *)
+  let get_fields struct_string = List.filter (fun s -> String.length s <> 0) (String.split_on_char ',' struct_string) in
+  (* splits a field string into a tuple (type,id) *)
+  let split_field field = 
+    let split = String.split_on_char '~' field in
+    (List.nth split 0, List.nth split 1)
+  in
+  (* given a list of field strings it returns a list of (type,id) tuples *)
+  let tup_fields fields = List.map split_field fields in
+  let gen_struct struct_string struct_name =
+    let fields = tup_fields (get_fields struct_string) in
+    "typedef struct {\n" ^
+    String.concat ";\n" (List.map (fun (typ,id) -> "\t" ^ typ ^ " " ^ id) fields) ^
+    ";\n} " ^ struct_name ^ ";\n\n"
+  in
+  Hashtbl.fold  (fun s name acc -> (gen_struct s name) ^ acc) Codegenpre.struct_map ""
+
 
 (* note: adding the codegen call here is just a hack so I can force
    the compiler to run on the codegenpre.ml file. I'll change it later
 *)
 let rec gen_ast ast = match ast with
-  | Program(pkg, toplvllist) -> Codegenpre.codepre_ast ast; List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
+  | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
   | Global(decl) -> gen_decl decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
@@ -146,7 +164,7 @@ and close_scopes d n =
     in
     c_s_rec d n ""
 and gen_if_stmt d clist =
-    let tab = ref (d) in (* tabulation counter, used to close scopes at the end *)
+    let tab = ref (d) in
     let gen_case case = match case with
         | Case(stmt_opt, exprlst, block) -> 
             gen_stmt_opt (!tab) stmt_opt ^ Pretty.crt_tab !tab true ^ "if (" 
@@ -169,34 +187,19 @@ and gen_if_stmt d clist =
     in
     let gen = fold_if (clist) in gen ^ (close_scopes (!tab-1) (List.length clist))
 and gen_switch_stmt d stmtopt expropt fclist =
-    (* Very similar to if, but I'm lazy and don't want to figure out a super generic way *)
-    let tab = ref (d) in (* tabulation counter, used to close scopes at the end *)
-    let n = tmp_count () in (* we are ALWAYS making a temp variable for switches, save the number for convenience *)
-    let gen_temp_type = function
-        | None -> "int" (* matching on no expression is equiv. to matching on true (1) *)
-        | Some e -> 
-            let typ = List.hd e._derived in
-            gen_type typ
-    in
-    let gen_case_cond expr = match (List.hd expr._derived) with
-        (* This works because this is already type-checked so we know that expr and __golite__tmpn have the same type *)
-        | `STRING -> "!strcmp(__golite__tmp" ^ n ^ ", " ^ gen_expr expr ^ ")"
-        (* TODO - Add more for arrays and stuff *)
-        | _ -> "__golite__tmp" ^ n ^ " == " ^ gen_expr expr
-    in
+    let tab = ref (d) in
     let gen_case case acc = match case with
         | (Case(stmt_opt, exprlst, block), _) -> 
             acc ^ Pretty.crt_tab !tab true ^ "if (" 
-            ^ (List.fold_right (fun expr acc -> acc ^ " || " ^ gen_case_cond expr) exprlst "0") 
+            ^ (List.fold_right 
+              (fun expr acc -> acc ^ " || " ^ gen_cond_expr expropt ^ "==" ^ gen_expr expr) exprlst "0") 
             ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
         | (Default(block), _) -> acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
     in
-    let gen = (List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
+    let gen =(List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
     in
     Pretty.crt_tab d true ^ "{\n" 
-    ^ gen_stmt_opt (d+1) stmtopt
-    ^ Pretty.crt_tab (d+1) true ^ gen_temp_type expropt ^ " __golite__tmp" ^ n ^ " = " 
-    ^ gen_cond_expr expropt ^ ";\n" (* assign the condition expr to a temporary *)
+    ^ gen_stmt_opt (d+1) stmtopt 
     ^ gen ^ close_scopes (!tab-1) (List.length fclist)
 and gen_for_stmt d initopt expropt stmtopt block =
     let continue_label = goto_cont_label true in
@@ -205,7 +208,6 @@ and gen_for_stmt d initopt expropt stmtopt block =
     ^ Pretty.crt_tab (d+1) true ^ "while (" ^ gen_cond_expr expropt ^ ") {\n"
     ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt (d+2) stmt) (List.rev block) "" 
     (* the ";" is so that it doesn't go crazy if there is no statement after the label *)
-    (* This is easier than making it so we don't put a label if there is no continue, instead it's just an empty stmt at the end *)
     ^ Pretty.crt_tab (d+1) true ^ continue_label ^ ":;\n"
     ^ gen_stmt_opt (d+2) stmtopt
     ^ Pretty.crt_tab (d+1) true ^ "}\n"
@@ -215,8 +217,9 @@ and gen_cond_expr expropt = match expropt with
     | None -> "1"
     
 
-let gen_c_code filename ast = 
-  let code = gen_file_header ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
+let gen_c_code filename ast =
+  Codegenpre.codepre_ast ast;
+  let code = gen_file_header ^ (gen_structs ()) ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 
