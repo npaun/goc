@@ -71,6 +71,62 @@ typedef struct {
 	int data[100];
 } __golite_arr_int_100;
 
+bool __golite_arr_arr_30_cmp(__golite_arr_arr_30* p, __golite_arr_arr_30* q) { 
+	for(int i = 0; i < 30; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+bool __golite_arr_person_20_cmp(__golite_arr_person_20* p, __golite_arr_person_20* q) { 
+	for(int i = 0; i < 20; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+bool __golite_arr_string_100_cmp(__golite_arr_string_100* p, __golite_arr_string_100* q) { 
+	for(int i = 0; i < 100; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+bool __golite_arr_string_20_cmp(__golite_arr_string_20* p, __golite_arr_string_20* q) { 
+	for(int i = 0; i < 20; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+bool __golite_arr_int_10_cmp(__golite_arr_int_10* p, __golite_arr_int_10* q) { 
+	for(int i = 0; i < 10; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+bool __golite_arr_int_10_cmp(__golite_arr_int_10* p, __golite_arr_int_10* q) { 
+	for(int i = 0; i < 10; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+bool __golite_arr_float64_100_cmp(__golite_arr_float64_100* p, __golite_arr_float64_100* q) { 
+	for(int i = 0; i < 100; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+bool __golite_arr_int_100_cmp(__golite_arr_int_100* p, __golite_arr_int_100* q) { 
+	for(int i = 0; i < 100; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
 int x;
 float y = 2.1;
 char* z = "wow";

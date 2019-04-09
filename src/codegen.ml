@@ -64,25 +64,34 @@ let gen_arrays () =
       return (p->i == q-> i) && (p->f == q->f) && (strcmp(p->s,q->s) == 0) && __golite__arr_int_100_cmp(&p->arr,&q->arr);
     }
 *)
+let get_struct_cmp_string (typ,id) =
+  if String.length typ >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  else if String.length typ >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->%s,q->%s) == 0)" id id
+  else Printf.sprintf "(p->%s == q->%s)" id id
+
+let get_arr_cmp_string (typ,id) = 
+  Printf.sprintf "(p->data[i] == q->data[i])" 
+
 let gen_struct_cmps () =
-  let get_cmp_string (typ,id) =
-    if String.length typ >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
-    else if String.length typ >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
-    else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->%s,q->%s) == 0)" id id
-    else Printf.sprintf "(p->%s == q->%s)" id id
-  in
   let gen_struct_cmp struct_string struct_name =
     let fields = tup_fields (get_fields struct_string) in
     (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^ 
-    "\treturn " ^ String.concat " && " (List.map get_cmp_string fields) ^
+    "\treturn " ^ String.concat " && " (List.map get_struct_cmp_string fields) ^
     ";\n}\n\n"
   in
   Hashtbl.fold  (fun s name acc -> (gen_struct_cmp s name) ^ acc) Codegenpre.struct_map ""
 
+let gen_arr_cmps () =
+  let gen_arr_cmp struct_string struct_name = 
+    let (typ,size) = split_field struct_string in
+    (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^
+    (Printf.sprintf "\tfor(int i = 0; i < %s; i++) {\n" size) ^
+    (Printf.sprintf "\t\tif(!%s) return false;\n" (get_arr_cmp_string (typ,struct_name))) ^ "\t}\n" ^ "\treturn true;\n}\n\n"
+  in
+  Hashtbl.fold (fun s name acc -> (gen_arr_cmp s name) ^ acc) Codegenpre.arr_map ""
 
-(* note: adding the codegen call here is just a hack so I can force
-   the compiler to run on the codegenpre.ml file. I'll change it later
-*)
+
 let rec gen_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
@@ -260,7 +269,7 @@ and gen_cond_expr expropt = match expropt with
 let gen_c_code filename ast =
   Codegenpre.codepre_ast ast;
   let code = gen_file_header ^ (gen_structs ()) ^ (gen_struct_cmps ()) ^ 
-  (gen_arrays ()) ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
+  (gen_arrays ()) ^ (gen_arr_cmps ()) ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 
