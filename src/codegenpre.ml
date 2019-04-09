@@ -1,5 +1,6 @@
 open Golite
 
+exception CodePreErr of string
 
 (*
   The general approach to generating structs is as follows:
@@ -59,8 +60,14 @@ let rec typ_string typ = match typ with
   | `TypeLit(t)   -> typelit_string t
 and typelit_string typlit = match typlit with
   | Slice(typ)    -> "__golite_builtin__slice"
-  | Array(i, typ) -> Hashtbl.find struct_map (hash_array i typ)
-  | Struct(fields)  -> Hashtbl.find struct_map (hash_struct fields)
+  | Array(i, typ) -> (match Hashtbl.find_opt arr_map (hash_array i typ) with
+    | Some s -> s
+    | None -> raise (CodePreErr (Printf.sprintf "Unable to find entry in arr_map: %s" (hash_array i typ)))
+  )
+  | Struct(fields)  -> (match Hashtbl.find_opt struct_map (hash_struct fields) with
+    | Some s -> s
+    | None -> raise (CodePreErr (Printf.sprintf "Unable to find entry in struct_map: %s" (hash_struct fields)))
+  )
 and add_struct_entry fields =
   let struct_string = hash_struct fields in
   let struct_name = "__golite__struct_" ^ tmp_count () in

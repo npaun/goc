@@ -79,6 +79,7 @@ func inctest() int {
 	return x
 }
 
+/*
 func iftest() {
     var x = 10
     var y = 5
@@ -119,35 +120,37 @@ func switchtest() {
     }
 }
 
+*/
 func fortest() {
     var x = 0
     for {
         x++
     }
-
+    
     var y = 0
     for y < 1000 {
         y++
     }
-
+    
     for i := 1; i < 1000; i = i + 1 {
+        /*
         if (i % 2 == 0) {
             continue
         }
+        */
         y--
     }
 }
 
 func print_test() {
-	var i = 5
+    var i = 5
 	var s = "string"
 	var b = true
 	var f = 1.0
 	var r = 'r'
-
+    
 	println(i,s,b,f,r)
 }
 func main() {
 	println("Hello world!")
-	print_test()
 }
