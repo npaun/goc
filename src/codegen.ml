@@ -144,7 +144,7 @@ and close_scopes d n =
     in
     c_s_rec d n ""
 and gen_if_stmt d clist =
-    let tab = ref (d) in
+    let tab = ref (d) in (* tabulation counter, used to close scopes at the end *)
     let gen_case case = match case with
         | Case(stmt_opt, exprlst, block) -> 
             gen_stmt_opt (!tab) stmt_opt ^ Pretty.crt_tab !tab true ^ "if (" 
@@ -167,19 +167,34 @@ and gen_if_stmt d clist =
     in
     let gen = fold_if (clist) in gen ^ (close_scopes (!tab-1) (List.length clist))
 and gen_switch_stmt d stmtopt expropt fclist =
-    let tab = ref (d) in
+    (* Very similar to if, but I'm lazy and don't want to figure out a super generic way *)
+    let tab = ref (d) in (* tabulation counter, used to close scopes at the end *)
+    let n = tmp_count () in (* we are ALWAYS making a temp variable for switches, save the number for convenience *)
+    let gen_temp_type = function
+        | None -> "int" (* matching on no expression is equiv. to matching on true (1) *)
+        | Some e -> 
+            let typ = List.hd e._derived in
+            gen_type typ
+    in
+    let gen_case_cond expr = match (List.hd expr._derived) with
+        (* This works because this is already type-checked so we know that expr and __golite__tmpn have the same type *)
+        | `STRING -> "!strcmp(__golite__tmp" ^ n ^ ", " ^ gen_expr expr ^ ")"
+        (* TODO - Add more for arrays and stuff *)
+        | _ -> "__golite__tmp" ^ n ^ " == " ^ gen_expr expr
+    in
     let gen_case case acc = match case with
         | (Case(stmt_opt, exprlst, block), _) -> 
             acc ^ Pretty.crt_tab !tab true ^ "if (" 
-            ^ (List.fold_right 
-              (fun expr acc -> acc ^ " || " ^ gen_cond_expr expropt ^ "==" ^ gen_expr expr) exprlst "0") 
+            ^ (List.fold_right (fun expr acc -> acc ^ " || " ^ gen_case_cond expr) exprlst "0") 
             ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
         | (Default(block), _) -> acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
     in
-    let gen =(List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
+    let gen = (List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
     in
     Pretty.crt_tab d true ^ "{\n" 
-    ^ gen_stmt_opt (d+1) stmtopt 
+    ^ gen_stmt_opt (d+1) stmtopt
+    ^ Pretty.crt_tab (d+1) true ^ gen_temp_type expropt ^ " __golite__tmp" ^ n ^ " = " 
+    ^ gen_cond_expr expropt ^ ";\n" (* assign the condition expr to a temporary *)
     ^ gen ^ close_scopes (!tab-1) (List.length fclist)
 and gen_for_stmt d initopt expropt stmtopt block =
     let continue_label = goto_cont_label true in
@@ -188,6 +203,7 @@ and gen_for_stmt d initopt expropt stmtopt block =
     ^ Pretty.crt_tab (d+1) true ^ "while (" ^ gen_cond_expr expropt ^ ") {\n"
     ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt (d+2) stmt) (List.rev block) "" 
     (* the ";" is so that it doesn't go crazy if there is no statement after the label *)
+    (* This is easier than making it so we don't put a label if there is no continue, instead it's just an empty stmt at the end *)
     ^ Pretty.crt_tab (d+1) true ^ continue_label ^ ":;\n"
     ^ gen_stmt_opt (d+2) stmtopt
     ^ Pretty.crt_tab (d+1) true ^ "}\n"

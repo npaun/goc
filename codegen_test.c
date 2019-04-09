@@ -38,22 +38,22 @@ void __golite__exp_test() {
 void __golite__assign_test() {
 	int x;
 	int y;
-	int __golite_tmp__22 = y;
-	x = __golite_tmp__22;
-	int __golite_tmp__20 = (10 + y);
-	x = __golite_tmp__20;
-	int __golite_tmp__16 = x;
-	int __golite_tmp__17 = 10;
-	int __golite_tmp__18 = 0;
-	y = __golite_tmp__16;
+	int __golite_tmp__26 = y;
+	x = __golite_tmp__26;
+	int __golite_tmp__24 = (10 + y);
+	x = __golite_tmp__24;
+	int __golite_tmp__20 = x;
+	int __golite_tmp__21 = 10;
+	int __golite_tmp__22 = 0;
+	y = __golite_tmp__20;
 ;
-	x = __golite_tmp__17;
-	int __golite_tmp__12 = y;
-	int __golite_tmp__13 = 100;
-	int __golite_tmp__14 = 1;
-	x = __golite_tmp__12;
+	x = __golite_tmp__21;
+	int __golite_tmp__16 = y;
+	int __golite_tmp__17 = 100;
+	int __golite_tmp__18 = 1;
+	x = __golite_tmp__16;
 ;
-	y = __golite_tmp__13;
+	y = __golite_tmp__17;
 }
 
 void __golite__opassign_test() {
@@ -83,8 +83,8 @@ void __golite__iftest() {
 	{
 		int z = 15;
 		if ((x > z)) {
-			int __golite_tmp__6 = x;
-			y = __golite_tmp__6;
+			int __golite_tmp__10 = x;
+			y = __golite_tmp__10;
 		}
 		else {
 			char* yy = "swag";
@@ -95,13 +95,13 @@ void __golite__iftest() {
 				int zz = 15;
 				int zzz = 20;
 				if ((y == 5)) {
-					int __golite_tmp__8 = z;
-					y = __golite_tmp__8;
+					int __golite_tmp__12 = z;
+					y = __golite_tmp__12;
 				}
 				else {
 					{
-						int __golite_tmp__10 = y;
-						x = __golite_tmp__10;
+						int __golite_tmp__14 = y;
+						x = __golite_tmp__14;
 					}
 				}
 			}
@@ -113,17 +113,37 @@ void __golite__switchtest() {
 	int x;
 	{
 		int y = 5;
-		if (0 || x==3 || x==2 || x==1) {
+		int __golite__tmp6 = x;
+		if (0 || __golite__tmp6 == 3 || __golite__tmp6 == 2 || __golite__tmp6 == 1) {
 			__golite__iftest();
 		}
 		else {
-			if (0 || x==5 || x==4) {
-				int __golite_tmp__4 = 10;
-				y = __golite_tmp__4;
+			if (0 || __golite__tmp6 == 5 || __golite__tmp6 == 4) {
+				int __golite_tmp__8 = 10;
+				y = __golite_tmp__8;
 			}
 			else {
 				{
 					y+=10;
+				}
+			}
+		}
+	}
+	char* xx = "foo";
+	{
+		char* z = "foo2";
+		char* __golite__tmp3 = xx;
+		if (0 || !strcmp(__golite__tmp3, "swag") || !strcmp(__golite__tmp3, "bar") || !strcmp(__golite__tmp3, "foo")) {
+			__golite__iftest();
+		}
+		else {
+			if (0 || !strcmp(__golite__tmp3, "dawg") || !strcmp(__golite__tmp3, "hey")) {
+				int __golite_tmp__5 = 10;
+				x = __golite_tmp__5;
+			}
+			else {
+				{
+					x+=10;
 				}
 			}
 		}

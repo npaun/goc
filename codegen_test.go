@@ -80,6 +80,15 @@ func switchtest() {
         default:
             y += 10
     }
+    var xx string = "foo"
+    switch z := "foo2"; xx {
+        case "foo", "bar", "swag":
+            iftest()
+        case "hey", "dawg":
+            x = 10
+        default:
+            x += 10
+    }
 }
 
 func fortest() {
