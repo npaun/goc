@@ -34,6 +34,14 @@ let do_typecheck lexbuf =
 			Typecheck.pass_ast !symt ast
 
 
+let do_codegen lexbuf =
+	let ast = parse lexbuf in
+		let symt = Symtbl.init_tbl false ast in
+			let typed_ast = Typecheck.pass_ast !symt ast in
+				let reduced_ast = Typereduce.pass_ast !symt typed_ast in
+					Codegen.gen_c_code Sys.argv.(2) reduced_ast (* FIXME *)
+
+
 let main () = 
 	let lexbuf = load_text() in
 		match Sys.argv.(1) with
@@ -44,7 +52,7 @@ let main () =
 		| "dumpast" -> with_error_handling (fun () -> parse lexbuf |> Dumpast.dump |> printf "%s\n") false
 		| "typecheck" -> with_error_handling (fun () -> do_typecheck lexbuf) true
 		| "symbol" -> with_error_handling (fun () -> parse lexbuf |> (Symtbl.init_tbl true)) false
-		| "codegen" -> with_error_handling (fun () -> do_typecheck lexbuf |> (Codegen.gen_c_code Sys.argv.(2))) true
+		| "codegen" -> with_error_handling (fun () -> do_codegen lexbuf) true
 		| _ -> printf "invalid argument\n"
 
 let _ = main ()
