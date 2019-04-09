@@ -39,20 +39,53 @@ open Golite
 
 let struct_map : (string,string) Hashtbl.t = Hashtbl.create 50
 
+(* had to copy this from Codegen because I was getting weird
+circular dep errors - can look into fixing this later *)
+let rec gen_typ typ = match typ with
+  | `BOOL
+  | `INT          -> "int"
+  | `RUNE         -> "char"
+  | `FLOAT64      -> "float"
+  | `STRING       -> "char*"
+  | `Type(id)     -> id (* TODO: we want to print the resolved type here *)
+  | `AUTO         -> "" (* this shouldn't be reached, probably want to throw an error *)
+  | `VOID         -> "void"
+  | `TypeLit(t)   -> gen_typelit t
+and gen_typelit typlit = match typlit with
+  | Slice(typ)    -> "__golite_builtin__slice"
+  | Array(i, typ) -> gen_typ typ ^ Printf.sprintf "[%d]" i
+  | Struct(mems)  -> "struct" (* TODO *)
+
+let temp_var_count = ref 0
+let tmp_count () =
+  incr temp_var_count;
+  string_of_int !temp_var_count
+
 let rec structg_decl decl = match decl with
   | Var(_,typ,_,_) -> structg_typ typ
   | Type(iden', typ) -> structg_typ typ
 and structg_typ typ = match typ with
-  | `TypeLit(Struct(mems)) -> ()
+  | `TypeLit(Struct(fields)) -> add_struct_entry fields
   | _ -> ()
+and add_struct_entry fields =
+  let struct_string = hash_struct fields in
+  let struct_name = "struct_" ^ tmp_count () in
+  Printf.printf "%s\n" struct_string; Hashtbl.add struct_map struct_string struct_name
+and hash_struct fields = List.fold_right (fun field acc -> (hash_field field) ^ "," ^ acc) fields ""
+and hash_field field = match field with
+  | (iden', typ) -> (match iden', typ with
+    | _, `TypeLit typlit -> "" (* TODO *)
+    | `V(id), _ -> Printf.sprintf "%s~%s" (gen_typ typ) id
+    | _,_ -> ""
+  )
 
 let rec codepre_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.iter codepre_toplvl toplvllist
 and codepre_toplvl toplvl = match toplvl.v with
-  | Global(decl) -> ()
+  | Global(decl) -> structg_decl decl
   | Func(iden', siglst, typ, block) -> codepre_block block
 and codepre_block block = List.iter codepre_stmt block
 and codepre_stmt stmt = match stmt.v with
-  | Decl(declist) -> ()
+  | Decl(declist) -> List.iter structg_decl declist
   | _ -> ()
 
