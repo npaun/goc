@@ -41,10 +41,73 @@ exception CodePreErr of string
 let struct_map : (string,string) Hashtbl.t = Hashtbl.create 50
 let arr_map : (string,string) Hashtbl.t = Hashtbl.create 50
 
+let struct_decls = ref []
+
 let temp_var_count = ref 0
 let tmp_count () =
   incr temp_var_count;
   string_of_int !temp_var_count
+
+(* splits struct string into a list of field strings - type~id *)
+let get_fields struct_string = List.filter (fun s -> String.length s <> 0) (String.split_on_char ',' struct_string) 
+
+(* splits a field string into a tuple (type,id) *)
+let split_field field = 
+  let split = String.split_on_char '~' field in
+  (List.nth split 0, List.nth split 1)
+
+(* given a list of field strings it returns a list of (type,id) tuples *)
+let tup_fields fields = List.map split_field fields 
+
+let gen_struct struct_string struct_name =
+  let fields = tup_fields (get_fields struct_string) in
+  "typedef struct {\n" ^
+  String.concat ";\n" (List.map (fun (typ,id) -> "\t" ^ typ ^ " " ^ id) fields) ^
+  ";\n} " ^ struct_name ^ ";\n\n"
+
+let gen_array struct_string struct_name =
+  let (typ,size) = split_field struct_string in
+  "typedef struct {\n" ^
+  Printf.sprintf "\t%s data[%s];\n} %s;\n\n" typ size struct_name
+
+(*
+  generates a comparison function for each generated struct. Ex:
+
+  typedef struct {
+    int i;
+    float f;
+    char* s;
+    __golite__arr_int_100 arr;
+  } struct_1;
+
+  bool struct_1_cmp(struct_1* p, struct_1* q) {
+    return (p->i == q-> i) && (p->f == q->f) && (strcmp(p->s,q->s) == 0) && __golite__arr_int_100_cmp(&p->arr,&q->arr);
+  }
+*)
+let get_struct_cmp_string (typ,id) =
+  if String.length typ >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  else if String.length typ >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->%s,q->%s) == 0)" id id
+  else Printf.sprintf "(p->%s == q->%s)" id id
+
+let get_arr_cmp_string (typ,id) =
+  if String.length typ >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->data[i],&q->data[i])" typ 
+  else if String.length typ >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->data[i],&q->data[i])" typ 
+  else if String.equal typ "char*" then "(strcmp(p->data[i],q->data[i]) == 0)" 
+  else "(p->data[i] == q->data[i])" 
+
+let gen_struct_cmp struct_string struct_name =
+  let fields = tup_fields (get_fields struct_string) in
+  (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^ 
+  "\treturn " ^ String.concat " && " (List.map get_struct_cmp_string fields) ^
+  ";\n}\n\n"
+
+let gen_arr_cmp struct_string struct_name = 
+  let (typ,size) = split_field struct_string in
+  (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^
+  (Printf.sprintf "\tfor(int i = 0; i < %s; i++) {\n" size) ^
+  (Printf.sprintf "\t\tif(!%s) return false;\n" (get_arr_cmp_string (typ,struct_name))) ^ "\t}\n" ^ "\treturn true;\n}\n\n"
+
 
 (* had to copy this from Codegen because I was getting weird
 circular dep errors - can look into fixing this later *)
@@ -74,7 +137,13 @@ and typ_string_arr typ = match typ with
 and add_struct_entry fields =
   let struct_string = hash_struct fields in
   let struct_name = "__golite__struct_" ^ tmp_count () in
-  Printf.printf "%s - > %s\n" struct_string struct_name; Hashtbl.add struct_map struct_string struct_name
+  Printf.printf "%s - > %s\n" struct_string struct_name; 
+  match Hashtbl.find_opt struct_map struct_string with
+    | Some s -> ()
+    | None -> 
+      struct_decls := !struct_decls@[gen_struct struct_string struct_name; gen_struct_cmp struct_string struct_name];
+      Hashtbl.add struct_map struct_string struct_name;
+  
 and hash_struct fields = List.fold_right (fun field acc -> (hash_field field) ^ "," ^ acc) fields ""
 and hash_field field = match field with
   | (iden', typ) -> (match iden', typ with
@@ -96,8 +165,13 @@ and hash_field field = match field with
   )
 and add_arr_entry size typ = 
   let struct_string = hash_array size typ in
-  let struct_name = Printf.sprintf "__golite_arr_%s_%d" (typ_string_arr typ) size in
-  Printf.printf "%s - > %s\n" struct_string struct_name; Hashtbl.add arr_map struct_string struct_name
+  let struct_name = Printf.sprintf "__golite__arr_%s_%d" (typ_string_arr typ) size in
+  Printf.printf "%s - > %s\n" struct_string struct_name; 
+  match Hashtbl.find_opt arr_map struct_string with 
+  | Some s -> ()
+  | None -> 
+    struct_decls := !struct_decls@[gen_array struct_string struct_name; gen_arr_cmp struct_string struct_name];
+    Hashtbl.replace arr_map struct_string struct_name
 and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
 
 
