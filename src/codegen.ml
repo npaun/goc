@@ -156,7 +156,7 @@ and gen_indexing id expr = match List.hd id._derived with
     | `TypeLit Array (n, typ) -> 
         record_array_indexing_helper typ (*n*); 
         array_index_helper_funname (gen_type typ) (*n*)
-        ^ "(" ^ gen_expr id ^ ", " ^ gen_expr expr ^ ")"
+        ^ "(" ^ gen_expr id ^ ".data" ^ ", " ^ gen_expr expr ^ ")"
     | `TypeLit Slice (typ) -> "TODO"
 and gen_expr_opt expr_opt = match expr_opt with
     | Some expr -> gen_expr expr
@@ -244,8 +244,11 @@ let generate_array_indexing_helpers () =
 (* TODO - plug the generation of indexing helpers and improve them *)    
 let gen_c_code filename ast =
   Codegenpre.codepre_ast ast;
-  let code = gen_file_header ^ (String.concat "" !Codegenpre.struct_decls) ^
-  (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
+  let ast_code = gen_ast ast in
+  let arr_helps = generate_array_indexing_helpers () in
+  let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
+  let code = 
+    gen_file_header ^ arr_helps ^ gend_structs ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 

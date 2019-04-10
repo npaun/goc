@@ -10,6 +10,22 @@ typedef struct {
 	 void* __contents ;
 } __golite_builtin__slice;
 
+
+// ---------- Array bounds checking helpers ----------
+// Type: float
+static inline __attribute__((always_inline))
+float __arr_index_float(float arg[], int index) {
+	if (index >= 0 && index < (sizeof(arg /* TODO - this is wrong */)/sizeof(arg[0]))) return arg[index];
+	else /* TODO error message */ exit(1);
+}
+
+// Type: int
+static inline __attribute__((always_inline))
+int __arr_index_int(int arg[], int index) {
+	if (index >= 0 && index < (sizeof(arg /* TODO - this is wrong */)/sizeof(arg[0]))) return arg[index];
+	else /* TODO error message */ exit(1);
+}
+
 typedef struct {
 	char* data[100];
 } __golite__arr_string_100;
@@ -117,12 +133,34 @@ bool __golite__arr___golite__arr_int_10_30_cmp(__golite__arr___golite__arr_int_1
 }
 
 typedef struct {
+	int data[5];
+} __golite__arr_int_5;
+
+bool __golite__arr_int_5_cmp(__golite__arr_int_5* p, __golite__arr_int_5* q) { 
+	for(int i = 0; i < 5; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+typedef struct {
+	float data[10];
+} __golite__arr_float_10;
+
+bool __golite__arr_float_10_cmp(__golite__arr_float_10* p, __golite__arr_float_10* q) { 
+	for(int i = 0; i < 10; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+typedef struct {
 	__golite_builtin__slice data[2];
 } __golite__arr___golite_builtin__slice_2;
 
 bool __golite__arr___golite_builtin__slice_2_cmp(__golite__arr___golite_builtin__slice_2* p, __golite__arr___golite_builtin__slice_2* q) { 
 	for(int i = 0; i < 2; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
+		if(!false) return false;
 	}
 	return true;
 }
@@ -134,7 +172,7 @@ typedef struct {
 } __golite__struct_4;
 
 bool __golite__struct_4_cmp(__golite__struct_4* p, __golite__struct_4* q) { 
-	return (p->f1 == q->f1) && __golite__arr___golite_builtin__slice_2_cmp(&p->f2,&q->f2) && (p->s == q->s);
+	return false && __golite__arr___golite_builtin__slice_2_cmp(&p->f2,&q->f2) && false;
 }
 
 int x;
@@ -325,10 +363,10 @@ void __golite__print_test() {
 }
 
 void __golite__index_test() {
-	int[5] i;
-	int y =  __arr_index_int(i, 3);
-	float64[10] j;
-	float z =  __arr_index_float64(j, (4 + 3));
+	__golite__arr_int_5 i;
+	int y =  __arr_index_int(i.data, 3);
+	__golite__arr_float_10 j;
+	float z =  __arr_index_float(j.data, (4 + 3));
 }
 
 void __golite__main() {

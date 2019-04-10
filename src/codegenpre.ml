@@ -88,7 +88,7 @@ let get_struct_cmp_string (typ,id) =
   let len = String.length typ in
   if len >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
   else if len >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
-  else if len >= 23 && String.equal (String.sub typ 0 23) "__golite__builtin_slice" then "" (* slices have no comparison *)
+  else if len >= 23 && String.equal (String.sub typ 0 23) "__golite_builtin__slice" then "false" (* slices have no comparison so this doesnt matter*)
   else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->%s,q->%s) == 0)" id id
   else Printf.sprintf "(p->%s == q->%s)" id id
 
@@ -96,7 +96,7 @@ let get_arr_cmp_string (typ,id) =
   let len = String.length typ in
   if len >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->data[i],&q->data[i])" typ 
   else if len >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->data[i],&q->data[i])" typ
-  else if len >= 23 && String.equal (String.sub typ 0 23) "__golite__builtin_slice" then "" (* slices have no comparison *) 
+  else if len >= 23 && String.equal (String.sub typ 0 23) "__golite_builtin__slice" then "false" (* slices have no comparison so this doesnt matter *) 
   else if String.equal typ "char*" then "(strcmp(p->data[i],q->data[i]) == 0)" 
   else "(p->data[i] == q->data[i])" 
 
