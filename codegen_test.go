@@ -79,7 +79,6 @@ func inctest() int {
 	return x
 }
 
-/*
 func iftest() {
     var x = 10
     var y = 5
@@ -120,12 +119,8 @@ func switchtest() {
     }
 }
 
-*/
 func fortest() {
     var x = 0
-    for {
-        x++
-    }
     
     var y = 0
     for y < 1000 {
@@ -133,11 +128,9 @@ func fortest() {
     }
     
     for i := 1; i < 1000; i = i + 1 {
-        /*
         if (i % 2 == 0) {
             continue
         }
-        */
         y--
     }
 }
@@ -152,5 +145,16 @@ func print_test() {
 	println(i,s,b,f,r)
 }
 func main() {
-	println("Hello world!")
+    println("Hello world!")
+    struct_test();
+    fortest();
+    switchtest();
+
+    type a1 [][2]int
+    type a2 [2][]int
+    type a3 struct {
+        f1 a1
+        f2 a2
+        s []float64
+    }
 }

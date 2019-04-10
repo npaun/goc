@@ -85,14 +85,18 @@ let gen_array struct_string struct_name =
   }
 *)
 let get_struct_cmp_string (typ,id) =
-  if String.length typ >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
-  else if String.length typ >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  let len = String.length typ in
+  if len >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  else if len >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  else if len >= 23 && String.equal (String.sub typ 0 23) "__golite__builtin_slice" then "" (* slices have no comparison *)
   else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->%s,q->%s) == 0)" id id
   else Printf.sprintf "(p->%s == q->%s)" id id
 
 let get_arr_cmp_string (typ,id) =
-  if String.length typ >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->data[i],&q->data[i])" typ 
-  else if String.length typ >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->data[i],&q->data[i])" typ 
+  let len = String.length typ in
+  if len >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->data[i],&q->data[i])" typ 
+  else if len >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->data[i],&q->data[i])" typ
+  else if len >= 23 && String.equal (String.sub typ 0 23) "__golite__builtin_slice" then "" (* slices have no comparison *) 
   else if String.equal typ "char*" then "(strcmp(p->data[i],q->data[i]) == 0)" 
   else "(p->data[i] == q->data[i])" 
 
@@ -108,9 +112,6 @@ let gen_arr_cmp struct_string struct_name =
   (Printf.sprintf "\tfor(int i = 0; i < %s; i++) {\n" size) ^
   (Printf.sprintf "\t\tif(!%s) return false;\n" (get_arr_cmp_string (typ,struct_name))) ^ "\t}\n" ^ "\treturn true;\n}\n\n"
 
-
-(* had to copy this from Codegen because I was getting weird
-circular dep errors - can look into fixing this later *)
 let rec typ_string typ = match typ with
   | `BOOL
   | `INT          -> "int"
