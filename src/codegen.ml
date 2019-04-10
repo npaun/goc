@@ -12,6 +12,18 @@ let cont_label_count () =
 let goto_cont_label inc =
     "__continue_lbl" ^ (if inc then cont_label_count () else string_of_int !continue_label_count)
     
+let array_index_helpers = ref []
+let array_index_helper_funname type_str (*n*) = " __arr_index_" ^ type_str (*^ "_" ^ string_of_int n*)
+let record_array_indexing_helper typ (*n*) = 
+    let already_exists typ' (*n'*) =
+        List.exists (fun typ(*, n*) -> typ = typ' (*&& n = n'*)) !array_index_helpers
+    in
+    let record typ'' (*n''*) =
+        if not (already_exists typ'' (*n''*)) then
+            Printf.printf "Registering array helper: type = %s\n" (Pretty.string_of_typ typ'')(* n''*);
+            array_index_helpers := (typ''(*, n''*))::(!array_index_helpers)
+    in record typ (*n*) 
+    
 
 let slice_header = 
   "typedef struct {\n" ^
@@ -101,7 +113,7 @@ and gen_type typ = match typ with
   | `TypeLit(t)   -> gen_typelit t
 and gen_typelit typlit = match typlit with
   | Slice(typ)    -> "__golite_builtin__slice" (* TODO *)
-  | Array(i, typ) -> gen_type typ ^ Printf.sprintf "[%d]" i
+  | Array(i, typ) -> gen_type typ ^ Printf.sprintf "[%d]" i (* that is not how you do it *)
   | Struct(mems)  -> "struct" (* TODO *)
 and gen_stmt d stmt = match stmt.v with
   | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map gen_decl decllst) ^ ";\n"
@@ -122,7 +134,11 @@ and gen_expr expr = match expr.v with
   | `Op1(op1,exp)        -> "(" ^ Pretty.string_of_op1 op1 ^ gen_expr exp ^ ")"
   | `Op2(op2, exp, exp2) -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   | `Call(exp, explist)  -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
-  | `Cast(typ, exp)      -> "(" ^ gen_type typ ^ ")" ^ gen_expr exp
+  | `Cast(typ, exp)      ->
+      (* TODO make this smarter:
+       * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
+       * - If different types, then cast basic types *)
+      "(" ^ gen_type typ ^ ")" ^ gen_expr exp
   | `Selector(exp, id)   -> gen_expr expr ^ "." ^ id
   | `L(lit)              -> (match lit with
     | Bool(b) -> if b then "1" else "0"
@@ -131,8 +147,20 @@ and gen_expr expr = match expr.v with
     | Float64(f) -> string_of_float f
     | String(s) -> s
     )
-  | `Indexing(id,exp)  -> gen_expr id ^ "[" ^ gen_expr exp ^ "]" (* TODO indexing for slices cant use [] *)
+  | `Indexing(id,exp)  -> 
+      (* TODO
+       * - Pre-generate helper functions for indexing for each basic type 
+       * - For each struct type, generate a function
+       * - for arrays of arrays (or arrays of slices and vice-versa), figure out a recursive thing *)
+      (*gen_expr id ^ "[" ^ gen_expr exp ^ "]"*) (* TODO indexing for slices cant use [] *)
+        gen_indexing id exp
   | `V(id)               -> id
+and gen_indexing id expr = match List.hd id._derived with
+    | `TypeLit Array (n, typ) -> 
+        record_array_indexing_helper typ (*n*); 
+        array_index_helper_funname (gen_type typ) (*n*)
+        ^ "(" ^ gen_expr id ^ ", " ^ gen_expr expr ^ ")"
+    | `TypeLit Slice (typ) -> "TODO"
 and gen_expr_opt expr_opt = match expr_opt with
     | Some expr -> gen_expr expr
     | None -> ""
@@ -214,9 +242,28 @@ and gen_cond_expr expropt = match expropt with
     | Some expr -> gen_expr expr
     | None -> "1"
     
+let generate_array_indexing_helpers () =
+    let header =
+        if List.length !array_index_helpers > 0 then "\n// ---------- Array bounds checking helpers ----------\n" else ""
+    in
+    let gen_arr_func typ acc =
+        let type_str = gen_type typ in
+        acc 
+        ^ "// Type: " ^ type_str (*^ ", size: " ^ string_of_int n*) ^ "\n"
+        ^ "static inline __attribute__((always_inline))\n" 
+        ^ type_str ^ array_index_helper_funname type_str (*n*)
+        ^ "(" ^ type_str ^ " arg[], int index) {\n"
+        ^ "\tif (index >= 0 && index < (sizeof(arg /* TODO - this is wrong */)/sizeof(arg[0]))) return arg[index];\n"
+        ^ "\telse /* TODO error message */ exit(1);\n"
+        ^ "}\n\n"
+    in
+    List.fold_right gen_arr_func !array_index_helpers header
+    
 
 let gen_c_code filename ast = 
-  let code = gen_file_header ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
+  let ast_code = gen_ast ast in
+  let arr_helps = generate_array_indexing_helpers () in
+  let code = gen_file_header ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 

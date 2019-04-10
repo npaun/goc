@@ -10,6 +10,22 @@ typedef struct {
 	 void* __contents ;
 }__golite_builtin__slice;
 
+
+// ---------- Array bounds checking helpers ----------
+// Type: float64
+static inline __attribute__((always_inline))
+float64 __arr_index_float64(float64 arg[], int index) {
+	if (index >= 0 && index < (sizeof(arg /* TODO - this is wrong */)/sizeof(arg[0]))) return arg[index];
+	else /* TODO error message */ exit(1);
+}
+
+// Type: int
+static inline __attribute__((always_inline))
+int __arr_index_int(int arg[], int index) {
+	if (index >= 0 && index < (sizeof(arg /* TODO - this is wrong */)/sizeof(arg[0]))) return arg[index];
+	else /* TODO error message */ exit(1);
+}
+
 int x;
 float y = 2.1;
 char* z = "wow";
@@ -188,6 +204,13 @@ void __golite__print_test() {
 	float f = 1.;
 	char r = 'r';
 	printf("%d %s %s %.6e %d\n",i,s,b ? "true" : "false",f,r);
+}
+
+void __golite__index_test() {
+	int[5] i;
+	int y =  __arr_index_int(i, 3);
+	float64[10] j;
+	float z =  __arr_index_float64(j, (4 + 3));
 }
 
 void __golite__main() {
