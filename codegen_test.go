@@ -144,6 +144,15 @@ func print_test() {
     
 	println(i,s,b,f,r)
 }
+
+func index_test() {
+    var i [5]int
+    y := i[3]
+
+    var j [10]float64
+    z := j[4 + 3]
+}
+
 func main() {
     println("Hello world!")
     struct_test();

@@ -324,6 +324,13 @@ void __golite__print_test() {
 	printf("%d %s %s %.6e %d\n",i,s,b ? "true" : "false",f,r);
 }
 
+void __golite__index_test() {
+	int[5] i;
+	int y =  __arr_index_int(i, 3);
+	float64[10] j;
+	float z =  __arr_index_float64(j, (4 + 3));
+}
+
 void __golite__main() {
 	printf("%s\n","Hello world!");
 	__golite__struct_test();
