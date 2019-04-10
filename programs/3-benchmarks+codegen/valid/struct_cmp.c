@@ -75,11 +75,11 @@ void __golite__main() {
 	int __golite_tmp__6 = 21;
 	jack.age = __golite_tmp__6;
 	printf("%s\n","Before assign:");
-	printf("%s\n",struct_eq ? "true" : "false");
+	printf("%s\n",__golite__struct_1_cmp(&bob,&jack) ? "true" : "false");
 	__golite__struct_1 __golite_tmp__4 = bob;
 	jack = __golite_tmp__4;
 	printf("%s\n","After assign:");
-	printf("%s\n",struct_eq ? "true" : "false");
+	printf("%s\n",__golite__struct_1_cmp(&bob,&jack) ? "true" : "false");
 	__golite__arr_int_100 x;
 	__golite__arr_int_100 y;
 	__golite__arr_int_100 __golite_tmp__2 = y;

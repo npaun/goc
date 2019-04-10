@@ -132,8 +132,8 @@ and gen_expr expr = match expr.v with
   | `Op2(op2, exp, exp2) -> (
       let exptyp = List.hd exp._derived in
       match exptyp with
-        | `TypeLit(Array(size,typ)) -> "array_eq" 
-        | `TypeLit(Struct(fields)) -> "struct_eq"
+        | `TypeLit(Array(size,typ)) -> Printf.sprintf "%s_cmp(&%s,&%s)" (Codegenpre.typ_string exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Struct(fields)) -> Printf.sprintf "%s_cmp(&%s,&%s)" (Codegenpre.typ_string exptyp) (gen_expr exp) (gen_expr exp2)
         | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   )
   | `Call(exp, explist)  -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
@@ -254,7 +254,7 @@ let gen_c_code filename ast =
   let arr_helps = generate_array_indexing_helpers () in
   let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
   let code = 
-    gen_file_header ^ arr_helps ^ gend_structs ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
+    gen_file_header ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 
