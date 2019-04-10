@@ -1,5 +1,6 @@
 open Golite
 
+exception CodePreErr of string
 
 (*
   The general approach to generating structs is as follows:
@@ -38,10 +39,16 @@ open Golite
 *)
 
 let struct_map : (string,string) Hashtbl.t = Hashtbl.create 50
+let arr_map : (string,string) Hashtbl.t = Hashtbl.create 50
+
+let temp_var_count = ref 0
+let tmp_count () =
+  incr temp_var_count;
+  string_of_int !temp_var_count
 
 (* had to copy this from Codegen because I was getting weird
 circular dep errors - can look into fixing this later *)
-let rec gen_typ typ = match typ with
+let rec typ_string typ = match typ with
   | `BOOL
   | `INT          -> "int"
   | `RUNE         -> "char"
@@ -50,42 +57,63 @@ let rec gen_typ typ = match typ with
   | `Type(id)     -> id (* TODO: we want to print the resolved type here *)
   | `AUTO         -> "" (* this shouldn't be reached, probably want to throw an error *)
   | `VOID         -> "void"
-  | `TypeLit(t)   -> gen_typelit t
-and gen_typelit typlit = match typlit with
+  | `TypeLit(t)   -> typelit_string t
+and typelit_string typlit = match typlit with
   | Slice(typ)    -> "__golite_builtin__slice"
-  | Array(i, typ) -> gen_typ typ ^ Printf.sprintf "[%d]" i
-  | Struct(mems)  -> "struct" (* TODO *)
-
-let temp_var_count = ref 0
-let tmp_count () =
-  incr temp_var_count;
-  string_of_int !temp_var_count
-
-let rec structg_decl decl = match decl with
-  | Var(_,typ,_,_) -> structg_typ typ
-  | Type(iden', typ) -> structg_typ typ
-and structg_typ typ = match typ with
-  | `TypeLit(Struct(fields)) -> add_struct_entry fields
-  | _ -> ()
+  | Array(i, typ) -> (match Hashtbl.find_opt arr_map (hash_array i typ) with
+    | Some s -> s
+    | None -> raise (CodePreErr (Printf.sprintf "Unable to find entry in arr_map: %s" (hash_array i typ)))
+  )
+  | Struct(fields)  -> (match Hashtbl.find_opt struct_map (hash_struct fields) with
+    | Some s -> s
+    | None -> raise (CodePreErr (Printf.sprintf "Unable to find entry in struct_map: %s" (hash_struct fields)))
+  )
+and typ_string_arr typ = match typ with
+  | `STRING -> "string"
+  | _ -> typ_string typ
 and add_struct_entry fields =
   let struct_string = hash_struct fields in
-  let struct_name = "struct_" ^ tmp_count () in
-  Printf.printf "%s\n" struct_string; Hashtbl.add struct_map struct_string struct_name
+  let struct_name = "__golite__struct_" ^ tmp_count () in
+  Printf.printf "%s - > %s\n" struct_string struct_name; Hashtbl.add struct_map struct_string struct_name
 and hash_struct fields = List.fold_right (fun field acc -> (hash_field field) ^ "," ^ acc) fields ""
 and hash_field field = match field with
   | (iden', typ) -> (match iden', typ with
-    | _, `TypeLit typlit -> "" (* TODO *)
-    | `V(id), _ -> Printf.sprintf "%s~%s" (gen_typ typ) id
-    | _,_ -> ""
+    | `V(id), `TypeLit typlit -> (match typlit with
+      | Struct(fields) ->
+        add_struct_entry fields;
+        let struct_string = hash_struct fields in
+        let struct_name = Hashtbl.find struct_map struct_string in
+        Printf.sprintf "%s~%s" struct_name id
+      | Array(size,typ) ->
+        add_arr_entry size typ;
+        let struct_string = hash_array size typ in
+        let struct_name = Hashtbl.find arr_map struct_string in
+        Printf.sprintf "%s~%s" struct_name id
+      | _ -> Printf.sprintf "%s~%s" (typelit_string typlit) id
+    )
+    | `V(id), _ -> Printf.sprintf "%s~%s" (typ_string typ) id
+    | _,_ -> "" (* this shouldn't be reached, might want to throw an error *)
   )
+and add_arr_entry size typ = 
+  let struct_string = hash_array size typ in
+  let struct_name = Printf.sprintf "__golite_arr_%s_%d" (typ_string_arr typ) size in
+  Printf.printf "%s - > %s\n" struct_string struct_name; Hashtbl.add arr_map struct_string struct_name
+and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
+
 
 let rec codepre_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.iter codepre_toplvl toplvllist
 and codepre_toplvl toplvl = match toplvl.v with
-  | Global(decl) -> structg_decl decl
+  | Global(decl) -> codepre_decl decl
   | Func(iden', siglst, typ, block) -> codepre_block block
 and codepre_block block = List.iter codepre_stmt block
 and codepre_stmt stmt = match stmt.v with
-  | Decl(declist) -> List.iter structg_decl declist
+  | Decl(declist) -> List.iter codepre_decl declist
   | _ -> ()
-
+and codepre_decl decl = match decl with
+  | Var(_,typ,_,_) -> codepre_typ typ
+  | Type(iden', typ) -> codepre_typ typ
+and codepre_typ typ = match typ with
+  | `TypeLit(Struct(fields)) -> add_struct_entry fields
+  | `TypeLit(Array(size,typ)) -> add_arr_entry size typ
+  | _ -> ()

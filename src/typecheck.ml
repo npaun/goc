@@ -2,31 +2,21 @@ open Golite
 open Printf
 open Typelib
 
-let lvalify node = match node.v with
-| something -> {node with v = (something:operand :> lvalinner)}
-
-let v_name = Pretty.string_of_lvalue'
-let maybe fn = function
-    | Some arg -> Some (fn arg)
-    | None -> None
-let present = function
-    | Some _ -> true
-    | None -> false
-
-let default fn if_none = function
-    | Some arg -> (fn arg)
-    | None -> if_none
-
-let packify fn symt nodes =
-	List.map (fun n -> {v = n; _derived = []; _start = (-100,-100); _end = (-100,-100); _debug = "Packified"}) nodes
-	|> traverse fn symt
-	|> List.map (fun n -> n.v)
-
 (* This function performs two operations:
     1) it ensures that the return types in a function match the functions return type
     2) it ensures that if the function is not void, then it ends with a terminating statement
        as defined by the golang spec: https://golang.org/ref/spec#Terminating_statements
 *)
+
+
+let lvalify node = match node.v with
+| something -> {node with v = (something:operand :> lvalinner)}
+
+let v_name = Pretty.string_of_lvalue'
+
+
+
+
 let func_ret_check ret symt block =
 	let return_count = ref 0 in
 	let block_visitor stmt = match stmt.v with

@@ -173,13 +173,48 @@ let rec rt (symt:symtbl) (typs:typesig):typesig =
 	| rest -> rest (* Neither basic nor compound types are resolved *)
 	in List.map aux typs 
 	|> resolve_basic symt (* search for identifiers mapping to built-in types *) 
-    
+
+
+
 (** err_loc: Provides a textual explanation of the error location to substitute into messages.**)
 let err_loc node =
 	let l0,c0 = node._start in
 	let l1,c1 = node._end in
 		sprintf "at line %d, cols %d-%d" l0 c0 c1
 
+
+
+(* 	resolve_reduce replaces types with their most basic possible definition. That is,
+	types will always be defined in terms of basic types, or type literals composed 
+	entirely of basic types. Note that if there is a cycle in the type definition,
+	this function will go into an infinite loop. Symbol table should prevent such
+	cases.
+*)
+let rec resolve_reduce (symt:symtbl) (typs:typesig):typesig = 
+	let illegal_type_error ctx = 
+		sprintf "Probable bug in Typecheck: Signature %s contains illegal type %s"
+		(string_of_typesig typs)
+		ctx
+	in let rec aux = function
+	| `Type id -> (* replace type identifier with definition, recurse *)
+		typeof_symbol symt id (* find definition of type *)
+		|> List.hd (* only first element is relevant *)
+		|> aux (* Attempt to reduce further *)
+	| `TypeLit Slice(typ) -> `TypeLit (Slice(aux typ))
+	| `TypeLit Array(sz,typ) -> `TypeLit (Array(sz, aux typ))
+	| `TypeLit Struct(members) ->  
+		let members' = List.map (fun (field, typ) -> (field, aux typ)) members in
+			`TypeLit (Struct(members'))
+
+	| `AUTO -> raise (TypeError (illegal_type_error "AUTO (type inference never finished?)"))
+	| basic -> basic (* Basic types may not be further reduced *)
+	in match typs with
+	(*| [`VOID] -> raise (TypeError (illegal_type_error "VOID as value")) *)
+	| [] -> raise (TypeError (illegal_type_error "<NOTYPE> (this node was never typechecked?)"))
+	| _ ->  List.map aux typs
+
+let reduce (symt:symtbl) (node:'n annotated):('n annotated) =
+	{node with _derived = (resolve_reduce symt node._derived)}
 
 (** assert_match: Require that two types match each other. The resolver is 
 	selectable depending on whether strict matching or deep resolution is required.
@@ -434,3 +469,24 @@ let assert_is_ordered symt ctxstring (node,typ) =
 	in if (aux (get_value_type (rt symt typ)))
 		then true
 		else raise (TypeError (not_ordered_error ()))
+
+
+(*** Some option monad stuff **)
+let maybe fn = function
+    | Some arg -> Some (fn arg)
+    | None -> None
+let present = function
+    | Some _ -> true
+    | None -> false
+
+let default fn if_none = function
+    | Some arg -> (fn arg)
+    | None -> if_none
+
+(** packify: This unholy function lets you pretend to use the symbol table traverser even on unannotated things like cases **)
+
+
+let packify fn symt nodes =
+	List.map (fun n -> {v = n; _derived = []; _start = (-100,-100); _end = (-100,-100); _debug = "Packified"}) nodes
+	|> traverse fn symt
+	|> List.map (fun n -> n.v)

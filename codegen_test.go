@@ -4,6 +4,34 @@ var x int
 var y = 2.1
 var z = "wow"
 
+type person struct {
+    name string
+    age int
+    friend_names [100]string
+}
+
+func struct_test() {
+    type s1 struct {
+        i int
+        f float64
+        s2 struct {
+            age int
+            st string
+        }
+    }
+}
+
+func array_test() {
+    var x [100]int
+    var y [100]float64
+    var z [20]string
+    var x2 [10]int
+    var p [20]person
+
+    type arr [10]int
+    var a [30]arr
+}
+
 func f(a int) int {
 	var x, y int
 	return 0
@@ -51,6 +79,7 @@ func inctest() int {
 	return x
 }
 
+/*
 func iftest() {
     var x = 10
     var y = 5
@@ -91,32 +120,35 @@ func switchtest() {
     }
 }
 
+*/
 func fortest() {
     var x = 0
     for {
         x++
     }
-
+    
     var y = 0
     for y < 1000 {
         y++
     }
-
+    
     for i := 1; i < 1000; i = i + 1 {
+        /*
         if (i % 2 == 0) {
             continue
         }
+        */
         y--
     }
 }
 
 func print_test() {
-	var i = 5
+    var i = 5
 	var s = "string"
 	var b = true
 	var f = 1.0
 	var r = 'r'
-
+    
 	println(i,s,b,f,r)
 }
 
@@ -130,5 +162,4 @@ func index_test() {
 
 func main() {
 	println("Hello world!")
-	print_test()
 }

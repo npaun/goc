@@ -31,14 +31,81 @@ let slice_header =
   "\tunsigned int __capacity;\n" ^
   "\tsize_t __el_size;\n" ^
   "\t void* __contents ;\n" ^
-  "}__golite_builtin__slice;\n\n"
+  "} __golite_builtin__slice;\n\n"
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
 
-(* note: adding the codegen call here is just a hack so I can force
-   the compiler to run on the codegenpre.ml file. I'll change it later
+(* splits struct string into a list of field strings - type~id *)
+let get_fields struct_string = List.filter (fun s -> String.length s <> 0) (String.split_on_char ',' struct_string) 
+
+(* splits a field string into a tuple (type,id) *)
+let split_field field = 
+  let split = String.split_on_char '~' field in
+  (List.nth split 0, List.nth split 1)
+
+(* given a list of field strings it returns a list of (type,id) tuples *)
+let tup_fields fields = List.map split_field fields 
+
+let gen_structs () =
+  let gen_struct struct_string struct_name =
+    let fields = tup_fields (get_fields struct_string) in
+    "typedef struct {\n" ^
+    String.concat ";\n" (List.map (fun (typ,id) -> "\t" ^ typ ^ " " ^ id) fields) ^
+    ";\n} " ^ struct_name ^ ";\n\n"
+  in
+  Hashtbl.fold  (fun s name acc -> (gen_struct s name) ^ acc) Codegenpre.struct_map ""
+
+let gen_arrays () = 
+  let gen_array struct_string struct_name =
+    let (typ,size) = split_field struct_string in
+    "typedef struct {\n" ^
+    Printf.sprintf "\t%s data[%s];\n} %s;\n\n" typ size struct_name
+  in
+  Hashtbl.fold (fun s name acc -> (gen_array s name) ^ acc) Codegenpre.arr_map ""
+
+(*
+    generates a comparison function for each generated struct. Ex:
+
+    typedef struct {
+      int i;
+      float f;
+      char* s;
+      __golite__arr_int_100 arr;
+    } struct_1;
+
+    bool struct_1_cmp(struct_1* p, struct_1* q) {
+      return (p->i == q-> i) && (p->f == q->f) && (strcmp(p->s,q->s) == 0) && __golite__arr_int_100_cmp(&p->arr,&q->arr);
+    }
 *)
+let get_struct_cmp_string (typ,id) =
+  if String.length typ >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  else if String.length typ >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->%s,q->%s) == 0)" id id
+  else Printf.sprintf "(p->%s == q->%s)" id id
+
+let get_arr_cmp_string (typ,id) = 
+  Printf.sprintf "(p->data[i] == q->data[i])" 
+
+let gen_struct_cmps () =
+  let gen_struct_cmp struct_string struct_name =
+    let fields = tup_fields (get_fields struct_string) in
+    (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^ 
+    "\treturn " ^ String.concat " && " (List.map get_struct_cmp_string fields) ^
+    ";\n}\n\n"
+  in
+  Hashtbl.fold  (fun s name acc -> (gen_struct_cmp s name) ^ acc) Codegenpre.struct_map ""
+
+let gen_arr_cmps () =
+  let gen_arr_cmp struct_string struct_name = 
+    let (typ,size) = split_field struct_string in
+    (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^
+    (Printf.sprintf "\tfor(int i = 0; i < %s; i++) {\n" size) ^
+    (Printf.sprintf "\t\tif(!%s) return false;\n" (get_arr_cmp_string (typ,struct_name))) ^ "\t}\n" ^ "\treturn true;\n}\n\n"
+  in
+  Hashtbl.fold (fun s name acc -> (gen_arr_cmp s name) ^ acc) Codegenpre.arr_map ""
+
+
 let rec gen_ast ast = match ast with
-  | Program(pkg, toplvllist) -> Codegenpre.codepre_ast ast; List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
+  | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
   | Global(decl) -> gen_decl decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
@@ -113,8 +180,8 @@ and gen_type typ = match typ with
   | `TypeLit(t)   -> gen_typelit t
 and gen_typelit typlit = match typlit with
   | Slice(typ)    -> "__golite_builtin__slice" (* TODO *)
-  | Array(i, typ) -> gen_type typ ^ Printf.sprintf "[%d]" i (* that is not how you do it *)
-  | Struct(mems)  -> "struct" (* TODO *)
+  | Array(i, typ) -> Hashtbl.find Codegenpre.arr_map (Codegenpre.hash_array i typ)
+  | Struct(fields)  -> Hashtbl.find Codegenpre.struct_map (Codegenpre.hash_struct fields)
 and gen_stmt d stmt = match stmt.v with
   | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map gen_decl decllst) ^ ";\n"
   | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
@@ -174,7 +241,7 @@ and close_scopes d n =
     in
     c_s_rec d n ""
 and gen_if_stmt d clist =
-    let tab = ref (d) in (* tabulation counter, used to close scopes at the end *)
+    let tab = ref (d) in
     let gen_case case = match case with
         | Case(stmt_opt, exprlst, block) -> 
             gen_stmt_opt (!tab) stmt_opt ^ Pretty.crt_tab !tab true ^ "if (" 
@@ -197,34 +264,19 @@ and gen_if_stmt d clist =
     in
     let gen = fold_if (clist) in gen ^ (close_scopes (!tab-1) (List.length clist))
 and gen_switch_stmt d stmtopt expropt fclist =
-    (* Very similar to if, but I'm lazy and don't want to figure out a super generic way *)
-    let tab = ref (d) in (* tabulation counter, used to close scopes at the end *)
-    let n = tmp_count () in (* we are ALWAYS making a temp variable for switches, save the number for convenience *)
-    let gen_temp_type = function
-        | None -> "int" (* matching on no expression is equiv. to matching on true (1) *)
-        | Some e -> 
-            let typ = List.hd e._derived in
-            gen_type typ
-    in
-    let gen_case_cond expr = match (List.hd expr._derived) with
-        (* This works because this is already type-checked so we know that expr and __golite__tmpn have the same type *)
-        | `STRING -> "!strcmp(__golite__tmp" ^ n ^ ", " ^ gen_expr expr ^ ")"
-        (* TODO - Add more for arrays and stuff *)
-        | _ -> "__golite__tmp" ^ n ^ " == " ^ gen_expr expr
-    in
+    let tab = ref (d) in
     let gen_case case acc = match case with
         | (Case(stmt_opt, exprlst, block), _) -> 
             acc ^ Pretty.crt_tab !tab true ^ "if (" 
-            ^ (List.fold_right (fun expr acc -> acc ^ " || " ^ gen_case_cond expr) exprlst "0") 
+            ^ (List.fold_right 
+              (fun expr acc -> acc ^ " || " ^ gen_cond_expr expropt ^ "==" ^ gen_expr expr) exprlst "0") 
             ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
         | (Default(block), _) -> acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
     in
-    let gen = (List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
+    let gen =(List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
     in
     Pretty.crt_tab d true ^ "{\n" 
-    ^ gen_stmt_opt (d+1) stmtopt
-    ^ Pretty.crt_tab (d+1) true ^ gen_temp_type expropt ^ " __golite__tmp" ^ n ^ " = " 
-    ^ gen_cond_expr expropt ^ ";\n" (* assign the condition expr to a temporary *)
+    ^ gen_stmt_opt (d+1) stmtopt 
     ^ gen ^ close_scopes (!tab-1) (List.length fclist)
 and gen_for_stmt d initopt expropt stmtopt block =
     let continue_label = goto_cont_label true in
@@ -233,7 +285,6 @@ and gen_for_stmt d initopt expropt stmtopt block =
     ^ Pretty.crt_tab (d+1) true ^ "while (" ^ gen_cond_expr expropt ^ ") {\n"
     ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt (d+2) stmt) (List.rev block) "" 
     (* the ";" is so that it doesn't go crazy if there is no statement after the label *)
-    (* This is easier than making it so we don't put a label if there is no continue, instead it's just an empty stmt at the end *)
     ^ Pretty.crt_tab (d+1) true ^ continue_label ^ ":;\n"
     ^ gen_stmt_opt (d+2) stmtopt
     ^ Pretty.crt_tab (d+1) true ^ "}\n"
@@ -260,10 +311,11 @@ let generate_array_indexing_helpers () =
     List.fold_right gen_arr_func !array_index_helpers header
     
 
-let gen_c_code filename ast = 
-  let ast_code = gen_ast ast in
-  let arr_helps = generate_array_indexing_helpers () in
-  let code = gen_file_header ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
+(* TODO - plug the generation of indexing helpers and improve them *)    
+let gen_c_code filename ast =
+  Codegenpre.codepre_ast ast;
+  let code = gen_file_header ^ (gen_structs ()) ^ (gen_struct_cmps ()) ^ 
+  (gen_arrays ()) ^ (gen_arr_cmps ()) ^ (gen_ast ast) ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 
