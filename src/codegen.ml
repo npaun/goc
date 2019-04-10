@@ -129,14 +129,20 @@ and gen_stmt d stmt = match stmt.v with
   | Empty -> ""
 and gen_expr expr = match expr.v with
   | `Op1(op1,exp)        -> "(" ^ Pretty.string_of_op1 op1 ^ gen_expr exp ^ ")"
-  | `Op2(op2, exp, exp2) -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
+  | `Op2(op2, exp, exp2) -> (
+      let exptyp = List.hd exp._derived in
+      match exptyp with
+        | `TypeLit(Array(size,typ)) -> "array_eq" 
+        | `TypeLit(Struct(fields)) -> "struct_eq"
+        | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
+  )
   | `Call(exp, explist)  -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
   | `Cast(typ, exp)      ->
       (* TODO make this smarter:
        * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
        * - If different types, then cast basic types *)
       "(" ^ gen_type typ ^ ")" ^ gen_expr exp
-  | `Selector(exp, id)   -> gen_expr expr ^ "." ^ id
+  | `Selector(exp, id)   -> gen_expr exp ^ "." ^ id
   | `L(lit)              -> (match lit with
     | Bool(b) -> if b then "1" else "0"
     | Rune(r) -> r
