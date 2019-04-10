@@ -11,15 +11,34 @@ typedef struct {
 } __golite_builtin__slice;
 
 typedef struct {
+	char* data[100];
+} __golite__arr_string_100;
+
+bool __golite__arr_string_100_cmp(__golite__arr_string_100* p, __golite__arr_string_100* q) { 
+	for(int i = 0; i < 100; i++) {
+		if(!(strcmp(p->data[i],q->data[i]) == 0)) return false;
+	}
+	return true;
+}
+
+typedef struct {
 	char* name;
 	int age;
-	__golite_arr_string_100 friend_names;
+	__golite__arr_string_100 friend_names;
 } __golite__struct_1;
+
+bool __golite__struct_1_cmp(__golite__struct_1* p, __golite__struct_1* q) { 
+	return (strcmp(p->name,q->name) == 0) && (p->age == q->age) && __golite__arr_string_100_cmp(&p->friend_names,&q->friend_names);
+}
 
 typedef struct {
 	int age;
 	char* st;
 } __golite__struct_2;
+
+bool __golite__struct_2_cmp(__golite__struct_2* p, __golite__struct_2* q) { 
+	return (p->age == q->age) && (strcmp(p->st,q->st) == 0);
+}
 
 typedef struct {
 	int i;
@@ -27,135 +46,72 @@ typedef struct {
 	__golite__struct_2 s2;
 } __golite__struct_3;
 
-bool __golite__struct_1_cmp(__golite__struct_1* p, __golite__struct_1* q) { 
-	return (strcmp(p->name,q->name) == 0) && (p->age == q->age) && (p->friend_names == q->friend_names);
-}
-
-bool __golite__struct_2_cmp(__golite__struct_2* p, __golite__struct_2* q) { 
-	return (p->age == q->age) && (strcmp(p->st,q->st) == 0);
-}
-
 bool __golite__struct_3_cmp(__golite__struct_3* p, __golite__struct_3* q) { 
 	return (p->i == q->i) && (p->f == q->f) && __golite__struct_2_cmp(&p->s2,&q->s2);
 }
 
 typedef struct {
+	int data[100];
+} __golite__arr_int_100;
+
+bool __golite__arr_int_100_cmp(__golite__arr_int_100* p, __golite__arr_int_100* q) { 
+	for(int i = 0; i < 100; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+typedef struct {
 	float data[100];
-} __golite_arr_float_100;
+} __golite__arr_float_100;
 
-typedef struct {
-	__golite__struct_1 data[20];
-} __golite_arr___golite__struct_1_20;
-
-typedef struct {
-	__golite_arr_int_10 data[30];
-} __golite_arr___golite_arr_int_10_30;
+bool __golite__arr_float_100_cmp(__golite__arr_float_100* p, __golite__arr_float_100* q) { 
+	for(int i = 0; i < 100; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
 
 typedef struct {
 	char* data[20];
-} __golite_arr_string_20;
+} __golite__arr_string_20;
 
-typedef struct {
-	int data[10];
-} __golite_arr_int_10;
-
-typedef struct {
-	int data[10];
-} __golite_arr_int_10;
-
-typedef struct {
-	char* data[100];
-} __golite_arr_string_100;
-
-typedef struct {
-	char* data[100];
-} __golite_arr_string_100;
-
-typedef struct {
-	char* data[100];
-} __golite_arr_string_100;
-
-typedef struct {
-	char* data[100];
-} __golite_arr_string_100;
-
-typedef struct {
-	int data[100];
-} __golite_arr_int_100;
-
-bool __golite_arr_float_100_cmp(__golite_arr_float_100* p, __golite_arr_float_100* q) { 
-	for(int i = 0; i < 100; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr___golite__struct_1_20_cmp(__golite_arr___golite__struct_1_20* p, __golite_arr___golite__struct_1_20* q) { 
+bool __golite__arr_string_20_cmp(__golite__arr_string_20* p, __golite__arr_string_20* q) { 
 	for(int i = 0; i < 20; i++) {
+		if(!(strcmp(p->data[i],q->data[i]) == 0)) return false;
+	}
+	return true;
+}
+
+typedef struct {
+	int data[10];
+} __golite__arr_int_10;
+
+bool __golite__arr_int_10_cmp(__golite__arr_int_10* p, __golite__arr_int_10* q) { 
+	for(int i = 0; i < 10; i++) {
 		if(!(p->data[i] == q->data[i])) return false;
 	}
 	return true;
 }
 
-bool __golite_arr___golite_arr_int_10_30_cmp(__golite_arr___golite_arr_int_10_30* p, __golite_arr___golite_arr_int_10_30* q) { 
+typedef struct {
+	__golite__struct_1 data[20];
+} __golite__arr___golite__struct_1_20;
+
+bool __golite__arr___golite__struct_1_20_cmp(__golite__arr___golite__struct_1_20* p, __golite__arr___golite__struct_1_20* q) { 
+	for(int i = 0; i < 20; i++) {
+		if(!__golite__struct_1_cmp(&p->data[i],&q->data[i])) return false;
+	}
+	return true;
+}
+
+typedef struct {
+	__golite__arr_int_10 data[30];
+} __golite__arr___golite__arr_int_10_30;
+
+bool __golite__arr___golite__arr_int_10_30_cmp(__golite__arr___golite__arr_int_10_30* p, __golite__arr___golite__arr_int_10_30* q) { 
 	for(int i = 0; i < 30; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr_string_20_cmp(__golite_arr_string_20* p, __golite_arr_string_20* q) { 
-	for(int i = 0; i < 20; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr_int_10_cmp(__golite_arr_int_10* p, __golite_arr_int_10* q) { 
-	for(int i = 0; i < 10; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr_int_10_cmp(__golite_arr_int_10* p, __golite_arr_int_10* q) { 
-	for(int i = 0; i < 10; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr_string_100_cmp(__golite_arr_string_100* p, __golite_arr_string_100* q) { 
-	for(int i = 0; i < 100; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr_string_100_cmp(__golite_arr_string_100* p, __golite_arr_string_100* q) { 
-	for(int i = 0; i < 100; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr_string_100_cmp(__golite_arr_string_100* p, __golite_arr_string_100* q) { 
-	for(int i = 0; i < 100; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr_string_100_cmp(__golite_arr_string_100* p, __golite_arr_string_100* q) { 
-	for(int i = 0; i < 100; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-bool __golite_arr_int_100_cmp(__golite_arr_int_100* p, __golite_arr_int_100* q) { 
-	for(int i = 0; i < 100; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
+		if(!__golite__arr_int_10_cmp(&p->data[i],&q->data[i])) return false;
 	}
 	return true;
 }
@@ -185,13 +141,13 @@ void __golite__struct_test() {
 }
 
 void __golite__array_test() {
-	__golite_arr_int_100 x;
-	__golite_arr_float_100 y;
-	__golite_arr_string_20 z;
-	__golite_arr_int_10 x2;
-	__golite_arr___golite__struct_1_20 p;
+	__golite__arr_int_100 x;
+	__golite__arr_float_100 y;
+	__golite__arr_string_20 z;
+	__golite__arr_int_10 x2;
+	__golite__arr___golite__struct_1_20 p;
 	;
-	__golite_arr___golite_arr_int_10_30 a;
+	__golite__arr___golite__arr_int_10_30 a;
 }
 
 int __golite__f(int __golite__a) {
