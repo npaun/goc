@@ -112,6 +112,26 @@ let gen_arr_cmp struct_string struct_name =
   (Printf.sprintf "\tfor(int i = 0; i < %s; i++) {\n" size) ^
   (Printf.sprintf "\t\tif(!%s) return false;\n" (get_arr_cmp_string (typ,struct_name))) ^ "\t}\n" ^ "\treturn true;\n}\n\n"
 
+let get_init_string typ =
+  if String.equal typ "char*" then "string_init"
+  else typ ^ "_init"
+
+let gen_struct_init struct_string struct_name =
+  let gen_field_init (typ,id) = Printf.sprintf "\t%s(&x->%s);\n" (get_init_string typ) id in
+  let fields = tup_fields (get_fields struct_string) in
+  (Printf.sprintf "void %s_init(%s* x) {\n" struct_name struct_name) ^
+  (String.concat "" (List.map gen_field_init fields)) ^ "}\n\n"
+
+let gen_array_init struct_string struct_name =
+  let (typ,size) = split_field struct_string in
+  (Printf.sprintf "void %s_init(%s* x) {\n" struct_name struct_name) ^
+  (Printf.sprintf "\tfor(int i = 0; i < %s; i++) {\n" size) ^
+  (Printf.sprintf "\t\t%s(&x->data[i]);\n" (get_init_string typ)) ^ "\t}\n}\n"
+
+
+let gen_struct_fns struct_string struct_name = [gen_struct struct_string struct_name; gen_struct_cmp struct_string struct_name; gen_struct_init struct_string struct_name]
+let gen_arr_fns struct_string struct_name = [gen_array struct_string struct_name; gen_arr_cmp struct_string struct_name; gen_array_init struct_string struct_name]
+
 let rec typ_string typ = match typ with
   | `BOOL
   | `INT          -> "int"
@@ -142,7 +162,7 @@ and add_struct_entry fields =
   | Some s -> ()
   | None -> 
       Printf.printf "%s - > %s\n" struct_string struct_name; 
-      struct_decls := !struct_decls@[gen_struct struct_string struct_name; gen_struct_cmp struct_string struct_name];
+      struct_decls := !struct_decls@gen_struct_fns struct_string struct_name;
       Hashtbl.add struct_map struct_string struct_name;
   
 and hash_struct fields = List.fold_right (fun field acc -> (hash_field field) ^ "," ^ acc) fields ""
@@ -171,7 +191,7 @@ and add_arr_entry size typ =
   | Some s -> ()
   | None -> 
     Printf.printf "%s - > %s\n" struct_string struct_name; 
-    struct_decls := !struct_decls@[gen_array struct_string struct_name; gen_arr_cmp struct_string struct_name];
+    struct_decls := !struct_decls@gen_arr_fns struct_string struct_name;
     Hashtbl.replace arr_map struct_string struct_name
 and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
 

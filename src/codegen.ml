@@ -52,13 +52,21 @@ and gen_siglist siglst =
   in
   String.concat ", " (List.map gen_sig siglst)
 and gen_decl decl =
-  let decl_end expr_opt typ = match expr_opt with
+  let gen_init typ = match typ with
+    | `RUNE -> "char_init"
+    | `BOOL
+    | `INT -> "int_init"
+    | `FLOAT64 -> "float_init"
+    | `STRING -> "string_init"
+    | _ -> (gen_type typ) ^ "_init"
+  in
+  let decl_end expr_opt typ id = match expr_opt with
     | Some expr -> " = " ^ gen_expr expr
-    | None -> ""
+    | None -> ";\n" ^ gen_init typ ^ Printf.sprintf "(&%s)" id
   in
   match decl with
     | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v with
-      | `V id -> gen_type typ ^ " " ^ id ^ (decl_end expr_opt typ)
+      | `V id -> gen_type typ ^ " " ^ id ^ (decl_end expr_opt typ id)
       | `Blank -> gen_expr_opt expr_opt
     )
     | Type(iden', typ) -> "" (* I don't think we need to typedef type decls, so we can probably just ignore them *)
@@ -257,15 +265,21 @@ let generate_array_indexing_helpers () =
     Printf.printf "array_index_helpers size = %d\n" (List.length !array_index_helpers);
     List.fold_right gen_arr_func !array_index_helpers header
     
-
+let gen_prim_init () =
+  "void int_init(int* x) { *x = 0; }\n" ^
+  "void float_init(float* x) { *x = 0; }\n" ^
+  "void char_init(char* c) { *c = 0; }\n" ^ 
+  "void string_init(char** s) { *s = \"\"; }\n\n"
+  
 (* TODO - plug the generation of indexing helpers and improve them *)    
 let gen_c_code filename ast =
   Codegenpre.codepre_ast ast;
   let ast_code = gen_ast ast in
   let arr_helps = generate_array_indexing_helpers () in
   let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
+  let prim_inits = gen_prim_init () in
   let code = 
-    gen_file_header ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
+    gen_file_header ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 
