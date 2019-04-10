@@ -108,20 +108,7 @@ and gen_lvalue' e = match e.v with
   | `Blank -> "__golite__tmp" ^ tmp_count ()
   |  #operand as x ->  gen_expr (Pretty.crt_stmt x)
 and gen_block d block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt (d + 1) stmt) ^ acc) block "") ^ Pretty.crt_tab (d) true ^ "}\n"
-and gen_type typ = match typ with
-  | `BOOL
-  | `INT          -> "int"
-  | `RUNE         -> "char"
-  | `FLOAT64      -> "float"
-  | `STRING       -> "char*"
-  | `Type(id)     -> id (* TODO: we want to print the resolved type here *)
-  | `AUTO         -> "" (* this shouldn't be reached, probably want to throw an error *)
-  | `VOID         -> "void"
-  | `TypeLit(t)   -> gen_typelit t
-and gen_typelit typlit = match typlit with
-  | Slice(typ)    -> "__golite_builtin__slice" (* TODO *)
-  | Array(i, typ) -> Hashtbl.find Codegenpre.arr_map (Codegenpre.hash_array i typ)
-  | Struct(fields)  -> Hashtbl.find Codegenpre.struct_map (Codegenpre.hash_struct fields)
+and gen_type typ = Codegenpre.typ_string typ
 and gen_stmt d stmt = match stmt.v with
   | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map gen_decl decllst) ^ ";\n"
   | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
@@ -141,9 +128,12 @@ and gen_expr expr = match expr.v with
   | `Op1(op1,exp)        -> "(" ^ Pretty.string_of_op1 op1 ^ gen_expr exp ^ ")"
   | `Op2(op2, exp, exp2) -> (
       let exptyp = List.hd exp._derived in
-      match exptyp with
-        | `TypeLit(Array(size,typ)) -> Printf.sprintf "%s_cmp(&%s,&%s)" (Codegenpre.typ_string exptyp) (gen_expr exp) (gen_expr exp2)
-        | `TypeLit(Struct(fields)) -> Printf.sprintf "%s_cmp(&%s,&%s)" (Codegenpre.typ_string exptyp) (gen_expr exp) (gen_expr exp2)
+      match exptyp, op2 with
+        | `TypeLit(Array(size,typ)),_ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Struct(fields)),_ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `STRING, `EQ -> Printf.sprintf "(strcmp(%s,%s) == 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `NEQ -> Printf.sprintf "(strcmp(%s,%s) != 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `ADD -> Printf.sprintf "str_add(%s,%s)" (gen_expr exp) (gen_expr exp2)
         | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   )
   | `Call(exp, explist)  -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
@@ -270,6 +260,14 @@ let gen_prim_init () =
   "void float_init(float* x) { *x = 0; }\n" ^
   "void char_init(char* c) { *c = 0; }\n" ^ 
   "void string_init(char** s) { *s = \"\"; }\n\n"
+
+let gen_str_add () =
+  "char* str_add(char* p, char* q) {\n" ^
+  "\tint len = strlen(p) + strlen(q);\n" ^
+  "\tchar* res = (char*)malloc(len);\n" ^
+  "\tstrcat(res,p);\n" ^
+  "\treturn strcat(res,q);\n" ^
+  "}\n\n"
   
 (* TODO - plug the generation of indexing helpers and improve them *)    
 let gen_c_code filename ast =
@@ -278,8 +276,9 @@ let gen_c_code filename ast =
   let arr_helps = generate_array_indexing_helpers () in
   let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
   let prim_inits = gen_prim_init () in
+  let str_add = gen_str_add () in
   let code = 
-    gen_file_header ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
+    gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 

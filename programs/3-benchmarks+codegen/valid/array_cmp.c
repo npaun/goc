@@ -10,6 +10,13 @@ typedef struct {
 	 void* __contents ;
 } __golite_builtin__slice;
 
+char* str_add(char* p, char* q) {
+	int len = strlen(p) + strlen(q);
+	char* res = (char*)malloc(len);
+	strcat(res,p);
+	return strcat(res,q);
+}
+
 void int_init(int* x) { *x = 0; }
 void float_init(float* x) { *x = 0; }
 void char_init(char* c) { *c = 0; }
@@ -62,8 +69,8 @@ __golite__arr___golite__struct_1_20_init(&parr1);
 __golite__arr___golite__struct_1_20_init(&parr2);
 	printf("%s\n","Before any changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");
-	char* __golite_tmp__2 = "bob";
-	 __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name = __golite_tmp__2;
+	char* __golite_tmp__6 = "bob";
+	 __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name = __golite_tmp__6;
 	printf("%s\n","After changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");
 	__golite__struct_1 bob =  __arr_index___golite__struct_1(parr1.data, 2, 20)[2];
@@ -80,6 +87,15 @@ string_init(&s);
 	char r;
 char_init(&r);
 	printf("%d %d %.6e %s %s %d\n",x,y,f,b ? "true" : "false",s,r);
+	int __golite_tmp__4 = (strcmp( __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name, __arr_index___golite__struct_1(parr2.data, 2, 20)[2].name) == 0);
+	b = __golite_tmp__4;
+	printf("%s\n",b ? "true" : "false");
+	int __golite_tmp__2 = (strcmp( __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name, __arr_index___golite__struct_1(parr2.data, 2, 20)[2].name) != 0);
+	b = __golite_tmp__2;
+	printf("%s\n",b ? "true" : "false");
+	printf("%s\n",str_add("another ","one"));
+	char* s2 = str_add("name: ", __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name);
+	printf("%s\n",s2);
 }
 
 int main() {
