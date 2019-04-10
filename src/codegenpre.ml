@@ -138,10 +138,10 @@ and typ_string_arr typ = match typ with
 and add_struct_entry fields =
   let struct_string = hash_struct fields in
   let struct_name = "__golite__struct_" ^ tmp_count () in
-  Printf.printf "%s - > %s\n" struct_string struct_name; 
   match Hashtbl.find_opt struct_map struct_string with
-    | Some s -> ()
-    | None -> 
+  | Some s -> ()
+  | None -> 
+      Printf.printf "%s - > %s\n" struct_string struct_name; 
       struct_decls := !struct_decls@[gen_struct struct_string struct_name; gen_struct_cmp struct_string struct_name];
       Hashtbl.add struct_map struct_string struct_name;
   
@@ -167,10 +167,10 @@ and hash_field field = match field with
 and add_arr_entry size typ = 
   let struct_string = hash_array size typ in
   let struct_name = Printf.sprintf "__golite__arr_%s_%d" (typ_string_arr typ) size in
-  Printf.printf "%s - > %s\n" struct_string struct_name; 
   match Hashtbl.find_opt arr_map struct_string with 
   | Some s -> ()
   | None -> 
+    Printf.printf "%s - > %s\n" struct_string struct_name; 
     struct_decls := !struct_decls@[gen_array struct_string struct_name; gen_arr_cmp struct_string struct_name];
     Hashtbl.replace arr_map struct_string struct_name
 and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size

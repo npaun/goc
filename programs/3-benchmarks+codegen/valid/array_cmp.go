@@ -1,7 +1,6 @@
 package main
 
 type person struct {
-	name string
 	age int
 }
 
@@ -11,7 +10,9 @@ func main() {
 	println("Before any changes:")
 	println(parr1 == parr2)
 
-	parr1[3].name = "bob"
+	parr1[2].age = 3
 	println("After changes:")
 	println(parr1 == parr2)
+
+	var bob = parr1[2]
 }

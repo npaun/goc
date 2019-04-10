@@ -16,15 +16,17 @@ let array_index_helpers = ref []
 let array_index_helper_funname type_str (*n*) = " __arr_index_" ^ type_str (*^ "_" ^ string_of_int n*)
 let record_array_indexing_helper typ (*n*) = 
     let already_exists typ' (*n'*) =
-        List.exists (fun typ(*, n*) -> typ = typ' (*&& n = n'*)) !array_index_helpers
+        List.exists (fun typ -> String.equal (Codegenpre.typ_string typ) (Codegenpre.typ_string typ')) !array_index_helpers
     in
     let record typ'' (*n''*) =
-        if not (already_exists typ'' (*n''*)) then
+        if not (already_exists typ'' (*n''*)) then (
             Printf.printf "Registering array helper: type = %s\n" (Pretty.string_of_typ typ'')(* n''*);
             array_index_helpers := (typ''(*, n''*))::(!array_index_helpers)
+        )
     in record typ (*n*) 
-    
 
+
+    
 let slice_header = 
   "typedef struct {\n" ^
   "\tunsigned int __size;\n" ^
@@ -159,11 +161,19 @@ and gen_expr expr = match expr.v with
         gen_indexing id exp
   | `V(id)               -> id
 and gen_indexing id expr = match List.hd id._derived with
-    | `TypeLit Array (n, typ) -> 
+    | `TypeLit Array (n, typ) ->
+        Printf.printf "index array type: %s\n" (gen_type typ);
         record_array_indexing_helper typ (*n*); 
+        let id_s = gen_expr id in
+        let exp_s = gen_expr expr in
         array_index_helper_funname (gen_type typ) (*n*)
-        ^ "(" ^ gen_expr id ^ ".data" ^ ", " ^ gen_expr expr ^ ")"
+        ^ Printf.sprintf "(%s.data, %s, %d)[%s]" id_s exp_s n exp_s
     | `TypeLit Slice (typ) -> "TODO"
+and bounds_check s exp n =
+  let exp_s = gen_expr exp in
+  let (line,ch) = s in
+  Printf.sprintf "if(%s < 0 || %s >= %d) {fprintf(stderr, Error: out of bounds index on line %d, chr %d); exit(-1);}\n"
+  exp_s exp_s n line ch
 and gen_expr_opt expr_opt = match expr_opt with
     | Some expr -> gen_expr expr
     | None -> ""
@@ -238,12 +248,13 @@ let generate_array_indexing_helpers () =
         acc 
         ^ "// Type: " ^ type_str (*^ ", size: " ^ string_of_int n*) ^ "\n"
         ^ "static inline __attribute__((always_inline))\n" 
-        ^ type_str ^ array_index_helper_funname type_str (*n*)
-        ^ "(" ^ type_str ^ " arg[], int index) {\n"
-        ^ "\tif (index >= 0 && index < (sizeof(arg /* TODO - this is wrong */)/sizeof(arg[0]))) return arg[index];\n"
-        ^ "\telse /* TODO error message */ exit(1);\n"
+        ^ type_str ^ "* "^ array_index_helper_funname type_str (*n*)
+        ^ "(" ^ type_str ^ "* arr, int i, int len) {\n"
+        ^ "\tif (i >= 0 && i < len) return arr;\n"
+        ^ "\telse {fprintf(stderr, \"Out of Bounds\\n\"); exit(-1);}\n"
         ^ "}\n\n"
     in
+    Printf.printf "array_index_helpers size = %d\n" (List.length !array_index_helpers);
     List.fold_right gen_arr_func !array_index_helpers header
     
 

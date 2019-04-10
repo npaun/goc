@@ -11,12 +11,11 @@ typedef struct {
 } __golite_builtin__slice;
 
 typedef struct {
-	char* name;
 	int age;
 } __golite__struct_1;
 
 bool __golite__struct_1_cmp(__golite__struct_1* p, __golite__struct_1* q) { 
-	return (strcmp(p->name,q->name) == 0) && (p->age == q->age);
+	return (p->age == q->age);
 }
 
 typedef struct {
@@ -34,9 +33,9 @@ bool __golite__arr___golite__struct_1_20_cmp(__golite__arr___golite__struct_1_20
 // ---------- Array bounds checking helpers ----------
 // Type: __golite__struct_1
 static inline __attribute__((always_inline))
-__golite__struct_1 __arr_index___golite__struct_1(__golite__struct_1 arg[], int index) {
-	if (index >= 0 && index < (sizeof(arg /* TODO - this is wrong */)/sizeof(arg[0]))) return arg[index];
-	else /* TODO error message */ exit(1);
+__golite__struct_1*  __arr_index___golite__struct_1(__golite__struct_1* arr, int i, int len) {
+	if (i >= 0 && i < len) return arr;
+	else {fprintf(stderr, "Out of Bounds\n"); exit(-1);}
 }
 
 ;
@@ -45,10 +44,11 @@ void __golite__main() {
 	__golite__arr___golite__struct_1_20 parr2;
 	printf("%s\n","Before any changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");
-	char* __golite_tmp__2 = "bob";
-	 __arr_index___golite__struct_1(parr1.data, 3).name = __golite_tmp__2;
+	int __golite_tmp__2 = 3;
+	 __arr_index___golite__struct_1(parr1.data, 2, 20)[2].age = __golite_tmp__2;
 	printf("%s\n","After changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");
+	__golite__struct_1 bob =  __arr_index___golite__struct_1(parr1.data, 2, 20)[2];
 }
 
 int main() {
