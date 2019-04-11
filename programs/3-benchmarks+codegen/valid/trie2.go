@@ -1,7 +1,7 @@
 // This implements a trie data structure to store ID to name lookups
 package main
 
-var KEYS, SEARCHES, ROUNDS = 500500, 10, 14
+var KEYS, SEARCHES, ROUNDS = 500000, 10, 15
 
 type entry struct {
 	data string // The data to store with a node	
@@ -20,18 +20,18 @@ func unpack(key int) [9]int {
 func trie_insert(t []entry, key int, data string) []entry {
 	cur := 0
 	{
-		key := unpack(key)
-		for i := 0; i < len(key); i++ {
-			key := key[i]
+		k2 := unpack(key)
+		for i := 0; i < len(k2); i++ {
+			k3 := k2[i]
 			// See if we need a new entry
-			if t[cur].chld[key] == 0 {
+			if t[cur].chld[k3] == 0 {
 				var nent entry
 				slot := len(t)
 				t = append(t,nent)
-				t[cur].chld[key] = slot
+				t[cur].chld[k3] = slot
 			}
 
-			cur = t[cur].chld[key]
+			cur = t[cur].chld[k3]
 		}
 
 		// Current should now be an empty slot
@@ -44,13 +44,13 @@ func trie_insert(t []entry, key int, data string) []entry {
 func trie_search(t []entry, key int) string {
 	cur := 0
 	{
-		key := unpack(key)
-		for i := 0; i < len(key); i++ {
-			key := key[i]
-			if t[cur].chld[key] == 0 {
+		k2 := unpack(key)
+		for i := 0; i < len(k2); i++ {
+			k3 := k2[i]
+			if t[cur].chld[k3] == 0 {
 				return "NOTFOUND"
 			}
-			cur = t[cur].chld[key]
+			cur = t[cur].chld[k3]
 		}
 		return t[cur].data
 	}
