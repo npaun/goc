@@ -495,6 +495,16 @@ int_init(&x);
 			}
 		}
 	}
+	{
+		if (0 || (strcmp(xx,"foo") == 0)) {
+			__golite__iftest();
+		}
+		else {
+			{
+				__golite__iftest();
+			}
+		}
+	}
 }
 
 void __golite__fortest() {

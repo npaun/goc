@@ -117,6 +117,12 @@ func switchtest() {
         default:
             x += 10
     }
+    switch {
+        case xx == "foo":
+            iftest()
+        default:
+            iftest()
+    }
 }
 
 func fortest() {

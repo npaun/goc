@@ -256,7 +256,7 @@ and gen_switch_stmt d stmtopt expropt fclist =
     let gen_switch_cond expropt expr =
         let expr' = expr in
         match expropt with
-        | None -> gen_expr (make_annot (`Op2(`EQ, (make_annot (`L(Int(1)))), expr)))
+        | None -> gen_expr expr
         | Some e -> gen_expr (make_annot (`Op2(`EQ, e, expr))) (* silly hack :) *)
     in
     let gen_case case acc = match case with
