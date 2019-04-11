@@ -5,14 +5,6 @@ type person struct {
 	age int
 }
 
-
-func arr() [10]int {
-	var x [10]int
-	x[1] = 5
-
-	return x
-}
-
 func main() {
 	var x,y int
 	x,_,y = 10, 20, 30
@@ -32,4 +24,8 @@ func main() {
 	var s2 []person
 	s2 = append(s2, parr1[2])
 	println("Indexing person slice: ", s2[0].name)
+
+	var f float64
+	f = 21.5
+	println(f)
 }

@@ -11,7 +11,7 @@ char* str_add(char* p, char* q) {
 }
 
 void int_init(int* x) { *x = 0; }
-void float_init(float* x) { *x = 0; }
+void double_init(double* x) { *x = 0; }
 void char_init(char* c) { *c = 0; }
 void string_init(char** s) { *s = ""; }
 
@@ -29,22 +29,6 @@ void __golite__struct_1_init(__golite__struct_1* x) {
 	int_init(&x->age);
 }
 
-typedef struct {
-	int data[10];
-} __golite__arr_int_10;
-
-bool __golite__arr_int_10_cmp(__golite__arr_int_10* p, __golite__arr_int_10* q) { 
-	for(int i = 0; i < 10; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-void __golite__arr_int_10_init(__golite__arr_int_10* x) {
-	for(int i = 0; i < 10; i++) {
-		int_init(&x->data[i]);
-	}
-}
 typedef struct {
 	__golite__struct_1 data[20];
 } __golite__arr___golite__struct_1_20;
@@ -128,53 +112,43 @@ __golite__struct_1*  __arr_index___golite__struct_1(__golite__struct_1* arr, int
 	else {fprintf(stderr, "Out of Bounds\n"); exit(-1);}
 }
 
-// Type: int
-static inline __attribute__((always_inline))
-int*  __arr_index_int(int* arr, int i, int len) {
-	if (i >= 0 && i < len) return arr;
-	else {fprintf(stderr, "Out of Bounds\n"); exit(-1);}
-}
-
 ;
-__golite__arr_int_10 __golite__arr() {
-	__golite__arr_int_10 x;
-__golite__arr_int_10_init(&x);
-	int __golite__tmp_12 = 5;
-	 __arr_index_int(x.data, 1, 10)[1] = __golite__tmp_12;
-	return x;
-}
-
 void __golite__main() {
 	int x;
 int_init(&x);
 	int y;
 int_init(&y);
-	int __golite__tmp_8 = 10;
-	int __golite__tmp_9 = 20;
-	int __golite__tmp_10 = 30;
-	x = __golite__tmp_8;
+	int __golite__tmp_10 = 10;
+	int __golite__tmp_11 = 20;
+	int __golite__tmp_12 = 30;
+	x = __golite__tmp_10;
 ;
-	y = __golite__tmp_10;
+	y = __golite__tmp_12;
 	__golite__arr___golite__struct_1_20 parr1;
 __golite__arr___golite__struct_1_20_init(&parr1);
 	__golite__arr___golite__struct_1_20 parr2;
 __golite__arr___golite__struct_1_20_init(&parr2);
 	printf("%s\n","Before any changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");
-	char* __golite__tmp_6 = "bob";
-	 __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name = __golite__tmp_6;
+	char* __golite__tmp_8 = "bob";
+	 __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name = __golite__tmp_8;
 	printf("%s\n","After changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");
 	__golite_builtin__slice_int s;
 __golite_builtin__slice_int_init(&s);
-	__golite_builtin__slice_int __golite__tmp_4 = __golite_builtin__slice_int_append(&s, 1);
-	s = __golite__tmp_4;
+	__golite_builtin__slice_int __golite__tmp_6 = __golite_builtin__slice_int_append(&s, 1);
+	s = __golite__tmp_6;
 	printf("%s %d\n","Indexing slice: ",(__golite_builtin__slice_int_index(s,0)[0]));
 	__golite_builtin__slice___golite__struct_1 s2;
 __golite_builtin__slice___golite__struct_1_init(&s2);
-	__golite_builtin__slice___golite__struct_1 __golite__tmp_2 = __golite_builtin__slice___golite__struct_1_append(&s2,  __arr_index___golite__struct_1(parr1.data, 2, 20)[2]);
-	s2 = __golite__tmp_2;
+	__golite_builtin__slice___golite__struct_1 __golite__tmp_4 = __golite_builtin__slice___golite__struct_1_append(&s2,  __arr_index___golite__struct_1(parr1.data, 2, 20)[2]);
+	s2 = __golite__tmp_4;
 	printf("%s %s\n","Indexing person slice: ",(__golite_builtin__slice___golite__struct_1_index(s2,0)[0]).name);
+	double f;
+double_init(&f);
+	double __golite__tmp_2 = 21.5;
+	f = __golite__tmp_2;
+	printf("%.6e\n",f);
 }
 
 int main() {
