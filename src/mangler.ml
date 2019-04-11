@@ -18,10 +18,18 @@ let mangled_name ident =
 let mangle symt id = 
 	match Symtbl.get_symbol symt id true with
 	| Some sym ->
-		sym.mangled <- Some (mangled_name id);
-		sym.mangled
+		let id' = mangled_name id in
+			sym.mangled <- Some id';
+			id'
 	| None -> failwith "Cannot mangle a non-existent symbol"	
 
+let mangle_ident' symt = function
+| `V id -> `V (mangle symt id)
+| `Blank -> `Blank
+
+let mangle_node symt node = match node.v with
+| `V id -> {node with v = `V (mangle symt id)}
+| _ -> failwith "I don't know how to mangle this kind of node"
 
 let get_symbol_exn symt id =
 	match Symtbl.get_symbol symt id true with
@@ -38,6 +46,7 @@ let rec nameof symt id =
 				| Some par -> nameof !par id
 				| None -> failwith "Symbol has never been mangled. Check if you handled the declaration correctly"
 				end
+
 
 let do_nothing symt typ = typ
 let ignore_node symt node = node
@@ -95,11 +104,14 @@ and pass_statement this_symt node = function
 	| Break | Continue | Empty -> same (fun () -> node)
 and pass_decl symt = function
 | Var(name, ltyp, init, shortp) ->
-		Var(	name, 
-			(do_nothing symt [ltyp] |> List.hd),
-			(maybe (pass_expr symt) init),
-			shortp)
-| Type(name, def) -> Type(name, do_nothing symt [def] |> List.hd)
+		let nameM = mangle_node symt name in
+			Var(	nameM, 
+				(do_nothing symt [ltyp] |> List.hd),
+				(maybe (pass_expr symt) init),
+				shortp)
+| Type(name, def) -> let nameM = mangle_ident' symt name in
+	Type(nameM, do_nothing symt [def] |> List.hd)
+
 and pass_fallable_case this_symt node = function
 | (case,mode) -> same (fun () -> {node with v = (packify pass_case this_symt [case] |> List.hd, mode)}) (* It is best not to ask *)
 and pass_case this_symt node = function
