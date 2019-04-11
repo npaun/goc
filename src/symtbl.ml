@@ -106,6 +106,11 @@ let make_symbol n k t d = {
     name = n; kind = k; typ = t; depth = d; mangled = None
 }
 
+(* Predeclared identifiers mangle to themselves *)
+let make_symbol_mangle n k t d = {
+	name = n; kind = k; typ = t; depth = d; mangled = Some n
+}
+
 (* ref symtbl -> symtbl *)
 let make_tbl parent = 
     let Symt(_, _, _, d) = !parent in
@@ -437,16 +442,17 @@ let init_tbl print ast =
     let root_tbl = ref (Symt(Hashtbl.create 500, None, [], 0)) in
     print_sym := print;
     if !print_sym then Printf.printf "{\n";
-    put_symbol !root_tbl (make_symbol "int" TypeK [`INT] 0) (-1,-1);
-    put_symbol !root_tbl (make_symbol "float64" TypeK [`FLOAT64] 0) (-1, -1);
-    put_symbol !root_tbl (make_symbol "bool" TypeK [`BOOL] 0) (-1,-1);
-    put_symbol !root_tbl (make_symbol "rune" TypeK [`RUNE] 0) (-1,-1);
-    put_symbol !root_tbl (make_symbol "string" TypeK [`STRING] 0) (-1,-1);
-    put_symbol !root_tbl (make_symbol "true" ConstK [`BOOL] 0) (-1,-1);
-    put_symbol !root_tbl (make_symbol "false" ConstK [`BOOL] 0) (-1,-1);
-    put_symbol !root_tbl (make_symbol "append" FuncK [`AUTO; `AUTO; `AUTO] 0) (-1,-1);
-    put_symbol !root_tbl (make_symbol "len" FuncK [`AUTO; `INT] 0) (-1,-1);
-    put_symbol !root_tbl (make_symbol "cap" FuncK [`AUTO; `INT] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol_mangle "int" TypeK [`INT] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol_mangle "float64" TypeK [`FLOAT64] 0) (-1, -1);
+    put_symbol !root_tbl (make_symbol_mangle "bool" TypeK [`BOOL] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol_mangle "rune" TypeK [`RUNE] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol_mangle "string" TypeK [`STRING] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol_mangle "true" ConstK [`BOOL] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol_mangle "false" ConstK [`BOOL] 0) (-1,-1);
+
+    put_symbol !root_tbl (make_symbol_mangle "append" FuncK [`AUTO; `AUTO; `AUTO] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol_mangle "len" FuncK [`AUTO; `INT] 0) (-1,-1);
+    put_symbol !root_tbl (make_symbol_mangle "cap" FuncK [`AUTO; `INT] 0) (-1,-1);
     let tbl = scope_tbl root_tbl in
     sym_ast ast tbl;
     unscope_tbl tbl;

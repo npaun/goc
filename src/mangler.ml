@@ -14,13 +14,16 @@ let mangled_name ident =
 	sprintf "%s$%d" ident !sym
 
 
+
 (* mangle: Update the symbol table to store a new mangled name, also returning it *)
 let mangle symt id = 
 	match Symtbl.get_symbol symt id true with
 	| Some sym ->
 		let id' = mangled_name id in
-			sym.mangled <- Some id';
-			id'
+			let Symt(defined_in,_,_,_) = Symtbl.get_table_of symt sym in
+				Hashtbl.add defined_in id' sym; (* insert a redundant definition for the mangled name *)
+				sym.mangled <- Some id'; (* save mangled name for us later *)
+				id'
 	| None -> failwith "Cannot mangle a non-existent symbol"	
 
 let mangle_ident' symt = function
@@ -130,7 +133,7 @@ and pass_lval' symt node = match node.v with
 
 and pass_expr symt node = match node.v with
 	| `L _ -> node 
-	| `V _ -> node
+	| `V id -> {node with v  = `V (nameof symt id)}
 	| `Indexing(arr, idx) ->
 		let arr' = pass_expr symt arr in
 		let idx' = pass_expr symt idx in
