@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+typedef char* string;
+
 char* str_add(char* p, char* q) {
 	int len = strlen(p) + strlen(q);
 	char* res = (char*)malloc(len);
@@ -16,12 +18,12 @@ void char_init(char* c) { *c = 0; }
 void string_init(char** s) { *s = ""; }
 
 typedef struct {
-	char* name;
+	string name;
 	int age;
 } __golite__struct_1;
 
 bool __golite__struct_1_cmp(__golite__struct_1* p, __golite__struct_1* q) { 
-	return (strcmp(p->name,q->name) == 0) && (p->age == q->age);
+	return (p->name == q->name) && (p->age == q->age);
 }
 
 void __golite__struct_1_init(__golite__struct_1* x) {
@@ -74,6 +76,14 @@ int* __golite_builtin__slice_int_index(__golite_builtin__slice_int s, int i) {
 	else { fprintf(stderr, "Out of Bounds index on slice\n"); exit(-1); }
 }
 
+int __golite_builtin__slice_int_len(__golite_builtin__slice_int s) {
+	return s.__size;
+}
+
+int __golite_builtin__slice_int_cap(__golite_builtin__slice_int s) {
+	return s.__capacity;
+}
+
 typedef struct {
 	unsigned int __size;
 	unsigned int __capacity;
@@ -103,6 +113,14 @@ __golite__struct_1* __golite_builtin__slice___golite__struct_1_index(__golite_bu
 	else { fprintf(stderr, "Out of Bounds index on slice\n"); exit(-1); }
 }
 
+int __golite_builtin__slice___golite__struct_1_len(__golite_builtin__slice___golite__struct_1 s) {
+	return s.__size;
+}
+
+int __golite_builtin__slice___golite__struct_1_cap(__golite_builtin__slice___golite__struct_1 s) {
+	return s.__capacity;
+}
+
 
 // ---------- Array bounds checking helpers ----------
 // Type: __golite__struct_1
@@ -113,7 +131,7 @@ __golite__struct_1*  __arr_index___golite__struct_1(__golite__struct_1* arr, int
 }
 
 ;
-char* __golite__f(int __golite__x) {
+string __golite__f(int x) {
 	int z;
 int_init(&z);
 	int y = x;
@@ -137,7 +155,7 @@ __golite__arr___golite__struct_1_20_init(&parr1);
 __golite__arr___golite__struct_1_20_init(&parr2);
 	printf("%s\n","Before any changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");
-	char* __golite__tmp_8 = "bob";
+	string __golite__tmp_8 = "bob";
 	 __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name = __golite__tmp_8;
 	printf("%s\n","After changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");

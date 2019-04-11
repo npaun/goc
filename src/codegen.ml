@@ -72,7 +72,7 @@ and gen_toplvl toplvl = match toplvl.v with
   )
 and gen_siglist siglst = 
   let gen_sig = function
-    | (`V id, typ) -> gen_type typ ^ " " ^ "__golite__" ^ id
+    | (`V id, typ) -> gen_type typ ^ " " ^ id
     | (`Blank, typ) -> gen_type typ ^ " " ^ "__golite_tmp__" ^ tmp_count ()
   in
   String.concat ", " (List.map gen_sig siglst)
