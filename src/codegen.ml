@@ -15,17 +15,17 @@ let goto_cont_label inc =
     "__continue_lbl" ^ (if inc then cont_label_count () else string_of_int !continue_label_count)
     
 let array_index_helpers = ref []
-let array_index_helper_funname type_str (*n*) = " __arr_index_" ^ type_str (*^ "_" ^ string_of_int n*)
-let record_array_indexing_helper typ (*n*) = 
-    let already_exists typ' (*n'*) =
+let array_index_helper_funname type_str = " __arr_index_" ^ type_str
+let record_array_indexing_helper typ = 
+    let already_exists typ' =
         List.exists (fun typ -> String.equal (Codegenpre.typ_string typ) (Codegenpre.typ_string typ')) !array_index_helpers
     in
-    let record typ'' (*n''*) =
-        if not (already_exists typ'' (*n''*)) then (
-            Printf.printf "Registering array helper: type = %s\n" (Pretty.string_of_typ typ'')(* n''*);
-            array_index_helpers := (typ''(*, n''*))::(!array_index_helpers)
+    let record typ'' =
+        if not (already_exists typ'') then (
+            Printf.printf "Registering array helper: type = %s\n" (Pretty.string_of_typ typ'');
+            array_index_helpers := (typ'')::(!array_index_helpers)
         )
-    in record typ (*n*) 
+    in record typ
 
     
 let slice_header = 
@@ -198,10 +198,10 @@ and gen_expr expr = match expr.v with
 and gen_indexing id expr = match List.hd id._derived with
     | `TypeLit Array (n, typ) ->
         Printf.printf "index array type: %s\n" (gen_type typ);
-        record_array_indexing_helper typ (*n*); 
+        record_array_indexing_helper typ; 
         let id_s = gen_expr id in
         let exp_s = gen_expr expr in
-        array_index_helper_funname (gen_type typ) (*n*)
+        array_index_helper_funname (gen_type typ)
         ^ Printf.sprintf "(%s.data, %s, %d)[%s]" id_s exp_s n exp_s
     | `TypeLit Slice (typ) ->
       let slice_name = gen_type (List.hd id._derived) in
@@ -250,11 +250,20 @@ and gen_if_stmt d clist =
     let gen = fold_if (clist) in gen ^ (close_scopes (!tab-1) (List.length clist))
 and gen_switch_stmt d stmtopt expropt fclist =
     let tab = ref (d) in
+    let make_annot oper = 
+        {v = oper; _debug = "hack :)"; _start = (-1,-1); _end = (-1,-1); _derived = [`BOOL]} 
+    in
+    let gen_switch_cond expropt expr =
+        let expr' = expr in
+        match expropt with
+        | None -> gen_expr (make_annot (`Op2(`EQ, (make_annot (`L(Int(1)))), expr)))
+        | Some e -> gen_expr (make_annot (`Op2(`EQ, e, expr))) (* silly hack :) *)
+    in
     let gen_case case acc = match case with
         | (Case(stmt_opt, exprlst, block), _) -> 
             acc ^ Pretty.crt_tab !tab true ^ "if (" 
             ^ (List.fold_right 
-              (fun expr acc -> acc ^ " || " ^ gen_cond_expr expropt ^ "==" ^ gen_expr expr) exprlst "0") 
+              (fun expr acc -> acc ^ " || " ^ gen_switch_cond expropt expr) exprlst "0") 
             ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
         | (Default(block), _) -> acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
     in
