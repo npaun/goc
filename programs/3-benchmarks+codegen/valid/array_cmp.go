@@ -16,6 +16,7 @@ func main() {
 	println(parr1 == parr2)
 
 	var s []int
+	s = append(s, 1)
+
 	var s2 []person
-	var s3 [][3]person
 }

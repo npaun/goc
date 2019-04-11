@@ -4,6 +4,8 @@ let temp_var_count = ref 0
 let tmp_count () =
   incr temp_var_count;
   string_of_int !temp_var_count
+let get_tmp () =
+  Printf.sprintf "__golite__%s" (tmp_count ())
 
 let continue_label_count = ref 0
 let cont_label_count () =
@@ -38,7 +40,24 @@ let slice_header =
   "\tx->__capacity = 0;\n" ^
   "\tx->__el_size = el_size;\n" ^
   "\tx->__contents = NULL;\n" ^
-  "}\n\n"
+  "}\n\n" ^
+  "void* __golite_builtin__slice_index(__golite_builtin__slice* x, int index) {\n" ^
+  "\tif(index >= x->__size) { fprintf(stderr, \"Out of Bounds slice index\"); exit(-1); }\n" ^ 
+  "\telse return x->__contents;\n}\n\n"
+
+let builtin_header = 
+  "__golite_builtin__slice __golite__append(__golite_builtin__slice _s, void* el) {\n" ^
+  "\t__golite_builtin__slice s = _s;\n" ^ 
+  "\tif(s.__size == s.__capacity) {\n" ^
+  "\t\tvoid* new_arr = malloc(s.__size * s.__el_size);\n" ^
+  "\t\tmemcpy(new_arr, s.__contents, s.__size * s.__el_size);\n" ^
+  "\t\ts.__capacity *= 2;\n" ^
+  "\t\ts.__contents = new_arr;\n" ^
+  "\t}\n" ^
+  "\tmemcpy(s.__contents + (s.__el_size * s.__size), el, s.__el_size);\n" ^
+  "\ts.__size++;\n" ^
+  "\treturn s;\n}\n\n"
+
 
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
 
@@ -54,7 +73,7 @@ and gen_toplvl toplvl = match toplvl.v with
 and gen_siglist siglst = 
   let gen_sig = function
     | (`V id, typ) -> gen_type typ ^ " " ^ "__golite__" ^ id
-    | (`Blank, typ) -> gen_type typ ^ " " ^ "_golite_tmp" ^ tmp_count ()
+    | (`Blank, typ) -> gen_type typ ^ " " ^ "__golite_tmp__" ^ tmp_count ()
   in
   String.concat ", " (List.map gen_sig siglst)
 and gen_decl decl =
@@ -145,7 +164,15 @@ and gen_expr expr = match expr.v with
         | `STRING, `ADD -> Printf.sprintf "str_add(%s,%s)" (gen_expr exp) (gen_expr exp2)
         | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   )
-  | `Call(exp, explist)  -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
+  | `Call(exp, explist)  -> 
+    let func_name = gen_expr exp in
+    if String.equal "append" func_name then (
+      let slice = gen_expr (List.hd explist) in
+      let el = gen_expr (List.nth explist 1) in
+      let tmp = get_tmp () in
+      Printf.sprintf "__golite__append(%s, %s)" slice el (* TODO: update this once slice gen is done *)
+    )
+    else "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
   | `Cast(typ, exp)      ->
       (* TODO make this smarter:
        * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
@@ -175,7 +202,11 @@ and gen_indexing id expr = match List.hd id._derived with
         let exp_s = gen_expr expr in
         array_index_helper_funname (gen_type typ) (*n*)
         ^ Printf.sprintf "(%s.data, %s, %d)[%s]" id_s exp_s n exp_s
-    | `TypeLit Slice (typ) -> "TODO"
+    | `TypeLit Slice (typ) ->
+      let typ_s = gen_type typ in
+      let id_s = gen_expr id in
+      let exp_s = gen_expr expr in
+      Printf.sprintf "((%s)__golite_builtin__slice_index(&%s,%s)[%s])" typ_s id_s exp_s exp_s 
 and bounds_check s exp n =
   let exp_s = gen_expr exp in
   let (line,ch) = s in
@@ -287,7 +318,7 @@ let gen_c_code filename ast =
   let prim_inits = gen_prim_init () in
   let str_add = gen_str_add () in
   let code = 
-    gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
+    gen_file_header ^ builtin_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 

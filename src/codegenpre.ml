@@ -40,6 +40,7 @@ exception CodePreErr of string
 
 let struct_map : (string,string) Hashtbl.t = Hashtbl.create 50
 let arr_map : (string,string) Hashtbl.t = Hashtbl.create 50
+let slice_set = ref []
 
 let struct_decls = ref []
 
@@ -69,6 +70,14 @@ let gen_array struct_string struct_name =
   let (typ,size) = split_field struct_string in
   "typedef struct {\n" ^
   Printf.sprintf "\t%s data[%s];\n} %s;\n\n" typ size struct_name
+
+let gen_slice typ_s = 
+  "typedef struct {\n" ^
+  "\tunsigned int __size;\n" ^
+  "\tunsigned int __capacity;\n" ^
+  Printf.sprintf "\t%s* __contents ;\n" typ_s ^
+  Printf.sprintf "} __golite_builtin__slice_%s;\n\n" typ_s
+
 
 (*
   generates a comparison function for each generated struct. Ex:
@@ -128,9 +137,15 @@ let gen_array_init struct_string struct_name =
   (Printf.sprintf "\tfor(int i = 0; i < %s; i++) {\n" size) ^
   (Printf.sprintf "\t\t%s(&x->data[i]);\n" (get_init_string typ)) ^ "\t}\n}\n"
 
+let gen_slice_init typ_s = 
+  (Printf.sprintf "void __golite_builtin__slice_%s_init(%s* x) {\n" typ_s typ_s) ^
+  (* TODO *)
+  "}\n\n"
+
 
 let gen_struct_fns struct_string struct_name = [gen_struct struct_string struct_name; gen_struct_cmp struct_string struct_name; gen_struct_init struct_string struct_name]
 let gen_arr_fns struct_string struct_name = [gen_array struct_string struct_name; gen_arr_cmp struct_string struct_name; gen_array_init struct_string struct_name]
+let gen_slice_fns typ_s = [gen_slice typ_s; gen_slice_init typ_s]
 
 let rec typ_string typ = match typ with
   | `BOOL
@@ -194,6 +209,14 @@ and add_arr_entry size typ =
     struct_decls := !struct_decls@gen_arr_fns struct_string struct_name;
     Hashtbl.replace arr_map struct_string struct_name
 and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
+and add_slice_entry typ = 
+  let typ_s = typ_string typ in
+  if not (List.exists (fun t -> String.equal t typ_s) !slice_set) then (
+    Printf.printf "generating slice struct for type %s\n" typ_s;
+    struct_decls := !struct_decls@gen_slice_fns typ_s
+  )
+
+
 
 
 let rec codepre_ast ast = match ast with
@@ -211,5 +234,5 @@ and codepre_decl decl = match decl with
 and codepre_typ typ = match typ with
   | `TypeLit(Struct(fields)) -> add_struct_entry fields
   | `TypeLit(Array(size,typ')) -> codepre_typ typ'; add_arr_entry size typ'
-  | `TypeLit(Slice(typ')) -> codepre_typ typ'
+  | `TypeLit(Slice(typ')) -> codepre_typ typ'; add_slice_entry typ'
   | _ -> ()
