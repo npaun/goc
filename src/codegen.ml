@@ -5,7 +5,7 @@ let tmp_count () =
   incr temp_var_count;
   string_of_int !temp_var_count
 let get_tmp () =
-  Printf.sprintf "__golite__%s" (tmp_count ())
+  Printf.sprintf "__golite__tmp_%s" (tmp_count ())
 
 let continue_label_count = ref 0
 let cont_label_count () =
@@ -98,20 +98,23 @@ and gen_decl decl =
 and gen_assignlist d alist =
   let start_val = int_of_string(tmp_count ()) in
   let counter = ref 0 in
+  let tmp_list = ref [] in
   let gen_tmps assign = 
     let (lval', exp) = assign in
-    (Pretty.crt_tab d true) ^ gen_type (List.hd exp._derived) ^ " __golite_tmp__" ^ (tmp_count ()) ^ " = " ^ gen_expr exp
+    let tmp = get_tmp () in
+    tmp_list := !tmp_list@[tmp];
+    (Pretty.crt_tab d true) ^ gen_type (List.hd exp._derived) ^ " " ^ tmp ^ " = " ^ gen_expr exp
   in
   let gen_assign assign = 
     let (lval', exp) = assign in
+    let tmp = (List.nth !tmp_list !counter) in
+    incr counter;
     match lval'.v with
       | `Blank -> ""
-      | _ -> 
-        incr counter;
-        (Pretty.crt_tab d true) ^ gen_lvalue' lval' ^ " = __golite_tmp__" ^ string_of_int (start_val + !counter)
+      | _ -> (Pretty.crt_tab d true) ^ gen_lvalue' lval' ^ " = " ^ tmp
   in
-  Pretty.string_of_lst alist ";\n" gen_tmps ^ ";\n" ^ 
-  Pretty.string_of_lst alist ";\n" gen_assign
+  let tmps = Pretty.string_of_lst alist ";\n" gen_tmps in
+  tmps ^ ";\n" ^ Pretty.string_of_lst alist ";\n" gen_assign
 and gen_print ln exprlist = 
     let symbol exp = match List.hd exp._derived with
       | `INT
