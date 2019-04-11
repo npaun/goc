@@ -210,5 +210,6 @@ and codepre_decl decl = match decl with
   | Type(iden', typ) -> codepre_typ typ
 and codepre_typ typ = match typ with
   | `TypeLit(Struct(fields)) -> add_struct_entry fields
-  | `TypeLit(Array(size,typ)) -> add_arr_entry size typ
+  | `TypeLit(Array(size,typ')) -> codepre_typ typ'; add_arr_entry size typ'
+  | `TypeLit(Slice(typ')) -> codepre_typ typ'
   | _ -> ()

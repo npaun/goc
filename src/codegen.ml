@@ -25,7 +25,6 @@ let record_array_indexing_helper typ (*n*) =
         )
     in record typ (*n*) 
 
-
     
 let slice_header = 
   "typedef struct {\n" ^
@@ -33,7 +32,14 @@ let slice_header =
   "\tunsigned int __capacity;\n" ^
   "\tsize_t __el_size;\n" ^
   "\t void* __contents ;\n" ^
-  "} __golite_builtin__slice;\n\n"
+  "} __golite_builtin__slice;\n\n" ^
+  "void __golite_builtin__slice_init(__golite_builtin__slice* x, size_t el_size) {\n" ^
+  "\tx->__size = 0;\n" ^
+  "\tx->__capacity = 0;\n" ^
+  "\tx->__el_size = el_size;\n" ^
+  "\tx->__contents = NULL;\n" ^
+  "}\n\n"
+
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
 
 let rec gen_ast ast = match ast with
@@ -62,7 +68,10 @@ and gen_decl decl =
   in
   let decl_end expr_opt typ id = match expr_opt with
     | Some expr -> " = " ^ gen_expr expr
-    | None -> ";\n" ^ gen_init typ ^ Printf.sprintf "(&%s)" id
+    | None -> (match typ with
+      | `TypeLit(Slice(typ')) -> ";\n" ^ Printf.sprintf "__golite_builtin__slice_init(&%s, sizeof(%s))" id (gen_type typ')
+      | _ -> ";\n" ^ gen_init typ ^ Printf.sprintf "(&%s)" id
+    )
   in
   match decl with
     | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v with
