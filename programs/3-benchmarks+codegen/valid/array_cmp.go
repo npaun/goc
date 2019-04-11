@@ -5,6 +5,12 @@ type person struct {
 	age int
 }
 
+func f(x int) string {
+	var z int
+	var y = x
+	return "wow"
+}
+
 func main() {
 	var x,y int
 	x,_,y = 10, 20, 30

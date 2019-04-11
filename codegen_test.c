@@ -13,7 +13,7 @@ char* str_add(char* p, char* q) {
 }
 
 void int_init(int* x) { *x = 0; }
-void float_init(float* x) { *x = 0; }
+void double_init(double* x) { *x = 0; }
 void char_init(char* c) { *c = 0; }
 void string_init(char** s) { *s = ""; }
 
@@ -50,6 +50,22 @@ void __golite__struct_1_init(__golite__struct_1* x) {
 }
 
 typedef struct {
+	int data[10];
+} __golite__arr_int_10;
+
+bool __golite__arr_int_10_cmp(__golite__arr_int_10* p, __golite__arr_int_10* q) { 
+	for(int i = 0; i < 10; i++) {
+		if(!(p->data[i] == q->data[i])) return false;
+	}
+	return true;
+}
+
+void __golite__arr_int_10_init(__golite__arr_int_10* x) {
+	for(int i = 0; i < 10; i++) {
+		int_init(&x->data[i]);
+	}
+}
+typedef struct {
 	int age;
 	string st;
 } __golite__struct_2;
@@ -65,7 +81,7 @@ void __golite__struct_2_init(__golite__struct_2* x) {
 
 typedef struct {
 	int i;
-	float f;
+	double f;
 	__golite__struct_2 s2;
 } __golite__struct_3;
 
@@ -75,7 +91,7 @@ bool __golite__struct_3_cmp(__golite__struct_3* p, __golite__struct_3* q) {
 
 void __golite__struct_3_init(__golite__struct_3* x) {
 	int_init(&x->i);
-	float_init(&x->f);
+	double_init(&x->f);
 	__golite__struct_2_init(&x->s2);
 }
 
@@ -96,19 +112,19 @@ void __golite__arr_int_100_init(__golite__arr_int_100* x) {
 	}
 }
 typedef struct {
-	float data[100];
-} __golite__arr_float_100;
+	double data[100];
+} __golite__arr_double_100;
 
-bool __golite__arr_float_100_cmp(__golite__arr_float_100* p, __golite__arr_float_100* q) { 
+bool __golite__arr_double_100_cmp(__golite__arr_double_100* p, __golite__arr_double_100* q) { 
 	for(int i = 0; i < 100; i++) {
 		if(!(p->data[i] == q->data[i])) return false;
 	}
 	return true;
 }
 
-void __golite__arr_float_100_init(__golite__arr_float_100* x) {
+void __golite__arr_double_100_init(__golite__arr_double_100* x) {
 	for(int i = 0; i < 100; i++) {
-		float_init(&x->data[i]);
+		double_init(&x->data[i]);
 	}
 }
 typedef struct {
@@ -125,22 +141,6 @@ bool __golite__arr_string_20_cmp(__golite__arr_string_20* p, __golite__arr_strin
 void __golite__arr_string_20_init(__golite__arr_string_20* x) {
 	for(int i = 0; i < 20; i++) {
 		string_init(&x->data[i]);
-	}
-}
-typedef struct {
-	int data[10];
-} __golite__arr_int_10;
-
-bool __golite__arr_int_10_cmp(__golite__arr_int_10* p, __golite__arr_int_10* q) { 
-	for(int i = 0; i < 10; i++) {
-		if(!(p->data[i] == q->data[i])) return false;
-	}
-	return true;
-}
-
-void __golite__arr_int_10_init(__golite__arr_int_10* x) {
-	for(int i = 0; i < 10; i++) {
-		int_init(&x->data[i]);
 	}
 }
 typedef struct {
@@ -192,19 +192,19 @@ void __golite__arr_int_5_init(__golite__arr_int_5* x) {
 	}
 }
 typedef struct {
-	float data[10];
-} __golite__arr_float_10;
+	double data[10];
+} __golite__arr_double_10;
 
-bool __golite__arr_float_10_cmp(__golite__arr_float_10* p, __golite__arr_float_10* q) { 
+bool __golite__arr_double_10_cmp(__golite__arr_double_10* p, __golite__arr_double_10* q) { 
 	for(int i = 0; i < 10; i++) {
 		if(!(p->data[i] == q->data[i])) return false;
 	}
 	return true;
 }
 
-void __golite__arr_float_10_init(__golite__arr_float_10* x) {
+void __golite__arr_double_10_init(__golite__arr_double_10* x) {
 	for(int i = 0; i < 10; i++) {
-		float_init(&x->data[i]);
+		double_init(&x->data[i]);
 	}
 }
 typedef struct {
@@ -247,8 +247,8 @@ __golite_builtin__slice_string __golite_builtin__slice_string_append(__golite_bu
 	return s;
 }
 
-string* __golite_builtin__slice_string_index(__golite_builtin__slice_string* s, int i) {
-	if(i >= 0 && i < s->__size) return s->__contents;
+string* __golite_builtin__slice_string_index(__golite_builtin__slice_string s, int i) {
+	if(i >= 0 && i < s.__size) return s.__contents;
 	else { fprintf(stderr, "Out of Bounds index on slice\n"); exit(-1); }
 }
 
@@ -300,8 +300,8 @@ __golite_builtin__slice___golite__arr_int_2 __golite_builtin__slice___golite__ar
 	return s;
 }
 
-__golite__arr_int_2* __golite_builtin__slice___golite__arr_int_2_index(__golite_builtin__slice___golite__arr_int_2* s, int i) {
-	if(i >= 0 && i < s->__size) return s->__contents;
+__golite__arr_int_2* __golite_builtin__slice___golite__arr_int_2_index(__golite_builtin__slice___golite__arr_int_2 s, int i) {
+	if(i >= 0 && i < s.__size) return s.__contents;
 	else { fprintf(stderr, "Out of Bounds index on slice\n"); exit(-1); }
 }
 
@@ -337,8 +337,8 @@ __golite_builtin__slice_int __golite_builtin__slice_int_append(__golite_builtin_
 	return s;
 }
 
-int* __golite_builtin__slice_int_index(__golite_builtin__slice_int* s, int i) {
-	if(i >= 0 && i < s->__size) return s->__contents;
+int* __golite_builtin__slice_int_index(__golite_builtin__slice_int s, int i) {
+	if(i >= 0 && i < s.__size) return s.__contents;
 	else { fprintf(stderr, "Out of Bounds index on slice\n"); exit(-1); }
 }
 
@@ -367,9 +367,46 @@ void __golite__arr___golite_builtin__slice_int_2_init(__golite__arr___golite_bui
 	}
 }
 typedef struct {
+	unsigned int __size;
+	unsigned int __capacity;
+	double* __contents ;
+} __golite_builtin__slice_double;
+
+void __golite_builtin__slice_double_init(__golite_builtin__slice_double* x) {
+	x->__size = 0;
+	x->__capacity = 0;
+	x->__contents = NULL;
+}
+
+__golite_builtin__slice_double __golite_builtin__slice_double_append(__golite_builtin__slice_double* _s, double el) {
+	__golite_builtin__slice_double s = *_s;
+	if(s.__size == s.__capacity) {
+		double* new_arr = malloc(s.__size * sizeof(double));
+		memcpy(new_arr, s.__contents, s.__size * sizeof(double));
+		s.__capacity *= 2;
+		s.__contents = new_arr;
+	}
+	s.__contents[s.__size++] = el;
+	return s;
+}
+
+double* __golite_builtin__slice_double_index(__golite_builtin__slice_double s, int i) {
+	if(i >= 0 && i < s.__size) return s.__contents;
+	else { fprintf(stderr, "Out of Bounds index on slice\n"); exit(-1); }
+}
+
+int __golite_builtin__slice_double_len(__golite_builtin__slice_double s) {
+	return s.__size;
+}
+
+int __golite_builtin__slice_double_cap(__golite_builtin__slice_double s) {
+	return s.__capacity;
+}
+
+typedef struct {
 	__golite_builtin__slice___golite__arr_int_2 f1;
 	__golite__arr___golite_builtin__slice_int_2 f2;
-	__golite_builtin__slice_float s;
+	__golite_builtin__slice_double s;
 } __golite__struct_5;
 
 bool __golite__struct_5_cmp(__golite__struct_5* p, __golite__struct_5* q) { 
@@ -379,14 +416,14 @@ bool __golite__struct_5_cmp(__golite__struct_5* p, __golite__struct_5* q) {
 void __golite__struct_5_init(__golite__struct_5* x) {
 	__golite_builtin__slice___golite__arr_int_2_init(&x->f1);
 	__golite__arr___golite_builtin__slice_int_2_init(&x->f2);
-	__golite_builtin__slice_float_init(&x->s);
+	__golite_builtin__slice_double_init(&x->s);
 }
 
 
 // ---------- Array bounds checking helpers ----------
-// Type: float
+// Type: double
 static inline __attribute__((always_inline))
-float*  __arr_index_float(float* arr, int i, int len) {
+double*  __arr_index_double(double* arr, int i, int len) {
 	if (i >= 0 && i < len) return arr;
 	else {fprintf(stderr, "Out of Bounds\n"); exit(-1);}
 }
@@ -400,9 +437,17 @@ int*  __arr_index_int(int* arr, int i, int len) {
 
 int x;
 int_init(&x);
-float y = 2.1;
+double y = 2.1;
 string z = "wow";
 ;
+__golite__arr_int_10 __golite__arr() {
+	__golite__arr_int_10 x;
+__golite__arr_int_10_init(&x);
+	int __golite__tmp_28 = 20;
+	 __arr_index_int(x.data, 1, 10)[1] = __golite__tmp_28;
+	return x;
+}
+
 void __golite__struct_test() {
 	;
 }
@@ -410,8 +455,8 @@ void __golite__struct_test() {
 void __golite__array_test() {
 	__golite__arr_int_100 x;
 __golite__arr_int_100_init(&x);
-	__golite__arr_float_100 y;
-__golite__arr_float_100_init(&y);
+	__golite__arr_double_100 y;
+__golite__arr_double_100_init(&y);
 	__golite__arr_string_20 z;
 __golite__arr_string_20_init(&z);
 	__golite__arr_int_10 x2;
@@ -445,7 +490,7 @@ int_init(&z);
 	int t5 = true;
 	int t6 = false;
 	int t7 = 101;
-	float t8 = 1.1;
+	double t8 = 1.1;
 	string t9 = "string";
 	char t10 = 'r';
 }
@@ -607,7 +652,7 @@ void __golite__print_test() {
 	int i = 5;
 	string s = "string";
 	int b = true;
-	float f = 1.;
+	double f = 1.;
 	char r = 'r';
 	printf("%d %s %s %.6e %d\n",i,s,b ? "true" : "false",f,r);
 }
@@ -616,9 +661,9 @@ void __golite__index_test() {
 	__golite__arr_int_5 i;
 __golite__arr_int_5_init(&i);
 	int y =  __arr_index_int(i.data, 3, 5)[3];
-	__golite__arr_float_10 j;
-__golite__arr_float_10_init(&j);
-	float z =  __arr_index_float(j.data, (4 + 3), 10)[(4 + 3)];
+	__golite__arr_double_10 j;
+__golite__arr_double_10_init(&j);
+	double z =  __arr_index_double(j.data, (4 + 3), 10)[(4 + 3)];
 }
 
 void __golite__len_cap_test() {

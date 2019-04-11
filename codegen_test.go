@@ -189,6 +189,4 @@ func main() {
         f2 a2
         s []float64
     }
-
-    arr()[2] = 10
 }

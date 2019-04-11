@@ -227,6 +227,9 @@ and hash_field field = match field with
         let struct_string = hash_array size typ in
         let struct_name = Hashtbl.find arr_map struct_string in
         Printf.sprintf "%s~%s" struct_name id
+      | Slice(typ') ->
+        add_slice_entry typ';
+        Printf.sprintf "__golite_builtin__slice_%s~%s" (typ_string typ') id
       | _ -> Printf.sprintf "%s~%s" (typelit_string typlit) id
     )
     | `V(id), _ -> Printf.sprintf "%s~%s" (typ_string typ) id
@@ -245,6 +248,7 @@ and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
 and add_slice_entry typ = 
   let typ_s = typ_string typ in
   if not (List.exists (fun t -> String.equal t typ_s) !slice_set) then (
+    slice_set := !slice_set@[typ_s];
     Printf.printf "generating slice struct for type %s\n" typ_s;
     struct_decls := !struct_decls@gen_slice_fns typ_s
   )
