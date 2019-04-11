@@ -25,7 +25,7 @@ let get_parent = function
     | Nametbl(t, tt, parent) -> parent
     
     
-let decl_renamed nametbl name is_var =
+let decl_renamed nametbl name is_var is_short_decl =
     match nametbl with
     | Nametbl(ntbl, ttbl, par) ->
         let found = Hashtbl.find_opt (if is_var then ntbl else ttbl) name in
@@ -35,7 +35,7 @@ let decl_renamed nametbl name is_var =
                 let new_name = get_renamed name in Hashtbl.add ntbl name new_name; new_name
             else
                 let new_name = get_renamed_type name in Hashtbl.add ttbl name new_name; new_name
-        | Some n -> "ERROR?"
+        | Some n -> if is_short_decl && is_var then let new_name = get_renamed name in Hashtbl.add ntbl name new_name; new_name else raise (Symtbl.SymbolErr "Redeclaration of variable!")
     
 let rec rename nametbl name is_var =
     match nametbl with
@@ -58,15 +58,15 @@ let rec rename_type nametbl typ =
     | `TypeLit Struct memes -> `TypeLit(Struct (List.map (fun (i, t) -> (i, rename_type nametbl t)) memes)) (* this ain't no typo *)
     | _ -> typ
     
-let decl_rename_iden nametbl = function   
+let decl_rename_iden nametbl is_short_decl = function   
     | `Blank -> `Blank
-    | `V id -> `V (decl_renamed nametbl id true)
+    | `V id -> `V (decl_renamed nametbl id true is_short_decl)
     
 let decl_rename_type nametbl = function   
     | `Blank -> `Blank
-    | `V id -> `V (decl_renamed nametbl id false)
+    | `V id -> `V (decl_renamed nametbl id false false)
     
-let rename_sig nametbl (iden, typ) = (decl_rename_iden nametbl iden, rename_type nametbl typ)
+let rename_sig nametbl (iden, typ) = (decl_rename_iden nametbl false iden, rename_type nametbl typ)
     
 let rec pass_ast = function
     | Program(pkg,tops) -> let p' = Program(pkg, List.map (pass_toplevel (make_name_tbl None)) tops) in
@@ -75,7 +75,10 @@ let rec pass_ast = function
 and pass_toplevel nametbl node = match node.v with
     | Global(decl) -> {node with v = Global(pass_decl nametbl decl)}
     | Func(name,args,ret,body) -> let tbl = make_name_tbl (Some nametbl) in 
-        let sign = List.map (rename_sig nametbl) args in
+        let sign = List.map (rename_sig tbl) args in
+        (*Printf.printf "%s" (Pretty.string_of_id name);
+        List.iter (fun (iden, typ) -> Printf.printf " %s: %s" (Pretty.string_of_id iden) (Pretty.string_of_typ typ)) sign;
+        Printf.printf "\n";*)
         {node with v = Func(name, sign, rename_type nametbl ret, pass_block tbl body)}
         
 and pass_block nametbl body = List.map (pass_statement nametbl) body
@@ -107,12 +110,12 @@ and pass_statement nametbl node = match node.v with
     | OpAssign(lval, op, expr) -> {node with v = OpAssign(pass_expr nametbl lval, op, pass_expr nametbl expr)}
     | _ -> node
 and pass_decl nametbl node = match node with
-    | Var(name, lt, expropt, s) -> Var(pass_decl_lval nametbl name, rename_type nametbl lt, pass_expr_opt nametbl expropt, s)
+    | Var(name, lt, expropt, s) -> Var(pass_decl_lval nametbl name s, rename_type nametbl lt, pass_expr_opt nametbl expropt, s)
     | Type(name, t) -> Type(decl_rename_type nametbl name, rename_type nametbl t)
     | other -> other (* Type declarations are already analyzed by symtbl *)
-and pass_decl_lval nametbl node = match node.v with
+and pass_decl_lval nametbl node is_short_decl = match node.v with
     | `Blank -> node
-    | `V id -> {node with v = `V (decl_renamed nametbl id true)}
+    | `V id -> {node with v = `V (decl_renamed nametbl id true is_short_decl)}
     | _ -> node
 and pass_assn nametbl (lval, expr) = (pass_lval nametbl lval), (pass_expr nametbl expr)
 and pass_fallable_case nametbl = function
@@ -141,5 +144,5 @@ and pass_expr nametbl node = match node.v with
     | `Call(fn, lst) -> {node with v = `Call(fn, List.map (pass_expr nametbl) lst)}
     | `Op1(op, expr) -> {node with v = `Op1(op, pass_expr nametbl expr)}
     | `Op2(op, expr1, expr2) -> {node with v = `Op2(op, pass_expr nametbl expr1, pass_expr nametbl expr2)}
-    | `Cast(t, expr) -> {node with v = `Cast(t, pass_expr nametbl expr)}
+    | `Cast(t, expr) -> {node with v = `Cast(rename_type nametbl t, pass_expr nametbl expr)}
     

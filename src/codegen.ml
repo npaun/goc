@@ -22,7 +22,7 @@ let record_array_indexing_helper typ =
     in
     let record typ'' =
         if not (already_exists typ'') then (
-            Printf.printf "Registering array helper: type = %s\n" (Pretty.string_of_typ typ'');
+            (*Printf.printf "Registering array helper: type = %s\n" (Pretty.string_of_typ typ'');*)
             array_index_helpers := (typ'')::(!array_index_helpers)
         )
     in record typ
@@ -218,7 +218,7 @@ and gen_cap exprlst =
     )
 and gen_indexing id expr = match List.hd id._derived with
     | `TypeLit Array (n, typ) ->
-        Printf.printf "index array type: %s\n" (gen_type typ);
+        (*Printf.printf "index array type: %s\n" (gen_type typ);*)
         record_array_indexing_helper typ; 
         let id_s = gen_expr id in
         let exp_s = gen_expr expr in
@@ -322,7 +322,7 @@ let generate_array_indexing_helpers () =
         ^ "\telse {fprintf(stderr, \"Out of Bounds\\n\"); exit(-1);}\n"
         ^ "}\n\n"
     in
-    Printf.printf "array_index_helpers size = %d\n" (List.length !array_index_helpers);
+    (*Printf.printf "array_index_helpers size = %d\n" (List.length !array_index_helpers);*)
     List.fold_right gen_arr_func !array_index_helpers header
     
 let gen_prim_init () =

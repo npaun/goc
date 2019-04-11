@@ -209,7 +209,7 @@ and add_struct_entry fields =
   match Hashtbl.find_opt struct_map struct_string with
   | Some s -> ()
   | None -> 
-      Printf.printf "%s - > %s\n" struct_string struct_name; 
+      (*Printf.printf "%s - > %s\n" struct_string struct_name; *)
       struct_decls := !struct_decls@gen_struct_fns struct_string struct_name;
       Hashtbl.add struct_map struct_string struct_name;
   
@@ -241,7 +241,7 @@ and add_arr_entry size typ =
   match Hashtbl.find_opt arr_map struct_string with 
   | Some s -> ()
   | None -> 
-    Printf.printf "%s - > %s\n" struct_string struct_name; 
+    (*Printf.printf "%s - > %s\n" struct_string struct_name; *)
     struct_decls := !struct_decls@gen_arr_fns struct_string struct_name;
     Hashtbl.replace arr_map struct_string struct_name
 and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
@@ -249,7 +249,7 @@ and add_slice_entry typ =
   let typ_s = typ_string typ in
   if not (List.exists (fun t -> String.equal t typ_s) !slice_set) then (
     slice_set := !slice_set@[typ_s];
-    Printf.printf "generating slice struct for type %s\n" typ_s;
+    (*Printf.printf "generating slice struct for type %s\n" typ_s;*)
     struct_decls := !struct_decls@gen_slice_fns typ_s
   )
 
