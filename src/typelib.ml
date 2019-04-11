@@ -342,8 +342,8 @@ let assert_same_if_user_defined symt ctxstring (e1, t1) (e2, t2) =
 	let match_error () =
 		sprintf "In %s, type of %s does not match type %s, perphaps it was shadowed? %s\n" 
 		ctxstring
-        (type_name t2)
-        (type_name t1)
+        (string_of_typesig [t2])
+        (string_of_typesig [t1])
 		(err_loc e1)
 	in 
     let id1 = find_ident_lval e1 in
