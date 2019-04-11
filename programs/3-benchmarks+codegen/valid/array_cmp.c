@@ -83,7 +83,10 @@ typedef struct {
 	int* __contents ;
 } __golite_builtin__slice_int;
 
-void __golite_builtin__slice_int_init(int* x) {
+void __golite_builtin__slice_int_init(__golite_builtin__slice_int* x) {
+	x->__size = 0;
+	x->__capacity = 0;
+	x->__contents = NULL;
 }
 
 typedef struct {
@@ -92,7 +95,10 @@ typedef struct {
 	__golite__struct_1* __contents ;
 } __golite_builtin__slice___golite__struct_1;
 
-void __golite_builtin__slice___golite__struct_1_init(__golite__struct_1* x) {
+void __golite_builtin__slice___golite__struct_1_init(__golite_builtin__slice___golite__struct_1* x) {
+	x->__size = 0;
+	x->__capacity = 0;
+	x->__contents = NULL;
 }
 
 

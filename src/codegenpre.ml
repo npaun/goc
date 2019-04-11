@@ -138,8 +138,10 @@ let gen_array_init struct_string struct_name =
   (Printf.sprintf "\t\t%s(&x->data[i]);\n" (get_init_string typ)) ^ "\t}\n}\n"
 
 let gen_slice_init typ_s = 
-  (Printf.sprintf "void __golite_builtin__slice_%s_init(%s* x) {\n" typ_s typ_s) ^
-  (* TODO *)
+  (Printf.sprintf "void __golite_builtin__slice_%s_init(__golite_builtin__slice_%s* x) {\n" typ_s typ_s) ^
+  "\tx->__size = 0;\n" ^
+  "\tx->__capacity = 0;\n" ^
+  "\tx->__contents = NULL;\n" ^
   "}\n\n"
 
 
