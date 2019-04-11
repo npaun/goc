@@ -19,6 +19,7 @@ type symbol = {
     mutable kind : symbolkind;
     mutable typ  : gotype list;
     mutable depth: int;
+    mutable mangled: string option;
     }
     
 (* hashtbl(name, sym) * parent (optional) * children * depth *)
@@ -102,7 +103,7 @@ let gen_stmt_opt stmt_node_opt stmt = match stmt_node_opt with
 
 (* string -> symbolkind -> gotype list -> astnode -> int -> symbol *)    
 let make_symbol n k t d = {
-    name = n; kind = k; typ = t; depth = d
+    name = n; kind = k; typ = t; depth = d; mangled = None
 }
 
 (* ref symtbl -> symtbl *)

@@ -80,7 +80,6 @@ and pass_toplevel nametbl node = match node.v with
         List.iter (fun (iden, typ) -> Printf.printf " %s: %s" (Pretty.string_of_id iden) (Pretty.string_of_typ typ)) sign;
         Printf.printf "\n";*)
         {node with v = Func(name, sign, rename_type nametbl ret, pass_block tbl body)}
-        
 and pass_block nametbl body = List.map (pass_statement nametbl) body
 and pass_inner_stmt nametbl node = 
 	(* Sorry for the weird-ass function *)

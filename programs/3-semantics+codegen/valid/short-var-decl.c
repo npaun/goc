@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+typedef char* string;
+
 char* str_add(char* p, char* q) {
 	int len = strlen(p) + strlen(q);
 	char* res = (char*)malloc(len);
@@ -11,22 +13,22 @@ char* str_add(char* p, char* q) {
 }
 
 void int_init(int* x) { *x = 0; }
-void float_init(float* x) { *x = 0; }
+void double_init(double* x) { *x = 0; }
 void char_init(char* c) { *c = 0; }
 void string_init(char** s) { *s = ""; }
 
 void __golite__main() {
-	int a = 5;
-	int b = 6;
-	int c = 7;
-	printf("%d\n",a);
-	printf("%d\n",b);
-	printf("%d\n",c);
-	int a = 8;
-	int c = 9;
-	int d = 10;
-	printf("%d\n",a);
-	printf("%d\n",c);
+	int __golite__var_a_1 = 5;
+	int __golite__var_b_2 = 6;
+	int __golite__var_c_3 = 7;
+	printf("%d\n",__golite__var_a_1);
+	printf("%d\n",__golite__var_b_2);
+	printf("%d\n",__golite__var_c_3);
+	int __golite__var_a_4 = 8;
+	int __golite__var_c_5 = 9;
+	int __golite__var_d_6 = 10;
+	printf("%d\n",__golite__var_a_4);
+	printf("%d\n",__golite__var_c_5);
 }
 
 int main() {

@@ -29,19 +29,19 @@ let build_symtbl print ast = Symtbl.init_tbl print ast
 
 let do_typecheck lexbuf = 
 	let ast = parse lexbuf in
-        let renamed_ast = (Codegenrename.pass_ast ast) in
-            let symt = Symtbl.init_tbl false renamed_ast in
+            let symt = Symtbl.init_tbl false ast in
+		let renamed_ast = Mangler.pass_ast !symt ast in
                 (* printf "%s\n\n\n" (Dumpast.dump_symtbl !symt); *)
                 Typecheck.pass_ast !symt renamed_ast
 
 
 let do_codegen lexbuf =
 	let ast = parse lexbuf in
-        let renamed_ast = (Codegenrename.pass_ast ast) in
-            let symt = Symtbl.init_tbl false renamed_ast in
-                let typed_ast = Typecheck.pass_ast !symt renamed_ast in
-                    let reduced_ast = Typereduce.pass_ast !symt typed_ast in
-                        Codegen.gen_c_code Sys.argv.(2) reduced_ast (* FIXME *)
+            let symt = Symtbl.init_tbl false ast in
+		let renamed_ast = Mangler.pass_ast !symt ast in
+                	let typed_ast = Typecheck.pass_ast !symt renamed_ast in
+                    		let reduced_ast = Typereduce.pass_ast !symt typed_ast in
+                        		Codegen.gen_c_code Sys.argv.(2) reduced_ast (* FIXME *)
 
 
 let main () = 
