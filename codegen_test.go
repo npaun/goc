@@ -176,11 +176,20 @@ func len_cap_test() {
     println(cap(slc))
 }
 
+func shadow_test(n int) float64 {
+    {
+        var n float64 = float64(n) * float64(n)
+        return n
+    }
+}
+
 func main() {
     println("Hello world!")
     struct_test();
     fortest();
     switchtest();
+
+    var ting = shadow_test(5)
 
     type a1 [][2]int
     type a2 [2][]int

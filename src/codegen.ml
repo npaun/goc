@@ -140,7 +140,7 @@ and gen_type typ = Codegenpre.typ_string typ
 and gen_stmt d stmt = match stmt.v with
   | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map gen_decl decllst) ^ ";\n"
   | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
-  | Block(block) -> gen_block (d+1) block
+  | Block(block) -> Pretty.crt_tab d true ^ gen_block (d) block
   | Assign(alist) -> gen_assignlist d alist ^ ";\n"
   | OpAssign(lvalue, op, expr) -> Pretty.crt_tab d true ^ gen_expr lvalue ^ Pretty.string_of_op_assign op ^ gen_expr expr ^ ";\n"
   | IncDec(expr, op) -> Pretty.crt_tab d true ^ gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--") ^ ";\n"
@@ -341,14 +341,15 @@ let gen_str_add () =
   
 (* TODO - plug the generation of indexing helpers and improve them *)    
 let gen_c_code filename ast =
-  Codegenpre.codepre_ast ast;
-  let ast_code = gen_ast ast in
-  let arr_helps = generate_array_indexing_helpers () in
-  let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
-  let prim_inits = gen_prim_init () in
-  let str_add = gen_str_add () in
-  let code = 
-    gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
-  let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
-  Printf.fprintf oc "%s" code; close_out oc
+    let ast' = ast (*Codegenrename.pass_ast ast*) in
+    Codegenpre.codepre_ast ast';
+    let ast_code = gen_ast ast' in
+    let arr_helps = generate_array_indexing_helpers () in
+    let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
+    let prim_inits = gen_prim_init () in
+    let str_add = gen_str_add () in
+    let code = 
+        gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
+    let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
+    Printf.fprintf oc "%s" code; close_out oc
 
