@@ -81,7 +81,7 @@ and gen_decl decl =
     | `RUNE -> "char_init"
     | `BOOL
     | `INT -> "int_init"
-    | `FLOAT64 -> "float_init"
+    | `FLOAT64 -> "double_init"
     | `STRING -> "string_init"
     | _ -> (gen_type typ) ^ "_init"
   in
@@ -228,7 +228,7 @@ and gen_indexing id expr = match List.hd id._derived with
       let slice_name = gen_type (List.hd id._derived) in
       let id_s = gen_expr id in
       let exp_s = gen_expr expr in
-      Printf.sprintf "(%s_index(&%s,%s)[%s])" slice_name id_s exp_s exp_s 
+      Printf.sprintf "(%s_index(%s,%s)[%s])" slice_name id_s exp_s exp_s 
 and bounds_check s exp n =
   let exp_s = gen_expr exp in
   let (line,ch) = s in
@@ -327,7 +327,7 @@ let generate_array_indexing_helpers () =
     
 let gen_prim_init () =
   "void int_init(int* x) { *x = 0; }\n" ^
-  "void float_init(float* x) { *x = 0; }\n" ^
+  "void double_init(double* x) { *x = 0; }\n" ^
   "void char_init(char* c) { *c = 0; }\n" ^ 
   "void string_init(char** s) { *s = \"\"; }\n\n"
 

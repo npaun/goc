@@ -16,7 +16,7 @@ and pass_toplevel this_symt node = function
 	| Func(name,args,ret,body) -> down (fun child_symt -> 
 		{node with v = Func(
 			name,
-			args,
+			(List.map (fun (name,typ) -> name,(resolve_reduce this_symt [typ] |> List.hd)) args),
 			(resolve_reduce this_symt [ret] |> List.hd),
 			pass_block child_symt body)})
 and pass_block this_symt body = traverse pass_statement this_symt body

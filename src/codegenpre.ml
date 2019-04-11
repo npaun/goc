@@ -159,8 +159,8 @@ let gen_slice_app typ_s =
 
 let gen_slice_index typ_s = 
   let slice_name = "__golite_builtin__slice_" ^ typ_s in
-  (Printf.sprintf "%s* %s_index(%s* s, int i) {\n" typ_s slice_name slice_name) ^
-  "\tif(i >= 0 && i < s->__size) return s->__contents;\n" ^
+  (Printf.sprintf "%s* %s_index(%s s, int i) {\n" typ_s slice_name slice_name) ^
+  "\tif(i >= 0 && i < s.__size) return s.__contents;\n" ^
   "\telse { fprintf(stderr, \"Out of Bounds index on slice\\n\"); exit(-1); }\n}\n\n" 
 
 let gen_slice_len typ_s = 
@@ -184,7 +184,7 @@ let rec typ_string typ = match typ with
   | `BOOL
   | `INT          -> "int"
   | `RUNE         -> "char"
-  | `FLOAT64      -> "float"
+  | `FLOAT64      -> "double"
   | `STRING       -> (*"char*"*) "string"
   | `Type(id)     -> id (* TODO: we want to print the resolved type here *)
   | `AUTO         -> "" (* this shouldn't be reached, probably want to throw an error *)

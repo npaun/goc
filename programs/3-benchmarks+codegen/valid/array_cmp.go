@@ -24,4 +24,8 @@ func main() {
 	var s2 []person
 	s2 = append(s2, parr1[2])
 	println("Indexing person slice: ", s2[0].name)
+
+	var f float64
+	f = 21.5
+	println(f)
 }
