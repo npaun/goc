@@ -159,6 +159,16 @@ func index_test() {
     z := j[4 + 3]
 }
 
+func len_cap_test() {
+    var arr [5]string
+    println(len(arr))
+    println(cap(arr))
+    var slc []string
+    slc = append(slc, "foo")
+    println(len(slc))
+    println(cap(slc))
+}
+
 func main() {
     println("Hello world!")
     struct_test();

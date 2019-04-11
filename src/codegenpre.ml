@@ -163,17 +163,29 @@ let gen_slice_index typ_s =
   "\tif(i >= 0 && i < s->__size) return s->__contents;\n" ^
   "\telse { fprintf(stderr, \"Out of Bounds index on slice\\n\"); exit(-1); }\n}\n\n" 
 
+let gen_slice_len typ_s = 
+    let slice_name = "__golite_builtin__slice_" ^ typ_s in
+    (Printf.sprintf "int %s_len(%s s) {\n" slice_name slice_name) ^
+    "\treturn s.__size;\n" ^
+    "}\n\n" 
+    
+let gen_slice_cap typ_s = 
+    let slice_name = "__golite_builtin__slice_" ^ typ_s in
+    (Printf.sprintf "int %s_cap(%s s) {\n" slice_name slice_name) ^
+    "\treturn s.__capacity;\n" ^
+    "}\n\n" 
+
 
 let gen_struct_fns struct_string struct_name = [gen_struct struct_string struct_name; gen_struct_cmp struct_string struct_name; gen_struct_init struct_string struct_name]
 let gen_arr_fns struct_string struct_name = [gen_array struct_string struct_name; gen_arr_cmp struct_string struct_name; gen_array_init struct_string struct_name]
-let gen_slice_fns typ_s = [gen_slice typ_s; gen_slice_init typ_s; gen_slice_app typ_s; gen_slice_index typ_s]
+let gen_slice_fns typ_s = [gen_slice typ_s; gen_slice_init typ_s; gen_slice_app typ_s; gen_slice_index typ_s; gen_slice_len typ_s; gen_slice_cap typ_s]
 
 let rec typ_string typ = match typ with
   | `BOOL
   | `INT          -> "int"
   | `RUNE         -> "char"
   | `FLOAT64      -> "float"
-  | `STRING       -> "char*"
+  | `STRING       -> (*"char*"*) "string"
   | `Type(id)     -> id (* TODO: we want to print the resolved type here *)
   | `AUTO         -> "" (* this shouldn't be reached, probably want to throw an error *)
   | `VOID         -> "void"
