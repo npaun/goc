@@ -157,10 +157,16 @@ let gen_slice_app typ_s =
   "\ts.__contents[s.__size++] = el;\n" ^
   "\treturn s;\n}\n\n"
 
+let gen_slice_index typ_s = 
+  let slice_name = "__golite_builtin__slice_" ^ typ_s in
+  (Printf.sprintf "%s* %s_index(%s* s, int i) {\n" typ_s slice_name slice_name) ^
+  "\tif(i >= 0 && i < s->__size) return s->__contents;\n" ^
+  "\telse { fprintf(stderr, \"Out of Bounds index on slice\\n\"); exit(-1); }\n}\n\n" 
+
 
 let gen_struct_fns struct_string struct_name = [gen_struct struct_string struct_name; gen_struct_cmp struct_string struct_name; gen_struct_init struct_string struct_name]
 let gen_arr_fns struct_string struct_name = [gen_array struct_string struct_name; gen_arr_cmp struct_string struct_name; gen_array_init struct_string struct_name]
-let gen_slice_fns typ_s = [gen_slice typ_s; gen_slice_init typ_s; gen_slice_app typ_s]
+let gen_slice_fns typ_s = [gen_slice typ_s; gen_slice_init typ_s; gen_slice_app typ_s; gen_slice_index typ_s]
 
 let rec typ_string typ = match typ with
   | `BOOL

@@ -19,7 +19,9 @@ func main() {
 
 	var s []int
 	s = append(s, 1)
+	println("Indexing slice: ", s[0])
 
 	var s2 []person
 	s2 = append(s2, parr1[2])
+	println("Indexing person slice: ", s2[0].name)
 }

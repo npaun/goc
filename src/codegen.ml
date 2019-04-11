@@ -204,10 +204,10 @@ and gen_indexing id expr = match List.hd id._derived with
         array_index_helper_funname (gen_type typ) (*n*)
         ^ Printf.sprintf "(%s.data, %s, %d)[%s]" id_s exp_s n exp_s
     | `TypeLit Slice (typ) ->
-      let typ_s = gen_type typ in
+      let slice_name = gen_type (List.hd id._derived) in
       let id_s = gen_expr id in
       let exp_s = gen_expr expr in
-      Printf.sprintf "((%s)__golite_builtin__slice_index(&%s,%s)[%s])" typ_s id_s exp_s exp_s 
+      Printf.sprintf "(%s_index(&%s,%s)[%s])" slice_name id_s exp_s exp_s 
 and bounds_check s exp n =
   let exp_s = gen_expr exp in
   let (line,ch) = s in
