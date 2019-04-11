@@ -4,6 +4,8 @@
 //~8
 //~9
 
+package main
+
 func main() {
     a, b, c := 5, 6, 7
 
@@ -12,7 +14,7 @@ func main() {
     println(c)
 
     // redeclaration of vars in the same scope
-    a, c := 8, 9
+    a, c, d := 8, 9, 10
     println(a)
     println(c)
 }

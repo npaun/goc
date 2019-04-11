@@ -69,8 +69,8 @@ __golite_builtin__slice_int __golite_builtin__slice_int_append(__golite_builtin_
 	return s;
 }
 
-int* __golite_builtin__slice_int_index(__golite_builtin__slice_int* s, int i) {
-	if(i >= 0 && i < s->__size) return s->__contents;
+int* __golite_builtin__slice_int_index(__golite_builtin__slice_int s, int i) {
+	if(i >= 0 && i < s.__size) return s.__contents;
 	else { fprintf(stderr, "Out of Bounds index on slice\n"); exit(-1); }
 }
 
@@ -98,8 +98,8 @@ __golite_builtin__slice___golite__struct_1 __golite_builtin__slice___golite__str
 	return s;
 }
 
-__golite__struct_1* __golite_builtin__slice___golite__struct_1_index(__golite_builtin__slice___golite__struct_1* s, int i) {
-	if(i >= 0 && i < s->__size) return s->__contents;
+__golite__struct_1* __golite_builtin__slice___golite__struct_1_index(__golite_builtin__slice___golite__struct_1 s, int i) {
+	if(i >= 0 && i < s.__size) return s.__contents;
 	else { fprintf(stderr, "Out of Bounds index on slice\n"); exit(-1); }
 }
 
@@ -138,12 +138,12 @@ __golite__arr___golite__struct_1_20_init(&parr2);
 __golite_builtin__slice_int_init(&s);
 	__golite_builtin__slice_int __golite__tmp_4 = __golite_builtin__slice_int_append(&s, 1);
 	s = __golite__tmp_4;
-	printf("%s %d\n","Indexing slice: ",(__golite_builtin__slice_int_index(&s,0)[0]));
+	printf("%s %d\n","Indexing slice: ",(__golite_builtin__slice_int_index(s,0)[0]));
 	__golite_builtin__slice___golite__struct_1 s2;
 __golite_builtin__slice___golite__struct_1_init(&s2);
 	__golite_builtin__slice___golite__struct_1 __golite__tmp_2 = __golite_builtin__slice___golite__struct_1_append(&s2,  __arr_index___golite__struct_1(parr1.data, 2, 20)[2]);
 	s2 = __golite__tmp_2;
-	printf("%s %s\n","Indexing person slice: ",(__golite_builtin__slice___golite__struct_1_index(&s2,0)[0]).name);
+	printf("%s %s\n","Indexing person slice: ",(__golite_builtin__slice___golite__struct_1_index(s2,0)[0]).name);
 }
 
 int main() {

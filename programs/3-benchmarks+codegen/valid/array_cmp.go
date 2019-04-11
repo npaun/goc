@@ -5,6 +5,14 @@ type person struct {
 	age int
 }
 
+
+func arr() [10]int {
+	var x [10]int
+	x[1] = 5
+
+	return x
+}
+
 func main() {
 	var x,y int
 	x,_,y = 10, 20, 30

@@ -4,6 +4,8 @@
 //~10
 //~69
 
+package main 
+
 var global int = 10
 
 func sideEffect() int {

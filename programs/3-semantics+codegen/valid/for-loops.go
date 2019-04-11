@@ -9,6 +9,8 @@
 //~8
 //~9
 
+package main
+
 func main() {
     // tests the init-statment (short var decl here)
     for i, a := 0, 0; i < 10; i++ {

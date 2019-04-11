@@ -10,6 +10,13 @@ type person struct {
     friend_names [100]string
 }
 
+func arr() [10]int {
+    var x [10]int
+    x[1] = 20
+
+    return x
+}
+
 func struct_test() {
     type s1 struct {
         i int
@@ -172,4 +179,6 @@ func main() {
         f2 a2
         s []float64
     }
+
+    arr()[2] = 10
 }

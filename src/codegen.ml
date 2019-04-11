@@ -207,7 +207,7 @@ and gen_indexing id expr = match List.hd id._derived with
       let slice_name = gen_type (List.hd id._derived) in
       let id_s = gen_expr id in
       let exp_s = gen_expr expr in
-      Printf.sprintf "(%s_index(&%s,%s)[%s])" slice_name id_s exp_s exp_s 
+      Printf.sprintf "(%s_index(%s,%s)[%s])" slice_name id_s exp_s exp_s 
 and bounds_check s exp n =
   let exp_s = gen_expr exp in
   let (line,ch) = s in
