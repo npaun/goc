@@ -59,7 +59,7 @@ let builtin_header =
   "\treturn s;\n}\n\n"
 
 
-let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n"  
+let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\ntypedef char* string;\n\n"  
 
 let rec gen_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
@@ -164,16 +164,19 @@ and gen_expr expr = match expr.v with
         | `STRING, `ADD -> Printf.sprintf "str_add(%s,%s)" (gen_expr exp) (gen_expr exp2)
         | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   )
-  | `Call(exp, explist)  -> 
+  | `Call(exp, explist)  -> (
     let func_name = gen_expr exp in
-    if String.equal "append" func_name then (
+    match func_name with
+    | "append" -> (
       let hd = List.hd explist in
       let id = gen_expr hd in
       let slice_name = gen_type (List.hd hd._derived) in
       let el = gen_expr (List.nth explist 1) in
-      Printf.sprintf "%s_append(&%s, %s)" slice_name id el
-    )
-    else "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
+      Printf.sprintf "%s_append(&%s, %s)" slice_name id el)
+    | "len" -> gen_len explist
+    | "cap" -> gen_cap explist
+    | _ -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
+  )
   | `Cast(typ, exp)      ->
       (* TODO make this smarter:
        * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
@@ -195,6 +198,24 @@ and gen_expr expr = match expr.v with
       (*gen_expr id ^ "[" ^ gen_expr exp ^ "]"*) (* TODO indexing for slices cant use [] *)
         gen_indexing id exp
   | `V(id)               -> id
+and gen_len exprlst =
+    match (List.hd (List.hd exprlst)._derived) with
+    | `TypeLit Array (n, _) -> string_of_int n
+    | _ -> ( (* the only other option is slice *)
+      let hd = List.hd exprlst in
+      let id = gen_expr hd in
+      let slice_name = gen_type (List.hd hd._derived) in
+      Printf.sprintf "%s_len(%s)" slice_name id
+    )
+and gen_cap exprlst =
+    match (List.hd (List.hd exprlst)._derived) with
+    | `TypeLit Array (n, _) -> string_of_int n
+    | _ -> ( (* the only other option is slice *)
+      let hd = List.hd exprlst in
+      let id = gen_expr hd in
+      let slice_name = gen_type (List.hd hd._derived) in
+      Printf.sprintf "%s_cap(%s)" slice_name id
+    )
 and gen_indexing id expr = match List.hd id._derived with
     | `TypeLit Array (n, typ) ->
         Printf.printf "index array type: %s\n" (gen_type typ);
@@ -254,7 +275,6 @@ and gen_switch_stmt d stmtopt expropt fclist =
         {v = oper; _debug = "hack :)"; _start = (-1,-1); _end = (-1,-1); _derived = [`BOOL]} 
     in
     let gen_switch_cond expropt expr =
-        let expr' = expr in
         match expropt with
         | None -> gen_expr expr
         | Some e -> gen_expr (make_annot (`Op2(`EQ, e, expr))) (* silly hack :) *)

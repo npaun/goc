@@ -113,6 +113,13 @@ __golite__struct_1*  __arr_index___golite__struct_1(__golite__struct_1* arr, int
 }
 
 ;
+char* __golite__f(int __golite__x) {
+	int z;
+int_init(&z);
+	int y = x;
+	return "wow";
+}
+
 void __golite__main() {
 	int x;
 int_init(&x);
