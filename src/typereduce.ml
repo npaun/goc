@@ -9,7 +9,7 @@ open Printf
 let rec pass_ast symt = function
 	| Program (pkg, tops) ->
 		let p' = Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops) in
-		(*printf "%s\n" (Dumpast.dump p');*)
+		(* printf "%s\n" (Dumpast.dump p'); *)
 		p'
 and pass_toplevel this_symt node = function
 	| Global(decl) -> same (fun () -> {node with v = Global(pass_decl this_symt decl)})

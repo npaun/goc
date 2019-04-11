@@ -20,18 +20,18 @@ func unpack(key int) [9]int {
 func trie_insert(t []entry, key int, data string) []entry {
 	cur := 0
 	{
-		k2 := unpack(key)
-		for i := 0; i < len(k2); i++ {
-			k3 := k2[i]
+		key := unpack(key)
+		for i := 0; i < len(key); i++ {
+			key := key[i]
 			// See if we need a new entry
-			if t[cur].chld[k3] == 0 {
+			if t[cur].chld[key] == 0 {
 				var nent entry
 				slot := len(t)
 				t = append(t,nent)
-				t[cur].chld[k3] = slot
+				t[cur].chld[key] = slot
 			}
 
-			cur = t[cur].chld[k3]
+			cur = t[cur].chld[key]
 		}
 
 		// Current should now be an empty slot
@@ -44,13 +44,13 @@ func trie_insert(t []entry, key int, data string) []entry {
 func trie_search(t []entry, key int) string {
 	cur := 0
 	{
-		k2 := unpack(key)
-		for i := 0; i < len(k2); i++ {
-			k3 := k2[i]
-			if t[cur].chld[k3] == 0 {
+		key := unpack(key)
+		for i := 0; i < len(key); i++ {
+			key := key[i]
+			if t[cur].chld[key] == 0 {
 				return "NOTFOUND"
 			}
-			cur = t[cur].chld[k3]
+			cur = t[cur].chld[key]
 		}
 		return t[cur].data
 	}
