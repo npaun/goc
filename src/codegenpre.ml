@@ -144,10 +144,23 @@ let gen_slice_init typ_s =
   "\tx->__contents = NULL;\n" ^
   "}\n\n"
 
+let gen_slice_app typ_s =
+  let slice_name = "__golite_builtin__slice_" ^ typ_s in
+  (Printf.sprintf "%s %s_append(%s* _s, %s el) {\n" slice_name slice_name slice_name typ_s) ^
+  (Printf.sprintf "\t%s s = *_s;\n" slice_name) ^ 
+  "\tif(s.__size == s.__capacity) {\n" ^
+  (Printf.sprintf "\t\t%s* new_arr = malloc(s.__size * sizeof(%s));\n" typ_s typ_s) ^
+  (Printf.sprintf "\t\tmemcpy(new_arr, s.__contents, s.__size * sizeof(%s));\n" typ_s) ^
+  "\t\ts.__capacity *= 2;\n" ^
+  "\t\ts.__contents = new_arr;\n" ^
+  "\t}\n" ^
+  "\ts.__contents[s.__size++] = el;\n" ^
+  "\treturn s;\n}\n\n"
+
 
 let gen_struct_fns struct_string struct_name = [gen_struct struct_string struct_name; gen_struct_cmp struct_string struct_name; gen_struct_init struct_string struct_name]
 let gen_arr_fns struct_string struct_name = [gen_array struct_string struct_name; gen_arr_cmp struct_string struct_name; gen_array_init struct_string struct_name]
-let gen_slice_fns typ_s = [gen_slice typ_s; gen_slice_init typ_s]
+let gen_slice_fns typ_s = [gen_slice typ_s; gen_slice_init typ_s; gen_slice_app typ_s]
 
 let rec typ_string typ = match typ with
   | `BOOL

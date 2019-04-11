@@ -7,7 +7,7 @@ type person struct {
 
 func main() {
 	var x,y int
-	x,y = 10, 20
+	x,_,y = 10, 20, 30
 	var parr1, parr2 [20]person
 	
 	println("Before any changes:")
@@ -21,4 +21,5 @@ func main() {
 	s = append(s, 1)
 
 	var s2 []person
+	s2 = append(s2, parr1[2])
 }

@@ -59,7 +59,7 @@ let builtin_header =
   "\treturn s;\n}\n\n"
 
 
-let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n" ^ slice_header  
+let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\n"  
 
 let rec gen_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
@@ -167,10 +167,11 @@ and gen_expr expr = match expr.v with
   | `Call(exp, explist)  -> 
     let func_name = gen_expr exp in
     if String.equal "append" func_name then (
-      let slice = gen_expr (List.hd explist) in
+      let hd = List.hd explist in
+      let id = gen_expr hd in
+      let slice_name = gen_type (List.hd hd._derived) in
       let el = gen_expr (List.nth explist 1) in
-      let tmp = get_tmp () in
-      Printf.sprintf "__golite__append(%s, %s)" slice el (* TODO: update this once slice gen is done *)
+      Printf.sprintf "%s_append(&%s, %s)" slice_name id el
     )
     else "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
   | `Cast(typ, exp)      ->
@@ -318,7 +319,7 @@ let gen_c_code filename ast =
   let prim_inits = gen_prim_init () in
   let str_add = gen_str_add () in
   let code = 
-    gen_file_header ^ builtin_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
+    gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
   let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
   Printf.fprintf oc "%s" code; close_out oc
 
