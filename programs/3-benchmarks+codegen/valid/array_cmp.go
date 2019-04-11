@@ -6,6 +6,8 @@ type person struct {
 }
 
 func main() {
+	var x,y int
+	x,y = 10, 20
 	var parr1, parr2 [20]person
 	
 	println("Before any changes:")

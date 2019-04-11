@@ -160,7 +160,7 @@ let rec typ_string typ = match typ with
   | `VOID         -> "void"
   | `TypeLit(t)   -> typelit_string t
 and typelit_string typlit = match typlit with
-  | Slice(typ)    -> "__golite_builtin__slice"
+  | Slice(typ)    -> "__golite_builtin__slice_" ^ (typ_string typ)
   | Array(i, typ) -> (match Hashtbl.find_opt arr_map (hash_array i typ) with
     | Some s -> s
     | None -> raise (CodePreErr (Printf.sprintf "Unable to find entry in arr_map: %s" (hash_array i typ)))

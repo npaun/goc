@@ -87,10 +87,7 @@ and gen_decl decl =
   in
   let decl_end expr_opt typ id = match expr_opt with
     | Some expr -> " = " ^ gen_expr expr
-    | None -> (match typ with
-      | `TypeLit(Slice(typ')) -> ";\n" ^ Printf.sprintf "__golite_builtin__slice_init(&%s, sizeof(%s))" id (gen_type typ')
-      | _ -> ";\n" ^ gen_init typ ^ Printf.sprintf "(&%s)" id
-    )
+    | None -> ";\n" ^ gen_init typ ^ Printf.sprintf "(&%s)" id
   in
   match decl with
     | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v with

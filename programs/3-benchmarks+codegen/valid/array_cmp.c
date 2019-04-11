@@ -112,6 +112,14 @@ __golite__struct_1*  __arr_index___golite__struct_1(__golite__struct_1* arr, int
 
 ;
 void __golite__main() {
+	int x;
+int_init(&x);
+	int y;
+int_init(&y);
+	int __golite_tmp__7 = 10;
+	int __golite_tmp__8 = 20;
+	x = __golite_tmp__7;
+	y = __golite_tmp__8;
 	__golite__arr___golite__struct_1_20 parr1;
 __golite__arr___golite__struct_1_20_init(&parr1);
 	__golite__arr___golite__struct_1_20 parr2;
@@ -122,12 +130,12 @@ __golite__arr___golite__struct_1_20_init(&parr2);
 	 __arr_index___golite__struct_1(parr1.data, 2, 20)[2].name = __golite_tmp__5;
 	printf("%s\n","After changes:");
 	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1,&parr2) ? "true" : "false");
-	__golite_builtin__slice s;
-__golite_builtin__slice_init(&s, sizeof(int));
-	__golite_builtin__slice __golite_tmp__3 = __golite__append(s, 1);
+	__golite_builtin__slice_int s;
+__golite_builtin__slice_int_init(&s);
+	__golite_builtin__slice_int __golite_tmp__3 = __golite__append(s, 1);
 	s = __golite_tmp__2;
-	__golite_builtin__slice s2;
-__golite_builtin__slice_init(&s2, sizeof(__golite__struct_1));
+	__golite_builtin__slice___golite__struct_1 s2;
+__golite_builtin__slice___golite__struct_1_init(&s2);
 }
 
 int main() {
