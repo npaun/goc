@@ -81,7 +81,7 @@ and gen_decl decl =
     | `RUNE -> "char_init"
     | `BOOL
     | `INT -> "int_init"
-    | `FLOAT64 -> "float_init"
+    | `FLOAT64 -> "double_init"
     | `STRING -> "string_init"
     | _ -> (gen_type typ) ^ "_init"
   in
@@ -307,7 +307,7 @@ let generate_array_indexing_helpers () =
     
 let gen_prim_init () =
   "void int_init(int* x) { *x = 0; }\n" ^
-  "void float_init(float* x) { *x = 0; }\n" ^
+  "void double_init(double* x) { *x = 0; }\n" ^
   "void char_init(char* c) { *c = 0; }\n" ^ 
   "void string_init(char** s) { *s = \"\"; }\n\n"
 

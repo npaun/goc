@@ -172,7 +172,7 @@ let rec typ_string typ = match typ with
   | `BOOL
   | `INT          -> "int"
   | `RUNE         -> "char"
-  | `FLOAT64      -> "float"
+  | `FLOAT64      -> "double"
   | `STRING       -> "char*"
   | `Type(id)     -> id (* TODO: we want to print the resolved type here *)
   | `AUTO         -> "" (* this shouldn't be reached, probably want to throw an error *)
