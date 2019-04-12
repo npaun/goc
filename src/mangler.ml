@@ -179,10 +179,12 @@ and pass_expr symt node = match node.v with
 	| `Selector(obj, field) ->
 		let obj' = pass_expr symt obj in
 			ignore_node symt {node with v = `Selector(obj', field)}
-	| `Call(fn,args) ->
-		(* TODO: we will not provide you with the signature of fn, hope that is ok *)
+	| `Call({v = `V func} as fn,args) ->
 		let args' = List.map (pass_expr symt) args in
-		ignore_node symt {node with v = `Call(fn, args')}
+			if kindof_symbol symt func = TypeK
+				then {node with v = `Call({fn with v = `V (nameof symt func)}, args')} (* Fake cast *)	
+				else {node with v = `Call(fn, args')}
+	| `Call(_,_) -> node (* This call is bogus, typecheck's gonna get it *)
 	| `Op1(op,a) ->
 		let a' = pass_expr symt a in
 		ignore_node symt {node with v = `Op1(op,a')}
