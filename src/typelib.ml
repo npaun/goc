@@ -104,7 +104,7 @@ let same (fn:unit -> 'n annotated) (nodes: 'n annotated list) (child:symtbl opti
 (** down: Recurse into a new scope, and remove it from the list of univsited scopes **)
 let down (fn:symtbl -> 'n annotated) (nodes: 'n annotated list) (child:symtbl option) (children:symtbl list):('n annotated list * symtbl list) = 
 	match child with
-	| Some c -> (fn c)::nodes, children
+	| Some c -> (* printf "%s\n" (Dumpast.dump_symtbl c); *) (fn c)::nodes, children
 	| None -> failwith "Probable bug in Symtbl or Typecheck: Attempt to recurse when no more blocks left in current scope"
 
 (** resolve_fn: A type of function which can simplify a typesig according to an inference rule. **)
@@ -307,90 +307,6 @@ let assert_is_slice symt ctxstring typ node =
     | `TypeLit Slice _ -> ()
     | _ -> raise (TypeError (match_error ()))
     
-(*
- * This abomination attemps to assert that two user-defined types are indeed the same, in case one of
- * them is a shadowed version of the other
- * 
- * I left a bunch of commented printfs for "debugging" purposes (I hate that I can't break into code...)
- *)
-exception Good
-let assert_same_if_user_defined symt ctxstring (e1, t1) (e2, t2) =
-    let is_user_defined symt typ = 
-        match List.hd (resolve_basic symt [typ]) with
-        | `Type _ | `TypeLit (Struct _) | `TypeLit Slice (`Type _ ) | `TypeLit (Array (_, `Type _)) -> true
-        | _ -> false
-    in
-    let rec find_ident_expr e = match e.v with
-        | `V (var) -> var
-        | `Indexing(arr,idx) -> find_ident_expr arr
-        | `Selector(obj,field) -> find_ident_expr obj 
-        | `Call({v = `V "append"},[arr;_]) -> find_ident_expr arr
-        | `Call(func,_) -> find_ident_expr func
-        | _ -> raise Good
-    in
-    let rec find_ident_lval e = match e.v with
-        | `V var -> var
-        | `Indexing(arr,idx) -> find_ident_expr arr
-        | `Selector(obj,field) -> find_ident_expr obj 
-        | `Call(func,_) -> find_ident_expr func
-        | `Blank | _ -> raise Good
-    in
-    let type_name = function
-        | `Type id -> id
-        | _ -> ""
-    in
-	let match_error () =
-		sprintf "In %s, type of %s does not match type %s, perphaps it was shadowed? %s\n" 
-		ctxstring
-        (string_of_typesig [t2])
-        (string_of_typesig [t1])
-		(err_loc e1)
-	in 
-    let id1 = find_ident_lval e1 in
-    let id2 = find_ident_expr e2 in
-    (*Printf.printf "checking symbols %s and %s of types: %s and %s\n" id1 id2 (Pretty.string_of_typ t1) (Pretty.string_of_typ t2);*)
-    if (is_user_defined symt t1 && is_user_defined symt t2) && (type_name t1 = type_name t2) then (
-        match Symtbl.get_symbol symt id1 true, Symtbl.get_symbol symt id2 true with
-        | Some s1, Some s2 -> (
-            (*Symtbl.print_symbol s1 symt;
-            Symtbl.print_symbol s2 symt;*)
-            if s1.depth <> s2.depth then (
-                (*Printf.printf "symbols %s and %s don't have the same depth\n" id1 id2;*)
-                let cur_depth = Symtbl.get_depth symt in
-                (*Printf.printf "getting table for first symbol %s\n" s1.name;*)
-                let s1_tbl = Symtbl.get_table_of symt s1 in
-                (*Printf.printf "getting table for second symbol %s\n" s2.name;*)
-                let s2_tbl = Symtbl.get_table_of symt s2 in
-                if (Symtbl.symbol_exists s2_tbl (type_name t2) && Symtbl.symbol_exists s1_tbl (type_name t1))
-                    || (s1.depth > s2.depth && Symtbl.symbol_exists s1_tbl id1) 
-                    || (s2.depth > s1.depth && Symtbl.symbol_exists s1_tbl id1)
-                    then raise (TypeError (match_error()))
-            )
-            else (
-                (*
-                 * if one of the expressions is a struct selector, then both initial symbols will be in the same depth
-                 * To fix that, get their types and compare depths, if the struct isn't on the same depth, then for
-                 * sure the type was shadowed (right?)
-                 *)
-                let typ1 = List.hd (resolve_basic symt (typeof_symbol symt id1)) in
-                let typ2 = List.hd (resolve_basic symt (typeof_symbol symt id2)) in
-                match typ1, typ2 with
-                | `Type typ1', `Type typ2' -> ( 
-                    match Symtbl.get_symbol symt typ1' true, Symtbl.get_symbol symt typ2' true with
-                    | Some s1, Some s2 ->
-                        let s1_tbl = Symtbl.get_table_of symt s1 in
-                        (*Printf.printf "getting table for second symbol %s\n" s2.name;*)
-                        let s2_tbl = Symtbl.get_table_of symt s2 in
-                        if s2.depth <> s1.depth then raise (TypeError (match_error()))
-                    | _, _ -> ()    
-                )
-                | _, _ -> ()
-            )
-        )
-        | _, _ -> ()
-    ) 
-    
-    
 (** assert_kinds: Require that the type of some symbol belong to the appropriate kinds. You probably want to use one of the predefined 'kinds'**)
 
 let kind_callable = ("a callable value",[FuncK])
@@ -487,6 +403,7 @@ let default fn if_none = function
 
 
 let packify fn symt nodes =
+	(* printf "Attempt to packify: %s\n\n\n" (Dumpast.dump_symtbl symt); *)
 	List.map (fun n -> {v = n; _derived = []; _start = (-100,-100); _end = (-100,-100); _debug = "Packified"}) nodes
 	|> traverse fn symt
 	|> List.map (fun n -> n.v)

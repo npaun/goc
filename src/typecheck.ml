@@ -187,17 +187,15 @@ and pass_assn_inner symt (lval, expr) = match (lval.v, expr.v) with
         let expr' = pass_expr symt expr in
         Typerules.assert_not_void "assignment" symt (expr', typeof expr');
         assert_match resolve_basic symt "assignment" ("<lvalue>", typeof lval') (expr', typeof expr');
-        begin try
-            (* TODO ASIUD assert_same_if_user_defined symt "assignment" (lval', List.hd (typeof lval')) ((expr'), List.hd (typeof expr')); *)
             (lval', expr')
-        with
-        | Good -> (lval', expr')
-        | TypeError msg -> raise (TypeError msg)
-        end;
-    )
+    	)
     | _ -> failwith "non-lvalue expression on lhs of assignment"
+
 and pass_fallable_case ctx expected_t this_symt node = function
-    | (case, mode) -> same (fun () -> {node with v = ((packify (pass_case false ctx expected_t) this_symt [case] |> List.hd), mode)})
+| (case,mode) -> fun nodes -> fun c -> fun children -> (
+                let [node'],children' = pass_case false ctx expected_t this_symt {node with v=case} case [] c children in
+                        {node with v = (node'.v,mode)}::nodes, children'
+        )
 and pass_case is_if ctx expected_t this_symt node = function
     | Default(block) -> down (fun child_symt -> {node with v = Default(pass_block child_symt block)})
     | Case(pre,conds,block) -> 

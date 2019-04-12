@@ -162,7 +162,10 @@ and pass_decl symt = function
 		Type(nameM, defM)
 
 and pass_fallable_case this_symt node = function
-| (case,mode) -> same (fun () -> {node with v = (packify pass_case this_symt [case] |> List.hd, mode)}) (* It is best not to ask *)
+| (case,mode) -> fun nodes -> fun c -> fun children -> (
+		let [node'],children' = pass_case this_symt {node with v=case} case [] c children in
+			{node with v = (node'.v,mode)}::nodes, children'
+	)	
 and pass_case this_symt node = function
 | Default(block) -> down (fun child_symt -> {node with v = Default(pass_block child_symt block)})
 | Case(pre,conds,block) -> down (fun child_symt ->
