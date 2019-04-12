@@ -177,15 +177,6 @@ double_init(&f$11);
 }
 
 void init_globals() {
-	int_init(&z$3);
-	y$4 = x$1;
-	int_init(&x$5);
-	int_init(&y$6);
-	__golite__arr___golite__struct_1_20_init(&parr1$7);
-	__golite__arr___golite__struct_1_20_init(&parr2$8);
-	__golite_builtin__slice_int_init(&s$9);
-	__golite_builtin__slice___golite__struct_1_init(&s2$10);
-	double_init(&f$11);
 }
 
 int main() {

@@ -31,6 +31,10 @@ void __golite__main() {
 	printf("%d\n",c$4);
 }
 
+void init_globals() {
+}
+
 int main() {
+	init_globals();
 	__golite__main();
 }

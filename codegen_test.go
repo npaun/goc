@@ -10,6 +10,9 @@ type person struct {
     friend_names [100]string
 }
 
+var p person
+
+
 func arr() [10]int {
     var x [10]int
     x[1] = 20
@@ -181,6 +184,29 @@ func shadow_test(n int) float64 {
         var n float64 = float64(n) * float64(n)
         return n
     }
+}
+
+func init() {
+    var x = 10
+    var p person
+    p.name = "Bob"
+    println("INIT 1")
+    println(x, p.name)
+}
+
+func init() {
+    println("INIT 2")
+
+    var x,y = 10,20
+    println(x,y)
+}
+
+func init() {
+    println("INIT 3")
+}
+
+func init() {
+    println("INIT 4")
 }
 
 func main() {

@@ -68,13 +68,13 @@ void __golite__arr_int_10_init(__golite__arr_int_10* x) {
 typedef struct {
 	int age;
 	string st;
-} __golite__struct_2;
+} __golite__struct_3;
 
-bool __golite__struct_2_cmp(__golite__struct_2* p, __golite__struct_2* q) { 
+bool __golite__struct_3_cmp(__golite__struct_3* p, __golite__struct_3* q) { 
 	return (p->age == q->age) && (p->st == q->st);
 }
 
-void __golite__struct_2_init(__golite__struct_2* x) {
+void __golite__struct_3_init(__golite__struct_3* x) {
 	int_init(&x->age);
 	string_init(&x->st);
 }
@@ -82,17 +82,17 @@ void __golite__struct_2_init(__golite__struct_2* x) {
 typedef struct {
 	int i;
 	double f;
-	__golite__struct_2 s2;
-} __golite__struct_3;
+	__golite__struct_3 s2;
+} __golite__struct_4;
 
-bool __golite__struct_3_cmp(__golite__struct_3* p, __golite__struct_3* q) { 
-	return (p->i == q->i) && (p->f == q->f) && __golite__struct_2_cmp(&p->s2,&q->s2);
+bool __golite__struct_4_cmp(__golite__struct_4* p, __golite__struct_4* q) { 
+	return (p->i == q->i) && (p->f == q->f) && __golite__struct_3_cmp(&p->s2,&q->s2);
 }
 
-void __golite__struct_3_init(__golite__struct_3* x) {
+void __golite__struct_4_init(__golite__struct_4* x) {
 	int_init(&x->i);
 	double_init(&x->f);
-	__golite__struct_2_init(&x->s2);
+	__golite__struct_3_init(&x->s2);
 }
 
 typedef struct {
@@ -407,13 +407,13 @@ typedef struct {
 	__golite_builtin__slice___golite__arr_int_2 f1;
 	__golite__arr___golite_builtin__slice_int_2 f2;
 	__golite_builtin__slice_double s;
-} __golite__struct_5;
+} __golite__struct_7;
 
-bool __golite__struct_5_cmp(__golite__struct_5* p, __golite__struct_5* q) { 
+bool __golite__struct_7_cmp(__golite__struct_7* p, __golite__struct_7* q) { 
 	return false && __golite__arr___golite_builtin__slice_int_2_cmp(&p->f2,&q->f2) && false;
 }
 
-void __golite__struct_5_init(__golite__struct_5* x) {
+void __golite__struct_7_init(__golite__struct_7* x) {
 	__golite_builtin__slice___golite__arr_int_2_init(&x->f1);
 	__golite__arr___golite_builtin__slice_int_2_init(&x->f2);
 	__golite_builtin__slice_double_init(&x->s);
@@ -439,12 +439,13 @@ int x$0;
 double y$1;
 string z$2;
 ;
+__golite__struct_1 p$4;
 __golite__arr_int_10 __golite__arr() {
-	__golite__arr_int_10 x$4;
-__golite__arr_int_10_init(&x$4);
+	__golite__arr_int_10 x$5;
+__golite__arr_int_10_init(&x$5);
 	int __golite__tmp_28 = 20;
-	 __arr_index_int(x$4.data, 1, 10)[1] = __golite__tmp_28;
-	return x$4;
+	 __arr_index_int(x$5.data, 1, 10)[1] = __golite__tmp_28;
+	return x$5;
 }
 
 void __golite__struct_test() {
@@ -452,119 +453,119 @@ void __golite__struct_test() {
 }
 
 void __golite__array_test() {
-	__golite__arr_int_100 x$6;
-__golite__arr_int_100_init(&x$6);
-	__golite__arr_double_100 y$7;
-__golite__arr_double_100_init(&y$7);
-	__golite__arr_string_20 z$8;
-__golite__arr_string_20_init(&z$8);
-	__golite__arr_int_10 x2$9;
-__golite__arr_int_10_init(&x2$9);
-	__golite__arr___golite__struct_1_20 p$10;
-__golite__arr___golite__struct_1_20_init(&p$10);
+	__golite__arr_int_100 x$7;
+__golite__arr_int_100_init(&x$7);
+	__golite__arr_double_100 y$8;
+__golite__arr_double_100_init(&y$8);
+	__golite__arr_string_20 z$9;
+__golite__arr_string_20_init(&z$9);
+	__golite__arr_int_10 x2$10;
+__golite__arr_int_10_init(&x2$10);
+	__golite__arr___golite__struct_1_20 p$11;
+__golite__arr___golite__struct_1_20_init(&p$11);
 	;
-	__golite__arr___golite__arr_int_10_30 a$12;
-__golite__arr___golite__arr_int_10_30_init(&a$12);
+	__golite__arr___golite__arr_int_10_30 a$13;
+__golite__arr___golite__arr_int_10_30_init(&a$13);
 }
 
-int __golite__f(int a$13) {
-	int x$14;
-int_init(&x$14);
-	int y$15;
-int_init(&y$15);
+int __golite__f(int a$14) {
+	int x$15;
+int_init(&x$15);
+	int y$16;
+int_init(&y$16);
 	return 0;
 }
 
 void __golite__exp_test() {
-	int x$16;
-int_init(&x$16);
-	int y$17;
-int_init(&y$17);
-	int z$18;
-int_init(&z$18);
-	int t$19 = (x$16 + y$17);
-	int t2$20 = (-x$16);
-	int t3$21 = __golite__f(x$16);
-	int t4$22 = (int)x$16;
-	int t5$23 = true;
-	int t6$24 = false;
-	int t7$25 = 101;
-	double t8$26 = 1.1;
-	string t9$27 = "string";
-	char t10$28 = 'r';
+	int x$17;
+int_init(&x$17);
+	int y$18;
+int_init(&y$18);
+	int z$19;
+int_init(&z$19);
+	int t$20 = (x$17 + y$18);
+	int t2$21 = (-x$17);
+	int t3$22 = __golite__f(x$17);
+	int t4$23 = (int)x$17;
+	int t5$24 = true;
+	int t6$25 = false;
+	int t7$26 = 101;
+	double t8$27 = 1.1;
+	string t9$28 = "string";
+	char t10$29 = 'r';
 }
 
 void __golite__assign_test() {
-	int x$29;
-int_init(&x$29);
-	int y$30;
-int_init(&y$30);
-	int __golite__tmp_26 = y$30;
-	x$29 = __golite__tmp_26;
-	int __golite__tmp_24 = (10 + y$30);
-	x$29 = __golite__tmp_24;
-	int __golite__tmp_20 = x$29;
+	int x$30;
+int_init(&x$30);
+	int y$31;
+int_init(&y$31);
+	int __golite__tmp_26 = y$31;
+	x$30 = __golite__tmp_26;
+	int __golite__tmp_24 = (10 + y$31);
+	x$30 = __golite__tmp_24;
+	int __golite__tmp_20 = x$30;
 	int __golite__tmp_21 = 10;
 	int __golite__tmp_22 = 0;
-	y$30 = __golite__tmp_20;
+	y$31 = __golite__tmp_20;
 ;
-	x$29 = __golite__tmp_22;
-	int __golite__tmp_16 = y$30;
+	x$30 = __golite__tmp_22;
+	int __golite__tmp_16 = y$31;
 	int __golite__tmp_17 = 100;
 	int __golite__tmp_18 = 1;
-	x$29 = __golite__tmp_16;
+	x$30 = __golite__tmp_16;
 ;
-	y$30 = __golite__tmp_18;
+	y$31 = __golite__tmp_18;
 }
 
 void __golite__opassign_test() {
-	int x$31;
-int_init(&x$31);
-	int y$32;
-int_init(&y$32);
-	x$31+=y$32;
-	x$31>>=y$32;
-	x$31*=y$32;
-	y$32+=1;
+	int x$32;
+int_init(&x$32);
+	int y$33;
+int_init(&y$33);
+	x$32+=y$33;
+	x$32>>=y$33;
+	x$32*=y$33;
+	y$33+=1;
 }
 
 int __golite__inctest() {
-	int x$33 = 10;
-	x$33++;
-	x$33--;
-	return x$33;
+	int x$34 = 10;
+	x$34++;
+	x$34--;
+	return x$34;
 }
 
 void __golite__iftest() {
-	int x$34 = 10;
-	int y$35 = 5;
+	int x$35 = 10;
+	int y$36 = 5;
 	{
 		if (true) {
 			printf("%s\n","fun");
 		}
 	}
 	{
-		int z$36 = 15;
-		if ((x$34 > z$36)) {
-			int __golite__tmp_10 = x$34;
-			y$35 = __golite__tmp_10;
+		int z$37 = 15;
+		if ((x$35 > z$37)) {
+			int __golite__tmp_10 = x$35;
+			y$36 = __golite__tmp_10;
 		}
 		else {
-			string yy$37 = "swag";
+			string yy$38 = "swag";
 			if (false) {
-				printf("%s\n",yy$37);
+				printf("%s\n",yy$38);
 			}
 			else {
-				int zz$38 = 15;
-				int zzz$39 = 20;
-				if ((y$35 == 5)) {
-					int __golite__tmp_12 = z$36;
-					y$35 = __golite__tmp_12;
+				int zz$39 = 15;
+				int zzz$40 = 20;
+				if ((y$36 == 5)) {
+					int __golite__tmp_12 = z$37;
+					y$36 = __golite__tmp_12;
 				}
 				else {
 					{
-						int __golite__tmp_14 = y$35;
-						x$34 = __golite__tmp_14;
+						int __golite__tmp_14 = y$36;
+						x$35 = __golite__tmp_14;
 					}
 				}
 			}
@@ -573,45 +574,45 @@ void __golite__iftest() {
 }
 
 void __golite__switchtest() {
-	int x$40;
-int_init(&x$40);
+	int x$41;
+int_init(&x$41);
 	{
-		int y$41 = 5;
-		if (0 || (x$40 == 3) || (x$40 == 2) || (x$40 == 1)) {
+		int y$42 = 5;
+		if (0 || (x$41 == 3) || (x$41 == 2) || (x$41 == 1)) {
 			__golite__iftest();
 		}
 		else {
-			if (0 || (x$40 == 5) || (x$40 == 4)) {
+			if (0 || (x$41 == 5) || (x$41 == 4)) {
 				int __golite__tmp_8 = 10;
-				y$41 = __golite__tmp_8;
+				y$42 = __golite__tmp_8;
 			}
 			else {
 				{
-					y$41+=10;
+					y$42+=10;
 				}
 			}
 		}
 	}
-	string xx$42 = "foo";
+	string xx$43 = "foo";
 	{
-		string z$43 = "foo2";
-		if (0 || (strcmp(xx$42,"swag") == 0) || (strcmp(xx$42,"bar") == 0) || (strcmp(xx$42,"foo") == 0)) {
+		string z$44 = "foo2";
+		if (0 || (strcmp(xx$43,"swag") == 0) || (strcmp(xx$43,"bar") == 0) || (strcmp(xx$43,"foo") == 0)) {
 			__golite__iftest();
 		}
 		else {
-			if (0 || (strcmp(xx$42,"dawg") == 0) || (strcmp(xx$42,"hey") == 0)) {
+			if (0 || (strcmp(xx$43,"dawg") == 0) || (strcmp(xx$43,"hey") == 0)) {
 				int __golite__tmp_6 = 10;
-				x$40 = __golite__tmp_6;
+				x$41 = __golite__tmp_6;
 			}
 			else {
 				{
-					x$40+=10;
+					x$41+=10;
 				}
 			}
 		}
 	}
 	{
-		if (0 || (strcmp(xx$42,"foo") == 0)) {
+		if (0 || (strcmp(xx$43,"foo") == 0)) {
 			__golite__iftest();
 		}
 		else {
@@ -623,65 +624,65 @@ int_init(&x$40);
 }
 
 void __golite__fortest() {
-	int x$44 = 0;
-	int y$45 = 0;
+	int x$45 = 0;
+	int y$46 = 0;
 	{
-		while ((y$45 < 1000)) {
-			y$45++;
+		while ((y$46 < 1000)) {
+			y$46++;
 		__continue_lbl2:;
 		}
 	}
 	{
-		int i$46 = 1;
-		while ((i$46 < 1000)) {
+		int i$47 = 1;
+		while ((i$47 < 1000)) {
 			{
-				if (((i$46 % 2) == 0)) {
+				if (((i$47 % 2) == 0)) {
 					goto __continue_lbl1;
 				}
 			}
-			y$45--;
+			y$46--;
 		__continue_lbl1:;
-			int __golite__tmp_4 = (i$46 + 1);
-			i$46 = __golite__tmp_4;
+			int __golite__tmp_4 = (i$47 + 1);
+			i$47 = __golite__tmp_4;
 		}
 	}
 }
 
 void __golite__print_test() {
-	int i$47 = 5;
-	string s$48 = "string";
-	int b$49 = true;
-	double f$50 = 1.;
-	char r$51 = 'r';
-	printf("%d %s %s %.6e %d\n",i$47,s$48,b$49 ? "true" : "false",f$50,r$51);
+	int i$48 = 5;
+	string s$49 = "string";
+	int b$50 = true;
+	double f$51 = 1.;
+	char r$52 = 'r';
+	printf("%d %s %s %.6e %d\n",i$48,s$49,b$50 ? "true" : "false",f$51,r$52);
 }
 
 void __golite__index_test() {
-	__golite__arr_int_5 i$52;
-__golite__arr_int_5_init(&i$52);
-	int y$53 =  __arr_index_int(i$52.data, 3, 5)[3];
-	__golite__arr_double_10 j$54;
-__golite__arr_double_10_init(&j$54);
-	double z$55 =  __arr_index_double(j$54.data, (4 + 3), 10)[(4 + 3)];
+	__golite__arr_int_5 i$53;
+__golite__arr_int_5_init(&i$53);
+	int y$54 =  __arr_index_int(i$53.data, 3, 5)[3];
+	__golite__arr_double_10 j$55;
+__golite__arr_double_10_init(&j$55);
+	double z$56 =  __arr_index_double(j$55.data, (4 + 3), 10)[(4 + 3)];
 }
 
 void __golite__len_cap_test() {
-	__golite__arr_string_5 arr$56;
-__golite__arr_string_5_init(&arr$56);
+	__golite__arr_string_5 arr$57;
+__golite__arr_string_5_init(&arr$57);
 	printf("%d\n",5);
 	printf("%d\n",5);
-	__golite_builtin__slice_string slc$57;
-__golite_builtin__slice_string_init(&slc$57);
-	__golite_builtin__slice_string __golite__tmp_2 = __golite_builtin__slice_string_append(&slc$57, "foo");
-	slc$57 = __golite__tmp_2;
-	printf("%d\n",__golite_builtin__slice_string_len(slc$57));
-	printf("%d\n",__golite_builtin__slice_string_cap(slc$57));
+	__golite_builtin__slice_string slc$58;
+__golite_builtin__slice_string_init(&slc$58);
+	__golite_builtin__slice_string __golite__tmp_2 = __golite_builtin__slice_string_append(&slc$58, "foo");
+	slc$58 = __golite__tmp_2;
+	printf("%d\n",__golite_builtin__slice_string_len(slc$58));
+	printf("%d\n",__golite_builtin__slice_string_cap(slc$58));
 }
 
-double __golite__shadow_test(int n$58) {
+double __golite__shadow_test(int n$59) {
 	{
-		double n$59 = ((double)n$58 * (double)n$58);
-		return n$59;
+		double n$60 = ((double)n$59 * (double)n$59);
+		return n$60;
 	}
 }
 
@@ -690,7 +691,7 @@ void __golite__main() {
 	__golite__struct_test();
 	__golite__fortest();
 	__golite__switchtest();
-	double ting$60 = __golite__shadow_test(5);
+	double ting$65 = __golite__shadow_test(5);
 	;
 	;
 	;
@@ -700,9 +701,35 @@ void init_globals() {
 	int_init(&x$0);
 	y$1 = 2.1;
 	z$2 = "wow";
+	__golite__struct_1_init(&p$4);
+}
+
+void init_funcs() {
+	{
+		int x$61 = 10;
+		__golite__struct_1 p$62;
+__golite__struct_1_init(&p$62);
+		string __golite__tmp_30 = "Bob";
+		p$62.name = __golite__tmp_30;
+		printf("%s\n","INIT 1");
+		printf("%d %s\n",x$61,p$62.name);
+	}
+	{
+		printf("%s\n","INIT 2");
+		int x$63 = 10;
+		int y$64 = 20;
+		printf("%d %d\n",x$63,y$64);
+	}
+	{
+		printf("%s\n","INIT 3");
+	}
+	{
+		printf("%s\n","INIT 4");
+	}
 }
 
 int main() {
 	init_globals();
+	init_funcs();
 	__golite__main();
 }

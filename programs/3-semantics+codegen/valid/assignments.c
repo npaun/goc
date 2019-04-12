@@ -54,7 +54,7 @@ int __golite_builtin__slice_double_cap(__golite_builtin__slice_double s) {
 	return s.__capacity;
 }
 
-int global$0 = 10;
+int global$0;
 int __golite__sideEffect() {
 	int __golite__tmp_11 = 69;
 	global$0 = __golite__tmp_11;
@@ -92,6 +92,11 @@ int_init(&d$5);
 	(__golite_builtin__slice_double_index(__golite__addressableSlice(),0)[0]) = __golite__tmp_2;
 }
 
+void init_globals() {
+	global$0 = 10;
+}
+
 int main() {
+	init_globals();
 	__golite__main();
 }

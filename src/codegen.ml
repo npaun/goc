@@ -67,7 +67,7 @@ and gen_toplvl toplvl = match toplvl.v with
   | Global(decl) -> gen_decl true decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
-      | `V id -> gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 0 block ^ "\n"
+      | `V id -> if not (String.equal id "init") then gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 0 block ^ "\n" else ""
       | `Blank -> ""
   )
 and gen_siglist siglst = 
@@ -354,6 +354,13 @@ let gen_init_globals () =
   String.concat "" (List.map gen_line !Codegenpre.global_vars) ^
   "}\n\n"
 
+
+(* generates a function which contains the blocks of all init functions defined in the source file *)
+let gen_init_funcs () =
+  "void init_funcs() {\n\t" ^
+  String.concat "\t" (List.map (gen_block 1) !Codegenpre.init_blocks) ^
+  "}\n\n"
+
   
 (* TODO - plug the generation of indexing helpers and improve them *)    
 let gen_c_code filename ast =
@@ -365,8 +372,9 @@ let gen_c_code filename ast =
     let prim_inits = gen_prim_init () in
     let str_add = gen_str_add () in
     let init_globals = gen_init_globals () in
+    let init_funcs = gen_init_funcs () in
     let code = 
-        gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ "int main() {\n\tinit_globals();\n\t__golite__main();\n}\n" in
+        gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
     let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
     Printf.fprintf oc "%s" code; close_out oc
 
