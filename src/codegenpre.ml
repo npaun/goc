@@ -210,29 +210,26 @@ and add_struct_entry fields =
   match Hashtbl.find_opt struct_map struct_string with
   | Some s -> ()
   | None -> 
-      (*Printf.printf "%s - > %s\n" struct_string struct_name; *)
       struct_decls := !struct_decls@gen_struct_fns struct_string struct_name;
       Hashtbl.add struct_map struct_string struct_name;
-  
+and get_typlit_name typlit = match typlit with
+  | Struct(fields) ->
+    add_struct_entry fields;
+    let struct_string = hash_struct fields in
+    let struct_name = Hashtbl.find struct_map struct_string in
+    struct_name 
+  | Array(size,typ) ->
+    add_arr_entry size typ;
+    let struct_string = hash_array size typ in
+    let struct_name = Hashtbl.find arr_map struct_string in
+    struct_name 
+  | Slice(typ') ->
+    add_slice_entry typ';
+    Printf.sprintf "__golite_builtin__slice_%s" (typ_string typ')
 and hash_struct fields = List.fold_right (fun field acc -> (hash_field field) ^ "," ^ acc) fields ""
 and hash_field field = match field with
   | (iden', typ) -> (match iden', typ with
-    | `V(id), `TypeLit typlit -> (match typlit with
-      | Struct(fields) ->
-        add_struct_entry fields;
-        let struct_string = hash_struct fields in
-        let struct_name = Hashtbl.find struct_map struct_string in
-        Printf.sprintf "%s~%s" struct_name id
-      | Array(size,typ) ->
-        add_arr_entry size typ;
-        let struct_string = hash_array size typ in
-        let struct_name = Hashtbl.find arr_map struct_string in
-        Printf.sprintf "%s~%s" struct_name id
-      | Slice(typ') ->
-        add_slice_entry typ';
-        Printf.sprintf "__golite_builtin__slice_%s~%s" (typ_string typ') id
-      | _ -> Printf.sprintf "%s~%s" (typelit_string typlit) id
-    )
+    | `V(id), `TypeLit typlit -> Printf.sprintf "%s~%s" (get_typlit_name typlit) id
     | `V(id), _ -> Printf.sprintf "%s~%s" (typ_string typ) id
     | _,_ -> "" (* this shouldn't be reached, might want to throw an error *)
   )
@@ -242,15 +239,15 @@ and add_arr_entry size typ =
   match Hashtbl.find_opt arr_map struct_string with 
   | Some s -> ()
   | None -> 
-    (*Printf.printf "%s - > %s\n" struct_string struct_name; *)
     struct_decls := !struct_decls@gen_arr_fns struct_string struct_name;
     Hashtbl.replace arr_map struct_string struct_name
-and hash_array size typ = Printf.sprintf "%s~%d" (typ_string typ) size
+and hash_array size typ = match typ with
+  | `TypeLit typlit -> Printf.sprintf "%s~%d" (get_typlit_name typlit) size 
+  | _ -> Printf.sprintf "%s~%d" (typ_string typ) size
 and add_slice_entry typ = 
   let typ_s = typ_string typ in
   if not (List.exists (fun t -> String.equal t typ_s) !slice_set) then (
     slice_set := !slice_set@[typ_s];
-    (*Printf.printf "generating slice struct for type %s\n" typ_s;*)
     struct_decls := !struct_decls@gen_slice_fns typ_s
   )
 
