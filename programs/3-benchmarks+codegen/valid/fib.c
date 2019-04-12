@@ -160,7 +160,11 @@ void init_globals() {
 	__golite_builtin__slice_double_init(&fib_memo_table$3);
 }
 
+void init_funcs() {
+	}
+
 int main() {
 	init_globals();
+	init_funcs();
 	__golite__main();
 }

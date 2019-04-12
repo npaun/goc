@@ -150,7 +150,11 @@ void init_globals() {
 	seed$11 = 3735928559;
 }
 
+void init_funcs() {
+	}
+
 int main() {
 	init_globals();
+	init_funcs();
 	__golite__main();
 }

@@ -21,8 +21,9 @@ let record_array_indexing_helper typ =
         List.exists (fun typ -> String.equal (Codegenpre.typ_string typ) (Codegenpre.typ_string typ')) !array_index_helpers
     in
     let record typ'' =
+        (* Printf.printf "in record_array with type %s\n" (Codegenpre.typ_string typ''); *)
         if not (already_exists typ'') then (
-            (*Printf.printf "Registering array helper: type = %s\n" (Pretty.string_of_typ typ'');*)
+            (* Printf.printf "Registering array helper: type = %s\n" (Codegenpre.typ_string typ''); *)
             array_index_helpers := (typ'')::(!array_index_helpers)
         )
     in record typ
@@ -367,12 +368,12 @@ let gen_c_code filename ast =
     let ast' = ast (*Codegenrename.pass_ast ast*) in
     Codegenpre.codepre_ast ast';
     let ast_code = gen_ast ast' in
-    let arr_helps = generate_array_indexing_helpers () in
     let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
     let prim_inits = gen_prim_init () in
     let str_add = gen_str_add () in
     let init_globals = gen_init_globals () in
     let init_funcs = gen_init_funcs () in
+    let arr_helps = generate_array_indexing_helpers () in
     let code = 
         gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
     let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 

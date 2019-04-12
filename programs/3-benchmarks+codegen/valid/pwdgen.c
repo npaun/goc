@@ -48,8 +48,8 @@ int q$2;
 int M$3;
 int x$4;
 int __golite__digit() {
-	int __golite__tmp_22 = ((x$4 * x$4) % M$3);
-	x$4 = __golite__tmp_22;
+	int __golite__tmp_2 = ((x$4 * x$4) % M$3);
+	x$4 = __golite__tmp_2;
 	return (x$4 & 1);
 }
 
@@ -67,41 +67,6 @@ int __golite__randint() {
 }
 
 __golite__arr_string_16 w$7;
-void __golite__init() {
-	string __golite__tmp_17 = "aardvark";
-	string __golite__tmp_18 = "backwater";
-	string __golite__tmp_19 = "candidate";
-	string __golite__tmp_20 = "decadence";
-	 __arr_index_string(w$7.data, 0, 16)[0] = __golite__tmp_17;
-	 __arr_index_string(w$7.data, 1, 16)[1] = __golite__tmp_18;
-	 __arr_index_string(w$7.data, 2, 16)[2] = __golite__tmp_19;
-	 __arr_index_string(w$7.data, 3, 16)[3] = __golite__tmp_20;
-	string __golite__tmp_12 = "embezzle";
-	string __golite__tmp_13 = "fascinate";
-	string __golite__tmp_14 = "gadgetry";
-	string __golite__tmp_15 = "hamburger";
-	 __arr_index_string(w$7.data, 4, 16)[4] = __golite__tmp_12;
-	 __arr_index_string(w$7.data, 5, 16)[5] = __golite__tmp_13;
-	 __arr_index_string(w$7.data, 6, 16)[6] = __golite__tmp_14;
-	 __arr_index_string(w$7.data, 7, 16)[7] = __golite__tmp_15;
-	string __golite__tmp_7 = "indoors";
-	string __golite__tmp_8 = "jawbone";
-	string __golite__tmp_9 = "keyboard";
-	string __golite__tmp_10 = "locale";
-	 __arr_index_string(w$7.data, 8, 16)[8] = __golite__tmp_7;
-	 __arr_index_string(w$7.data, 9, 16)[9] = __golite__tmp_8;
-	 __arr_index_string(w$7.data, 10, 16)[10] = __golite__tmp_9;
-	 __arr_index_string(w$7.data, 11, 16)[11] = __golite__tmp_10;
-	string __golite__tmp_2 = "merit";
-	string __golite__tmp_3 = "neptune";
-	string __golite__tmp_4 = "obtuse";
-	string __golite__tmp_5 = "payday";
-	 __arr_index_string(w$7.data, 12, 16)[12] = __golite__tmp_2;
-	 __arr_index_string(w$7.data, 13, 16)[13] = __golite__tmp_3;
-	 __arr_index_string(w$7.data, 14, 16)[14] = __golite__tmp_4;
-	 __arr_index_string(w$7.data, 15, 16)[15] = __golite__tmp_5;
-}
-
 string __golite__chr(int num$8, int idx$9) {
 	return (string)(32 + (((num$8 >> idx$9) & 255) % 94));
 }
@@ -136,7 +101,45 @@ void init_globals() {
 	__golite__arr_string_16_init(&w$7);
 }
 
+void init_funcs() {
+	{
+		string __golite__tmp_19 = "aardvark";
+		string __golite__tmp_20 = "backwater";
+		string __golite__tmp_21 = "candidate";
+		string __golite__tmp_22 = "decadence";
+		 __arr_index_string(w$7.data, 0, 16)[0] = __golite__tmp_19;
+		 __arr_index_string(w$7.data, 1, 16)[1] = __golite__tmp_20;
+		 __arr_index_string(w$7.data, 2, 16)[2] = __golite__tmp_21;
+		 __arr_index_string(w$7.data, 3, 16)[3] = __golite__tmp_22;
+		string __golite__tmp_14 = "embezzle";
+		string __golite__tmp_15 = "fascinate";
+		string __golite__tmp_16 = "gadgetry";
+		string __golite__tmp_17 = "hamburger";
+		 __arr_index_string(w$7.data, 4, 16)[4] = __golite__tmp_14;
+		 __arr_index_string(w$7.data, 5, 16)[5] = __golite__tmp_15;
+		 __arr_index_string(w$7.data, 6, 16)[6] = __golite__tmp_16;
+		 __arr_index_string(w$7.data, 7, 16)[7] = __golite__tmp_17;
+		string __golite__tmp_9 = "indoors";
+		string __golite__tmp_10 = "jawbone";
+		string __golite__tmp_11 = "keyboard";
+		string __golite__tmp_12 = "locale";
+		 __arr_index_string(w$7.data, 8, 16)[8] = __golite__tmp_9;
+		 __arr_index_string(w$7.data, 9, 16)[9] = __golite__tmp_10;
+		 __arr_index_string(w$7.data, 10, 16)[10] = __golite__tmp_11;
+		 __arr_index_string(w$7.data, 11, 16)[11] = __golite__tmp_12;
+		string __golite__tmp_4 = "merit";
+		string __golite__tmp_5 = "neptune";
+		string __golite__tmp_6 = "obtuse";
+		string __golite__tmp_7 = "payday";
+		 __arr_index_string(w$7.data, 12, 16)[12] = __golite__tmp_4;
+		 __arr_index_string(w$7.data, 13, 16)[13] = __golite__tmp_5;
+		 __arr_index_string(w$7.data, 14, 16)[14] = __golite__tmp_6;
+		 __arr_index_string(w$7.data, 15, 16)[15] = __golite__tmp_7;
+	}
+}
+
 int main() {
 	init_globals();
+	init_funcs();
 	__golite__main();
 }

@@ -224,4 +224,7 @@ func main() {
         f2 a2
         s []float64
     }
+
+    var inta [10]int
+    inta[1] = 2
 }
