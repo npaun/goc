@@ -253,20 +253,27 @@ and add_slice_entry typ =
     struct_decls := !struct_decls@gen_slice_fns typ_s
   )
 
+let global_vars = ref []
+let add_globalvar_entry iden' typ expr_opt = global_vars := !global_vars@[(iden',typ,expr_opt)]
 
-
+let init_blocks = ref []
 
 let rec codepre_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.iter codepre_toplvl toplvllist
 and codepre_toplvl toplvl = match toplvl.v with
-  | Global(decl) -> codepre_decl decl
-  | Func(iden', siglst, typ, block) -> codepre_block block
+  | Global(decl) -> codepre_decl true decl
+  | Func(iden', siglst, typ, block) -> (match iden' with 
+        | `V(id) -> 
+          if String.equal id "init" then init_blocks := !init_blocks@[block];
+          codepre_block block;
+        | _ -> codepre_block block;
+    )
 and codepre_block block = List.iter codepre_stmt block
 and codepre_stmt stmt = match stmt.v with
-  | Decl(declist) -> List.iter codepre_decl declist
+  | Decl(declist) -> List.iter (codepre_decl false) declist
   | _ -> ()
-and codepre_decl decl = match decl with
-  | Var(_,typ,_,_) -> codepre_typ typ
+and codepre_decl isglobal decl = match decl with
+  | Var(iden',typ, expr_opt, isshort) -> if isglobal then add_globalvar_entry iden' typ expr_opt; codepre_typ typ
   | Type(iden', typ) -> codepre_typ typ
 and codepre_typ typ = match typ with
   | `TypeLit(Struct(fields)) -> add_struct_entry fields

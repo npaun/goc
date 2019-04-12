@@ -10,6 +10,9 @@ type person struct {
     friend_names [100]string
 }
 
+var p person
+
+
 func arr() [10]int {
     var x [10]int
     x[1] = 20
@@ -183,6 +186,29 @@ func shadow_test(n int) float64 {
     }
 }
 
+func init() {
+    var x = 10
+    var p person
+    p.name = "Bob"
+    println("INIT 1")
+    println(x, p.name)
+}
+
+func init() {
+    println("INIT 2")
+
+    var x,y = 10,20
+    println(x,y)
+}
+
+func init() {
+    println("INIT 3")
+}
+
+func init() {
+    println("INIT 4")
+}
+
 func main() {
     println("Hello world!")
     struct_test();
@@ -198,4 +224,14 @@ func main() {
         f2 a2
         s []float64
     }
+
+    var inta [10]int
+    inta[1] = 2
+
+    var i = 100
+    var str = string(i)
+    var r = 'r'
+    var str2 = string(r)
+    println("casted str from int =", str)
+    println("casted str from rune =", str2)
 }

@@ -36,6 +36,10 @@ void __golite__main() {
 	}
 }
 
+void init_globals() {
+}
+
 int main() {
+	init_globals();
 	__golite__main();
 }

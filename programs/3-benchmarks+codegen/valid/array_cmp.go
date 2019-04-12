@@ -5,7 +5,7 @@ type person struct {
 	age int
 }
 
-func f(x int) string {
+func f(x int, f float64) string {
 	var z int
 	var y = x
 	return "wow"

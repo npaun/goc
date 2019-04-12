@@ -21,8 +21,9 @@ let record_array_indexing_helper typ =
         List.exists (fun typ -> String.equal (Codegenpre.typ_string typ) (Codegenpre.typ_string typ')) !array_index_helpers
     in
     let record typ'' =
+        (* Printf.printf "in record_array with type %s\n" (Codegenpre.typ_string typ''); *)
         if not (already_exists typ'') then (
-            (*Printf.printf "Registering array helper: type = %s\n" (Pretty.string_of_typ typ'');*)
+            (* Printf.printf "Registering array helper: type = %s\n" (Codegenpre.typ_string typ''); *)
             array_index_helpers := (typ'')::(!array_index_helpers)
         )
     in record typ
@@ -58,16 +59,20 @@ let builtin_header =
   "\ts.__size++;\n" ^
   "\treturn s;\n}\n\n"
 
+let string_conv =
+  "string __golite_num_to_string(int x) {\n" ^
+  "\tstring s = malloc(1);\n\t*s = x;\n}\n\n"
+
 
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\ntypedef char* string;\n\n"  
 
 let rec gen_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
-  | Global(decl) -> gen_decl decl ^ ";\n"
+  | Global(decl) -> gen_decl true decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
-      | `V id -> gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 0 block ^ "\n"
+      | `V id -> if not (String.equal id "init") then gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 0 block ^ "\n" else ""
       | `Blank -> ""
   )
 and gen_siglist siglst = 
@@ -76,23 +81,24 @@ and gen_siglist siglst =
     | (`Blank, typ) -> gen_type typ ^ " " ^ "__golite_tmp__" ^ tmp_count ()
   in
   String.concat ", " (List.map gen_sig siglst)
-and gen_decl decl =
-  let gen_init typ = match typ with
-    | `RUNE -> "char_init"
-    | `BOOL
-    | `INT -> "int_init"
-    | `FLOAT64 -> "double_init"
-    | `STRING -> "string_init"
-    | _ -> (gen_type typ) ^ "_init"
-  in
+and gen_init typ = match typ with
+  | `RUNE -> "char_init"
+  | `BOOL
+  | `INT -> "int_init"
+  | `FLOAT64 -> "double_init"
+  | `STRING -> "string_init"
+  | _ -> (gen_type typ) ^ "_init"
+and gen_decl isglobal decl =
   let decl_end expr_opt typ id = match expr_opt with
     | Some expr -> " = " ^ gen_expr expr
     | None -> ";\n" ^ gen_init typ ^ Printf.sprintf "(&%s)" id
   in
   match decl with
-    | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v with
-      | `V id -> gen_type typ ^ " " ^ id ^ (decl_end expr_opt typ id)
-      | `Blank -> gen_expr_opt expr_opt
+    | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v, isglobal with
+      | `V id, false -> gen_type typ ^ " " ^ id ^ (decl_end expr_opt typ id)
+      | `Blank, false -> gen_expr_opt expr_opt
+      | `V id, true -> gen_type typ ^ " " ^ id
+      | `Blank, true -> ""
     )
     | Type(iden', typ) -> "" (* I don't think we need to typedef type decls, so we can probably just ignore them *)
 and gen_assignlist d alist =
@@ -138,7 +144,7 @@ and gen_lvalue' e = match e.v with
 and gen_block d block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt (d + 1) stmt) ^ acc) block "") ^ Pretty.crt_tab (d) true ^ "}\n"
 and gen_type typ = Codegenpre.typ_string typ
 and gen_stmt d stmt = match stmt.v with
-  | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map gen_decl decllst) ^ ";\n"
+  | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map (gen_decl false) decllst) ^ ";\n"
   | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
   | Block(block) -> Pretty.crt_tab d true ^ gen_block (d) block
   | Assign(alist) -> gen_assignlist d alist ^ ";\n"
@@ -177,11 +183,14 @@ and gen_expr expr = match expr.v with
     | "cap" -> gen_cap explist
     | _ -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
   )
-  | `Cast(typ, exp)      ->
-      (* TODO make this smarter:
-       * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
-       * - If different types, then cast basic types *)
-      "(" ^ gen_type typ ^ ")" ^ gen_expr exp
+  (* TODO make this smarter:
+   * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
+   * - If different types, then cast basic types *)
+  | `Cast(typ, exp)      -> (match typ, (List.hd exp._derived) with
+    | `STRING, `INT
+    | `STRING, `RUNE -> Printf.sprintf "__golite_num_to_string(%s)" (gen_expr exp)
+    | _,_ ->  "(" ^ gen_type typ ^ ")" ^ gen_expr exp
+  )
   | `Selector(exp, id)   -> gen_expr exp ^ "." ^ id
   | `L(lit)              -> (match lit with
     | Bool(b) -> if b then "1" else "0"
@@ -270,6 +279,7 @@ and gen_if_stmt d clist =
     in
     let gen = fold_if (clist) in gen ^ (close_scopes (!tab-1) (List.length clist))
 and gen_switch_stmt d stmtopt expropt fclist =
+    let has_default = ref false in
     let tab = ref (d) in
     let make_annot oper = 
         {v = oper; _debug = "hack :)"; _start = (-1,-1); _end = (-1,-1); _derived = [`BOOL]} 
@@ -285,13 +295,13 @@ and gen_switch_stmt d stmtopt expropt fclist =
             ^ (List.fold_right 
               (fun expr acc -> acc ^ " || " ^ gen_switch_cond expropt expr) exprlst "0") 
             ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
-        | (Default(block), _) -> acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
+        | (Default(block), _) -> has_default := true; acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
     in
     let gen =(List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
     in
     Pretty.crt_tab d true ^ "{\n" 
     ^ gen_stmt_opt (d+1) stmtopt 
-    ^ gen ^ close_scopes (!tab-1) (List.length fclist)
+    ^ gen ^ close_scopes (!tab - (if !has_default then 1 else 0)) ((List.length fclist) + (if !has_default then 0 else 1))
 and gen_for_stmt d initopt expropt stmtopt block =
     let continue_label = goto_cont_label true in
     Pretty.crt_tab d true ^ "{\n"
@@ -338,18 +348,41 @@ let gen_str_add () =
   "\tstrcat(res,p);\n" ^
   "\treturn strcat(res,q);\n" ^
   "}\n\n"
+
+let gen_init_globals () =
+  let gen_line (iden',typ,expr_opt) = match iden'.v, expr_opt with 
+    | `V(id), Some expr -> Printf.sprintf "\t%s = %s;\n" id (gen_expr expr)
+    | `V(id), None ->
+      let init = gen_init typ in
+      Printf.sprintf "\t%s(&%s);\n" init id
+    | `Blank, Some expr -> (gen_expr expr) ^ ";\n"
+    | _, _ -> ""
+  in
+  "void init_globals() {\n" ^
+  String.concat "" (List.map gen_line !Codegenpre.global_vars) ^
+  "}\n\n"
+
+
+(* generates a function which contains the blocks of all init functions defined in the source file *)
+let gen_init_funcs () =
+  "void init_funcs() {\n\t" ^
+  String.concat "\t" (List.map (gen_block 1) !Codegenpre.init_blocks) ^
+  "}\n\n"
+
   
 (* TODO - plug the generation of indexing helpers and improve them *)    
 let gen_c_code filename ast =
     let ast' = ast (*Codegenrename.pass_ast ast*) in
     Codegenpre.codepre_ast ast';
     let ast_code = gen_ast ast' in
-    let arr_helps = generate_array_indexing_helpers () in
     let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
     let prim_inits = gen_prim_init () in
     let str_add = gen_str_add () in
+    let init_globals = gen_init_globals () in
+    let init_funcs = gen_init_funcs () in
+    let arr_helps = generate_array_indexing_helpers () in
     let code = 
-        gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ "int main() {\n\t__golite__main();\n}\n" in
+        gen_file_header ^ str_add ^ string_conv ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
     let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
     Printf.fprintf oc "%s" code; close_out oc
 
