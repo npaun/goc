@@ -227,4 +227,11 @@ func main() {
 
     var inta [10]int
     inta[1] = 2
+
+    var i = 100
+    var str = string(i)
+    var r = 'r'
+    var str2 = string(r)
+    println("casted str from int =", str)
+    println("casted str from rune =", str2)
 }

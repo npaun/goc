@@ -59,6 +59,10 @@ let builtin_header =
   "\ts.__size++;\n" ^
   "\treturn s;\n}\n\n"
 
+let string_conv =
+  "string __golite_num_to_string(int x) {\n" ^
+  "\tstring s = malloc(1);\n\t*s = x;\n}\n\n"
+
 
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\ntypedef char* string;\n\n"  
 
@@ -179,11 +183,14 @@ and gen_expr expr = match expr.v with
     | "cap" -> gen_cap explist
     | _ -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
   )
-  | `Cast(typ, exp)      ->
-      (* TODO make this smarter:
-       * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
-       * - If different types, then cast basic types *)
-      "(" ^ gen_type typ ^ ")" ^ gen_expr exp
+  (* TODO make this smarter:
+   * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
+   * - If different types, then cast basic types *)
+  | `Cast(typ, exp)      -> (match typ, (List.hd exp._derived) with
+    | `STRING, `INT
+    | `STRING, `RUNE -> Printf.sprintf "__golite_num_to_string(%s)" (gen_expr exp)
+    | _,_ ->  "(" ^ gen_type typ ^ ")" ^ gen_expr exp
+  )
   | `Selector(exp, id)   -> gen_expr exp ^ "." ^ id
   | `L(lit)              -> (match lit with
     | Bool(b) -> if b then "1" else "0"
@@ -375,7 +382,7 @@ let gen_c_code filename ast =
     let init_funcs = gen_init_funcs () in
     let arr_helps = generate_array_indexing_helpers () in
     let code = 
-        gen_file_header ^ str_add ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
+        gen_file_header ^ str_add ^ string_conv ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
     let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
     Printf.fprintf oc "%s" code; close_out oc
 

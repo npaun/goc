@@ -12,6 +12,11 @@ char* str_add(char* p, char* q) {
 	return strcat(res,q);
 }
 
+string __golite_num_to_string(int x) {
+	string s = malloc(1);
+	*s = x;
+}
+
 void int_init(int* x) { *x = 0; }
 void double_init(double* x) { *x = 0; }
 void char_init(char* c) { *c = 0; }
@@ -699,6 +704,12 @@ void __golite__main() {
 __golite__arr_int_10_init(&inta$69);
 	int __golite__tmp_2 = 2;
 	 __arr_index_int(inta$69.data, 1, 10)[1] = __golite__tmp_2;
+	int i$70 = 100;
+	string str$71 = __golite_num_to_string(i$70);
+	char r$72 = 'r';
+	string str2$73 = __golite_num_to_string(r$72);
+	printf("%s %s\n","casted str from int =",str$71);
+	printf("%s %s\n","casted str from rune =",str2$73);
 }
 
 void init_globals() {

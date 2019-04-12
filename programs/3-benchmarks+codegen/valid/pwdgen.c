@@ -12,6 +12,11 @@ char* str_add(char* p, char* q) {
 	return strcat(res,q);
 }
 
+string __golite_num_to_string(int x) {
+	string s = malloc(1);
+	*s = x;
+}
+
 void int_init(int* x) { *x = 0; }
 void double_init(double* x) { *x = 0; }
 void char_init(char* c) { *c = 0; }
@@ -68,7 +73,7 @@ int __golite__randint() {
 
 __golite__arr_string_16 w$7;
 string __golite__chr(int num$8, int idx$9) {
-	return (string)(32 + (((num$8 >> idx$9) & 255) % 94));
+	return __golite_num_to_string((32 + (((num$8 >> idx$9) & 255) % 94)));
 }
 
 string __golite__to_password(int a$10, int b$11) {
