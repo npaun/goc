@@ -271,6 +271,7 @@ and gen_if_stmt d clist =
     in
     let gen = fold_if (clist) in gen ^ (close_scopes (!tab-1) (List.length clist))
 and gen_switch_stmt d stmtopt expropt fclist =
+    let has_default = ref false in
     let tab = ref (d) in
     let make_annot oper = 
         {v = oper; _debug = "hack :)"; _start = (-1,-1); _end = (-1,-1); _derived = [`BOOL]} 
@@ -286,13 +287,13 @@ and gen_switch_stmt d stmtopt expropt fclist =
             ^ (List.fold_right 
               (fun expr acc -> acc ^ " || " ^ gen_switch_cond expropt expr) exprlst "0") 
             ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
-        | (Default(block), _) -> acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
+        | (Default(block), _) -> has_default := true; acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
     in
     let gen =(List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
     in
     Pretty.crt_tab d true ^ "{\n" 
     ^ gen_stmt_opt (d+1) stmtopt 
-    ^ gen ^ close_scopes (!tab-1) (List.length fclist)
+    ^ gen ^ close_scopes (!tab - (if !has_default then 1 else 0)) ((List.length fclist) + (if !has_default then 0 else 1))
 and gen_for_stmt d initopt expropt stmtopt block =
     let continue_label = goto_cont_label true in
     Pretty.crt_tab d true ^ "{\n"
