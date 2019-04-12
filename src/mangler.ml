@@ -24,7 +24,7 @@ let mangle symt id =
 				Hashtbl.add defined_in id' sym; (* insert a redundant definition for the mangled name *)
 				sym.mangled <- Some id'; (* save mangled name for us later *)
 				id'
-	| None -> failwith "Cannot mangle a non-existent symbol"	
+	| None -> failwith ("Cannot mangle a non-existent symbol " ^ id)	
 
 let mangle_ident' symt = function
 | `V id -> `V (mangle symt id)
@@ -32,16 +32,18 @@ let mangle_ident' symt = function
 
 let mangle_node symt node = match node.v with
 | `V id -> {node with v = `V (mangle symt id)}
-| _ -> failwith "I don't know how to mangle this kind of node"
-
+| `Blank -> {node with v = `Blank}
+| _ -> failwith "die"
 let get_symbol_exn symt id =
 	match Symtbl.get_symbol symt id true with
 	| Some sym -> sym
-	| None -> failwith "Non-existent symbol please die now"
+	| None -> failwith ("Non-existent symbol please die now " ^ id)
 
 let rec nameof symt id =
 	let sym = get_symbol_exn symt id in
-		match sym.mangled with
+		if sym.kind = FuncK then
+			id (* Functions not subject to mangling *)
+		else match sym.mangled with
 		| Some name -> name
 		| None -> 	(* then the mangled name is in an upper table*)
 				let Symt(_,parent,_,_) = symt in
@@ -57,16 +59,17 @@ let ignore_node symt node = node
 let rec pass_ast symt = function
 	| Program (pkg, tops) ->
 		let p' = Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops) in
-		printf "%s\n" (Dumpast.dump p'); 
+		(* printf "%s\n" (Dumpast.dump p'); *)
 		p'
 and pass_toplevel this_symt node = function
 	| Global(decl) -> same (fun () -> {node with v = Global(pass_decl this_symt decl)})
-	| Func(name,args,ret,body) -> down (fun child_symt -> 
-		{node with v = Func(
-			name,
-			(List.map (fun (name,typ) -> name,(do_nothing this_symt [typ] |> List.hd)) args),
-			(do_nothing this_symt [ret] |> List.hd),
-			pass_block child_symt body)})
+	| Func(name,args,ret,body) -> down (fun child_symt ->
+		let argsM = List.map (fun (name,typ) -> (
+			(mangle_ident' child_symt name),
+			(do_nothing this_symt [typ] |> List.hd))) args
+		in let retM = (do_nothing this_symt [ret] |> List.hd)
+		in let body' = pass_block child_symt body
+		in {node with v = Func(name,argsM,retM,body')})
 and pass_block this_symt body = traverse pass_statement this_symt body
 and pass_inner_stmt symt node = 
 	(pass_block symt [node] |> List.hd)
@@ -107,13 +110,15 @@ and pass_statement this_symt node = function
 	| Break | Continue | Empty -> same (fun () -> node)
 and pass_decl symt = function
 | Var(name, ltyp, init, shortp) ->
+		let init' = maybe (pass_expr symt) init in
+		let ltypM = do_nothing symt [ltyp] |> List.hd in
 		let nameM = mangle_node symt name in
 			Var(	nameM, 
-				(do_nothing symt [ltyp] |> List.hd),
-				(maybe (pass_expr symt) init),
+				ltypM,
+				init',
 				shortp)
 | Type(name, def) -> let nameM = mangle_ident' symt name in
-	Type(nameM, do_nothing symt [def] |> List.hd)
+	Type(name, do_nothing symt [def] |> List.hd)
 
 and pass_fallable_case this_symt node = function
 | (case,mode) -> same (fun () -> {node with v = (packify pass_case this_symt [case] |> List.hd, mode)}) (* It is best not to ask *)
@@ -123,6 +128,7 @@ and pass_case this_symt node = function
 		let pre' = maybe (pass_inner_stmt this_symt) pre in
 		let conds' = List.map (pass_expr this_symt) conds in
 		let block' = pass_block child_symt block in
+			(* printf "%s\n" (Pretty.string_of_expr (List.hd conds)); *)
 			{node with v = Case(pre',conds',block')})
 and pass_lval symt node = pass_expr symt node 
 and pass_lval' symt node = match node.v with

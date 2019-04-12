@@ -188,7 +188,7 @@ and pass_assn_inner symt (lval, expr) = match (lval.v, expr.v) with
         Typerules.assert_not_void "assignment" symt (expr', typeof expr');
         assert_match resolve_basic symt "assignment" ("<lvalue>", typeof lval') (expr', typeof expr');
         begin try
-            assert_same_if_user_defined symt "assignment" (lval', List.hd (typeof lval')) ((expr'), List.hd (typeof expr'));
+            (* TODO ASIUD assert_same_if_user_defined symt "assignment" (lval', List.hd (typeof lval')) ((expr'), List.hd (typeof expr')); *)
             (lval', expr')
         with
         | Good -> (lval', expr')
