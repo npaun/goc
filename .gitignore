@@ -17,3 +17,5 @@ lexer.ml
 menhir-*.tar*
 menhir
 .vscode/*
+*.c
+*.out

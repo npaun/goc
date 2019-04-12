@@ -16,14 +16,18 @@ let mangled_name ident =
 
 
 (* mangle: Update the symbol table to store a new mangled name, also returning it *)
-let mangle symt id =
- 	match Symtbl.get_symbol symt id true with
-	| Some sym ->
+let mangle symt id = 
+	let rename sym =
 		let id' = mangled_name id in
 			let Symt(defined_in,_,_,_) = Symtbl.get_table_of symt sym in
-				Hashtbl.add defined_in id' sym; (* insert a redundant definition for the mangled name *)
+				Hashtbl.add defined_in id' {sym with typ=[]}; (* insert a redundant definition for the mangled name *)
 				sym.mangled <- Some id'; (* save mangled name for us later *)
 				id'
+	in match Symtbl.get_symbol symt id true with
+	| Some sym -> 	begin match sym.mangled with
+			| Some name -> name
+			| None -> rename sym
+			end
 	| None -> failwith ("Cannot mangle a non-existent symbol " ^ id)	
 
 let mangle_ident' symt = function
@@ -53,20 +57,27 @@ let rec nameof symt id =
 				| None -> failwith "Symbol has never been mangled. Check if you handled the declaration correctly"
 				end
 
-let set_type symt id typ = match id with
-| `V id ->
+let set_type' symt id typ multiple = 
+	let set_once sym = 
+		if sym.typ = [] || multiple then
+			sym.typ <- typ
+		else
+			() (* Already mangled *)
+	in match id with
+	| `V id ->
 		begin match Symtbl.get_symbol symt id true with
-		| Some sym -> sym.typ <- typ
+		| Some sym -> set_once sym
 		| None -> failwith ("Cannot set type of nonexistent symbol" ^ id)
 		end
-| `Blank -> ()
+	| `Blank -> ()
+let set_type symt id typ = set_type' symt id typ false
 
 let update_fun this_symt child_symt id ret args = 
 	List.iter (fun (name,typ) -> set_type child_symt name [typ]) args;
 	if id = `V "init" then () 
 	else (
 		let args' = List.map (fun (name,typ) -> typ) args in
-		set_type this_symt id (ret::(distinguish_void args'))
+		set_type' this_symt id (ret::(distinguish_void args')) true
 	)
 
 let mangled_type symt typs = 
@@ -80,8 +91,6 @@ let mangled_type symt typs =
 	| other -> other  
 	in List.map aux typs
 
-let do_nothing symt typ = typ
-let ignore_node symt node = node
 
 let rec pass_ast symt = function
 	| Program (pkg, tops) ->
@@ -175,10 +184,10 @@ and pass_expr symt node = match node.v with
 	| `Indexing(arr, idx) ->
 		let arr' = pass_expr symt arr in
 		let idx' = pass_expr symt idx in
-		ignore_node symt {node with v = `Indexing(arr', idx')}
+		{node with v = `Indexing(arr', idx')}
 	| `Selector(obj, field) ->
 		let obj' = pass_expr symt obj in
-			ignore_node symt {node with v = `Selector(obj', field)}
+			{node with v = `Selector(obj', field)}
 	| `Call({v = `V func} as fn,args) ->
 		let args' = List.map (pass_expr symt) args in
 			if kindof_symbol symt func = TypeK
@@ -187,9 +196,9 @@ and pass_expr symt node = match node.v with
 	| `Call(_,_) -> node (* This call is bogus, typecheck's gonna get it *)
 	| `Op1(op,a) ->
 		let a' = pass_expr symt a in
-		ignore_node symt {node with v = `Op1(op,a')}
+		{node with v = `Op1(op,a')}
 	| `Op2(op,a,b) ->
 		let a' = pass_expr symt a in
 		let b' = pass_expr symt b in
-		ignore_node symt {node with v = `Op2(op,a',b')}
+		{node with v = `Op2(op,a',b')}
 	| `Cast(_,_) -> failwith "No casting yet"	

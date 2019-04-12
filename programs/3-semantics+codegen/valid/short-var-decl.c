@@ -12,6 +12,11 @@ char* str_add(char* p, char* q) {
 	return strcat(res,q);
 }
 
+string __golite_num_to_string(int x) {
+	string s = malloc(1);
+	*s = x;
+}
+
 void int_init(int* x) { *x = 0; }
 void double_init(double* x) { *x = 0; }
 void char_init(char* c) { *c = 0; }
@@ -24,17 +29,21 @@ void __golite__main() {
 	printf("%d\n",a$0);
 	printf("%d\n",b$1);
 	printf("%d\n",c$2);
-	int a$3 = 8;
-	int c$4 = 9;
-	int d$5 = 10;
-	printf("%d\n",a$3);
-	printf("%d\n",c$4);
+	int a$0 = 8;
+	int c$2 = 9;
+	int d$3 = 10;
+	printf("%d\n",a$0);
+	printf("%d\n",c$2);
 }
 
 void init_globals() {
 }
 
+void init_funcs() {
+	}
+
 int main() {
 	init_globals();
+	init_funcs();
 	__golite__main();
 }

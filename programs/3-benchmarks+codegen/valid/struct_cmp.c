@@ -12,6 +12,11 @@ char* str_add(char* p, char* q) {
 	return strcat(res,q);
 }
 
+string __golite_num_to_string(int x) {
+	string s = malloc(1);
+	*s = x;
+}
+
 void int_init(int* x) { *x = 0; }
 void double_init(double* x) { *x = 0; }
 void char_init(char* c) { *c = 0; }
@@ -126,7 +131,11 @@ __golite__arr_int_100_init(&y$6);
 void init_globals() {
 }
 
+void init_funcs() {
+	}
+
 int main() {
 	init_globals();
+	init_funcs();
 	__golite__main();
 }
