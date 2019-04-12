@@ -16,8 +16,8 @@ let mangled_name ident =
 
 
 (* mangle: Update the symbol table to store a new mangled name, also returning it *)
-let mangle symt id = 
-	match Symtbl.get_symbol symt id true with
+let mangle symt id =
+ 	match Symtbl.get_symbol symt id true with
 	| Some sym ->
 		let id' = mangled_name id in
 			let Symt(defined_in,_,_,_) = Symtbl.get_table_of symt sym in
@@ -55,14 +55,19 @@ let rec nameof symt id =
 
 let set_type symt id typ = match id with
 | `V id ->
-		let sym = get_symbol_exn symt id in
-			sym.typ <- typ
+		begin match Symtbl.get_symbol symt id true with
+		| Some sym -> sym.typ <- typ
+		| None -> failwith ("Cannot set type of nonexistent symbol" ^ id)
+		end
 | `Blank -> ()
 
 let update_fun this_symt child_symt id ret args = 
-	List.iter (fun (name,typ) -> set_type child_symt name [typ]) args;
-	let args' = List.map (fun (name,typ) -> typ) args in
+	if id = `V "init" then () 
+	else (
+		List.iter (fun (name,typ) -> set_type child_symt name [typ]) args;
+		let args' = List.map (fun (name,typ) -> typ) args in
 		set_type this_symt id (ret::(distinguish_void args'))
+	)
 
 let mangled_type symt typs = 
 	let rec aux = function
@@ -81,7 +86,7 @@ let ignore_node symt node = node
 let rec pass_ast symt = function
 	| Program (pkg, tops) ->
 		let p' = Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops) in
-		printf "%s\n" (Dumpast.dump p');
+		(* printf "%s\n" (Dumpast.dump p'); *)
 		p'
 and pass_toplevel this_symt node = function
 	| Global(decl) -> same (fun () -> {node with v = Global(pass_decl this_symt decl)})
@@ -144,7 +149,8 @@ and pass_decl symt = function
 | Type(name, def) -> 
 	let nameM = mangle_ident' symt name in
 	let defM = mangled_type symt [def] |> List.hd in
-	Type(nameM, defM)
+		set_type symt nameM [defM]; 
+		Type(nameM, defM)
 
 and pass_fallable_case this_symt node = function
 | (case,mode) -> same (fun () -> {node with v = (packify pass_case this_symt [case] |> List.hd, mode)}) (* It is best not to ask *)
