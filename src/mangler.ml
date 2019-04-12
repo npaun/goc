@@ -62,9 +62,9 @@ let set_type symt id typ = match id with
 | `Blank -> ()
 
 let update_fun this_symt child_symt id ret args = 
+	List.iter (fun (name,typ) -> set_type child_symt name [typ]) args;
 	if id = `V "init" then () 
 	else (
-		List.iter (fun (name,typ) -> set_type child_symt name [typ]) args;
 		let args' = List.map (fun (name,typ) -> typ) args in
 		set_type this_symt id (ret::(distinguish_void args'))
 	)
