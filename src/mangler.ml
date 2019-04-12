@@ -53,6 +53,17 @@ let rec nameof symt id =
 				| None -> failwith "Symbol has never been mangled. Check if you handled the declaration correctly"
 				end
 
+let set_type symt id typ = match id with
+| `V id ->
+		let sym = get_symbol_exn symt id in
+			sym.typ <- typ
+| `Blank -> ()
+
+let update_fun this_symt child_symt id ret args = 
+	List.iter (fun (name,typ) -> set_type child_symt name [typ]) args;
+	let args' = List.map (fun (name,typ) -> typ) args in
+		set_type this_symt id (ret::(distinguish_void args'))
+
 let mangled_type symt typs = 
 	let rec aux = function
 	| `Type id -> `Type (nameof symt id)
@@ -78,9 +89,10 @@ and pass_toplevel this_symt node = function
 		let argsM = List.map (fun (name,typ) -> (
 			(mangle_ident' child_symt name),
 			(mangled_type this_symt [typ] |> List.hd))) args
-		in let retM = (mangled_type this_symt [ret] |> List.hd)
-		in let body' = pass_block child_symt body
-		in {node with v = Func(name,argsM,retM,body')})
+		in let retM = mangled_type this_symt [ret] |> List.hd in
+			update_fun this_symt child_symt name retM argsM;
+			let body' = pass_block child_symt body in	
+				{node with v = Func(name,argsM,retM,body')})
 and pass_block this_symt body = traverse pass_statement this_symt body
 and pass_inner_stmt symt node = 
 	(pass_block symt [node] |> List.hd)
@@ -124,6 +136,7 @@ and pass_decl symt = function
 		let init' = maybe (pass_expr symt) init in
 		let ltypM = mangled_type symt [ltyp] |> List.hd in
 		let nameM = mangle_node symt name in
+			set_type symt nameM.v [ltypM];
 			Var(	nameM, 
 				ltypM,
 				init',
