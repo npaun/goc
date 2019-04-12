@@ -39,6 +39,7 @@ let get_symbol_exn symt id =
 	| Some sym -> sym
 	| None -> failwith ("Non-existent symbol please die now " ^ id)
 
+
 let rec nameof symt id =
 	let sym = get_symbol_exn symt id in
 		if sym.kind = FuncK then
@@ -52,6 +53,16 @@ let rec nameof symt id =
 				| None -> failwith "Symbol has never been mangled. Check if you handled the declaration correctly"
 				end
 
+let mangled_type symt typs = 
+	let rec aux = function
+	| `Type id -> `Type (nameof symt id)
+	| `TypeLit Slice(typ) -> `TypeLit(Slice(aux typ))
+	| `TypeLit Array(sz,typ) -> `TypeLit(Array(sz,aux typ))
+	| `TypeLit Struct(members) -> 
+		let members' = List.map (fun (id,typ) -> (id, aux typ)) members in
+		`TypeLit(Struct(members'))
+	| other -> other  
+	in List.map aux typs
 
 let do_nothing symt typ = typ
 let ignore_node symt node = node
@@ -59,15 +70,15 @@ let ignore_node symt node = node
 let rec pass_ast symt = function
 	| Program (pkg, tops) ->
 		let p' = Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops) in
-		(* printf "%s\n" (Dumpast.dump p'); *)
+		printf "%s\n" (Dumpast.dump p');
 		p'
 and pass_toplevel this_symt node = function
 	| Global(decl) -> same (fun () -> {node with v = Global(pass_decl this_symt decl)})
 	| Func(name,args,ret,body) -> down (fun child_symt ->
 		let argsM = List.map (fun (name,typ) -> (
 			(mangle_ident' child_symt name),
-			(do_nothing this_symt [typ] |> List.hd))) args
-		in let retM = (do_nothing this_symt [ret] |> List.hd)
+			(mangled_type this_symt [typ] |> List.hd))) args
+		in let retM = (mangled_type this_symt [ret] |> List.hd)
 		in let body' = pass_block child_symt body
 		in {node with v = Func(name,argsM,retM,body')})
 and pass_block this_symt body = traverse pass_statement this_symt body
@@ -111,14 +122,16 @@ and pass_statement this_symt node = function
 and pass_decl symt = function
 | Var(name, ltyp, init, shortp) ->
 		let init' = maybe (pass_expr symt) init in
-		let ltypM = do_nothing symt [ltyp] |> List.hd in
+		let ltypM = mangled_type symt [ltyp] |> List.hd in
 		let nameM = mangle_node symt name in
 			Var(	nameM, 
 				ltypM,
 				init',
 				shortp)
-| Type(name, def) -> let nameM = mangle_ident' symt name in
-	Type(name, do_nothing symt [def] |> List.hd)
+| Type(name, def) -> 
+	let nameM = mangle_ident' symt name in
+	let defM = mangled_type symt [def] |> List.hd in
+	Type(nameM, defM)
 
 and pass_fallable_case this_symt node = function
 | (case,mode) -> same (fun () -> {node with v = (packify pass_case this_symt [case] |> List.hd, mode)}) (* It is best not to ask *)
