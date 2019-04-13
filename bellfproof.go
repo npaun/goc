@@ -48,7 +48,7 @@
 package main
 
 
-var ROUNDS = 7
+var ROUNDS = 1
 var FAKE_VERTICES = 1 << 4
 var FAKE_EDGES = 1 << 2
 
@@ -61,12 +61,12 @@ type edge struct {
 type vertex struct {
 	name_str string
 	name int
-	adj []edge
+	adj [4]edge
 }
 
 var INF = float64(1 << 30)
 
-var graph []vertex
+var graph [16]vertex
 
 type waypoint struct {
 	pred int
@@ -74,6 +74,25 @@ type waypoint struct {
 }
 
 var path []waypoint
+
+
+func dump_graph() {
+	for i := 0; i < len(graph); i++ {
+		print(graph[i].name," ---> ")
+		for j := 0; j < len(graph[i].adj); j++ {
+			print(int(graph[i].adj[j].metric),"@",graph[i].adj[j].to, "; ")
+		}
+		println("")
+	}
+}
+
+
+func dump_edges(edges [4]edge) {
+		for j := 0; j < len(edges); j++ {
+			print(int(edges[j].metric),"@",edges[j].to, "; ")
+		}
+		println("")
+}
 
 func make_edge(to int, to_str string, metric float64) edge {
 	var e edge
@@ -83,7 +102,7 @@ func make_edge(to int, to_str string, metric float64) edge {
 	return e
 }
 
-func make_vertex(name int, name_str string, adj []edge) vertex{
+func make_vertex(name int, name_str string, adj [4]edge) vertex{
 	var v vertex
 	v.name = name
 	v.name_str = name_str
@@ -99,20 +118,22 @@ var lfsr int = 0xBADD
 func rand() int {
 	bit  = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1
 	lfsr =  (lfsr >> 1) | (bit << 15)
-	println(lfsr)
 	return lfsr
 }
 
 func init_graph() {
-        var new_graph []vertex
+        var new_graph [16]vertex
         for i := 0; i < FAKE_VERTICES; i++ {
-                var edges []edge
+                var edges [4]edge
                 for j := 0; j < FAKE_EDGES; j++ {
-                        edges = append(edges, make_edge(rand() % FAKE_VERTICES, "FAKE", float64(rand() % 100) + 100.0))
+                        edges[j] = make_edge(rand() % FAKE_VERTICES, "FAKE", float64(rand() % 100) + 100.0)
+			dump_edges(edges)
+			dump_graph()
                 }
-                new_graph = append(new_graph, make_vertex(i, "FAKE",  edges))
+                new_graph[i] = make_vertex(i, "FAKE",  edges)
+        	graph = new_graph
+		println("JEEZUS")
         }
-        graph = new_graph
 }
 
 
@@ -151,10 +172,9 @@ func path_to(dest int) {
 }
 
 func main() {
-	for r := 0; r < ROUNDS; r++ {
 		init_graph()
+		dump_graph()
 		bellman(0)
-		//path_to(3)
+		path_to(3)
 		
-	}
 }
