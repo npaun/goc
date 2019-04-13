@@ -103,20 +103,17 @@ func rand() int {
 }
 
 func init_graph() {
-        var e_yul []edge
-        e_yul = append(e_yul,make_edge(1,"YYZ",500.0))
-        e_yul = append(e_yul,make_edge(2,"JFK",900.0))
-        graph = append(graph, make_vertex(0,"YUL",e_yul))
-        var e_yyz []edge
-        e_yyz = append(e_yyz,make_edge(2,"JFK",600.0))
-        e_yyz = append(e_yyz,make_edge(3,"EZE",4100.0))
-        graph = append(graph, make_vertex(1,"YYZ",e_yyz))
-        var  e_jfk []edge
-        e_jfk = append(e_jfk,make_edge(3,"EZE",3600.0))
-        graph = append(graph, make_vertex(2,"JFK",e_jfk))
-        var e_eze []edge
-        graph = append(graph, make_vertex(3,"EZE",e_eze))
+        var new_graph []vertex
+        for i := 0; i < FAKE_VERTICES; i++ {
+                var edges []edge
+                for j := 0; j < FAKE_EDGES; j++ {
+                        edges = append(edges, make_edge(rand() % FAKE_VERTICES, "FAKE", float64(rand() % 100) + 100.0))
+                }
+                new_graph = append(new_graph, make_vertex(i, "FAKE",  edges))
+        }
+        graph = new_graph
 }
+
 
 
 func bellman(src int) {
