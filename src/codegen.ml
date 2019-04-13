@@ -372,7 +372,7 @@ let gen_init_funcs () =
   
 (* TODO - plug the generation of indexing helpers and improve them *)    
 let gen_c_code filename ast =
-    let ast' = ast (*Codegenrename.pass_ast ast*) in
+    let ast' = (*ast*) Codegenrename.pass_ast ast in
     Codegenpre.codepre_ast ast';
     let ast_code = gen_ast ast' in
     let gend_structs = (String.concat "" !Codegenpre.struct_decls) in
