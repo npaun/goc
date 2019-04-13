@@ -70,89 +70,89 @@ __golite__arr_double_256*  __arr_index___golite__arr_double_256(__golite__arr_do
 	else {fprintf(stderr, "Out of Bounds\n"); exit(-1);}
 }
 
-int CYCLES$0;
+int __golite__var_CYCLES_0_1;
 ;
-__golite__arr___golite__arr_double_256_256 __golite__mmult(__golite__arr___golite__arr_double_256_256 A$2, __golite__arr___golite__arr_double_256_256 B$3) {
-	int n$4 = 256;
-	int m$5 = 256;
+__golite__arr___golite__arr_double_256_256 __golite__mmult(__golite__arr___golite__arr_double_256_256 __golite__var_A_2_2, __golite__arr___golite__arr_double_256_256 __golite__var_B_3_3) {
+	int __golite__var_n_4_4 = 256;
+	int __golite__var_m_5_5 = 256;
 	256;
-	int p$6 = 256;
-	__golite__arr___golite__arr_double_256_256 C$7;
-__golite__arr___golite__arr_double_256_256_init(&C$7);
+	int __golite__var_p_6_6 = 256;
+	__golite__arr___golite__arr_double_256_256 __golite__var_C_7_7;
+__golite__arr___golite__arr_double_256_256_init(&__golite__var_C_7_7);
 	{
-		int i$8 = 0;
-		while ((i$8 < n$4)) {
+		int __golite__var_i_8_8 = 0;
+		while ((__golite__var_i_8_8 < __golite__var_n_4_4)) {
 			{
-				int j$9 = 0;
-				while ((j$9 < p$6)) {
+				int __golite__var_j_9_9 = 0;
+				while ((__golite__var_j_9_9 < __golite__var_p_6_6)) {
 					{
-						int k$10 = 0;
-						while ((k$10 < m$5)) {
-							 __arr_index_double( __arr_index___golite__arr_double_256(C$7.data, i$8, 256)[i$8].data, j$9, 256)[j$9]+=( __arr_index_double( __arr_index___golite__arr_double_256(A$2.data, i$8, 256)[i$8].data, k$10, 256)[k$10] *  __arr_index_double( __arr_index___golite__arr_double_256(B$3.data, k$10, 256)[k$10].data, j$9, 256)[j$9]);
+						int __golite__var_k_10_10 = 0;
+						while ((__golite__var_k_10_10 < __golite__var_m_5_5)) {
+							 __arr_index_double( __arr_index___golite__arr_double_256(__golite__var_C_7_7.data, __golite__var_i_8_8, 256)[__golite__var_i_8_8].data, __golite__var_j_9_9, 256)[__golite__var_j_9_9]+=( __arr_index_double( __arr_index___golite__arr_double_256(__golite__var_A_2_2.data, __golite__var_i_8_8, 256)[__golite__var_i_8_8].data, __golite__var_k_10_10, 256)[__golite__var_k_10_10] *  __arr_index_double( __arr_index___golite__arr_double_256(__golite__var_B_3_3.data, __golite__var_k_10_10, 256)[__golite__var_k_10_10].data, __golite__var_j_9_9, 256)[__golite__var_j_9_9]);
 						__continue_lbl6:;
-							k$10++;
+							__golite__var_k_10_10++;
 						}
 					}
 				__continue_lbl5:;
-					j$9++;
+					__golite__var_j_9_9++;
 				}
 			}
 		__continue_lbl4:;
-			i$8++;
+			__golite__var_i_8_8++;
 		}
 	}
-	return C$7;
+	return __golite__var_C_7_7;
 }
 
-int seed$11;
+int __golite__var_seed_11_11;
 int __golite__rand() {
-	int __golite__tmp_4 = (((seed$11 * 1103515245) + 12345) & ((1 << 31) - 1));
-	seed$11 = __golite__tmp_4;
-	return seed$11;
+	int __golite__tmp_4 = (((__golite__var_seed_11_11 * 1140671485) + 1140671485) & (1 << 24));
+	__golite__var_seed_11_11 = __golite__tmp_4;
+	return __golite__var_seed_11_11;
 }
 
 __golite__arr___golite__arr_double_256_256 __golite__rand_matrix() {
-	__golite__arr___golite__arr_double_256_256 M$12;
-__golite__arr___golite__arr_double_256_256_init(&M$12);
-	int n$13 = 256;
+	__golite__arr___golite__arr_double_256_256 __golite__var_M_12_12;
+__golite__arr___golite__arr_double_256_256_init(&__golite__var_M_12_12);
+	int __golite__var_n_13_13 = 256;
 	{
-		int i$14 = 0;
-		while ((i$14 < n$13)) {
+		int __golite__var_i_14_14 = 0;
+		while ((__golite__var_i_14_14 < __golite__var_n_13_13)) {
 			{
-				int j$15 = 0;
-				while ((j$15 < n$13)) {
+				int __golite__var_j_15_15 = 0;
+				while ((__golite__var_j_15_15 < __golite__var_n_13_13)) {
 					double __golite__tmp_2 = ((double)__golite__rand() + (1e-06 * (double)__golite__rand()));
-					 __arr_index_double( __arr_index___golite__arr_double_256(M$12.data, i$14, 256)[i$14].data, j$15, 256)[j$15] = __golite__tmp_2;
+					 __arr_index_double( __arr_index___golite__arr_double_256(__golite__var_M_12_12.data, __golite__var_i_14_14, 256)[__golite__var_i_14_14].data, __golite__var_j_15_15, 256)[__golite__var_j_15_15] = __golite__tmp_2;
 				__continue_lbl3:;
-					j$15++;
+					__golite__var_j_15_15++;
 				}
 			}
 		__continue_lbl2:;
-			i$14++;
+			__golite__var_i_14_14++;
 		}
 	}
-	return M$12;
+	return __golite__var_M_12_12;
 }
 
 void __golite__main() {
 	{
-		int i$16 = 0;
-		while ((i$16 < CYCLES$0)) {
+		int __golite__var_i_16_16 = 0;
+		while ((__golite__var_i_16_16 < __golite__var_CYCLES_0_1)) {
 			__golite__mmult(__golite__rand_matrix(), __golite__rand_matrix());
 			{
-				if (((i$16 % 10) == 0)) {
+				if (((__golite__var_i_16_16 % 10) == 0)) {
 					printf("%s\n","+");
 				}
 			}
 		__continue_lbl1:;
-			i$16++;
+			__golite__var_i_16_16++;
 		}
 	}
 }
 
 void init_globals() {
-	CYCLES$0 = 100;
-	seed$11 = 3735928559;
+	__golite__var_CYCLES_0_1 = 100;
+	__golite__var_seed_11_11 = 3735928559;
 }
 
 void init_funcs() {

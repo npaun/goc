@@ -83,9 +83,10 @@ void __golite_builtin__slice___golite__struct_1_init(__golite_builtin__slice___g
 __golite_builtin__slice___golite__struct_1 __golite_builtin__slice___golite__struct_1_append(__golite_builtin__slice___golite__struct_1* _s, __golite__struct_1 el) {
 	__golite_builtin__slice___golite__struct_1 s = *_s;
 	if(s.__size == s.__capacity) {
-		__golite__struct_1* new_arr = malloc(s.__size * sizeof(__golite__struct_1));
-		memcpy(new_arr, s.__contents, s.__size * sizeof(__golite__struct_1));
-		s.__capacity *= 2;
+		if (s.__capacity == 0) s.__capacity = 1;
+		else s.__capacity *= 2;
+		__golite__struct_1* new_arr = (__golite__struct_1*)malloc((s.__capacity) * sizeof(__golite__struct_1));
+		if (s.__contents != NULL) memcpy(new_arr, s.__contents, s.__size * sizeof(__golite__struct_1));
 		s.__contents = new_arr;
 	}
 	s.__contents[s.__size++] = el;
@@ -114,104 +115,104 @@ int*  __arr_index_int(int* arr, int i, int len) {
 	else {fprintf(stderr, "Out of Bounds\n"); exit(-1);}
 }
 
-int KEYS$0;
-int SEARCHES$1;
-int ROUNDS$2;
+int __golite__var_KEYS_0_1;
+int __golite__var_SEARCHES_1_2;
+int __golite__var_ROUNDS_2_3;
 ;
-__golite__arr_int_9 __golite__unpack(int key$4) {
-	__golite__arr_int_9 r$5;
-__golite__arr_int_9_init(&r$5);
+__golite__arr_int_9 __golite__unpack(int __golite__var_key_4_4) {
+	__golite__arr_int_9 __golite__var_r_5_5;
+__golite__arr_int_9_init(&__golite__var_r_5_5);
 	{
-		int i$6 = (9 - 1);
-		while ((i$6 >= 0)) {
-			int __golite__tmp_23 = (key$4 % 10);
-			 __arr_index_int(r$5.data, i$6, 9)[i$6] = __golite__tmp_23;
-			key$4/=10;
+		int __golite__var_i_6_6 = (9 - 1);
+		while ((__golite__var_i_6_6 >= 0)) {
+			int __golite__tmp_23 = (__golite__var_key_4_4 % 10);
+			 __arr_index_int(__golite__var_r_5_5.data, __golite__var_i_6_6, 9)[__golite__var_i_6_6] = __golite__tmp_23;
+			__golite__var_key_4_4/=10;
 		__continue_lbl6:;
-			i$6--;
+			__golite__var_i_6_6--;
 		}
 	}
-	return r$5;
+	return __golite__var_r_5_5;
 }
 
-__golite_builtin__slice___golite__struct_1 __golite__trie_insert(__golite_builtin__slice___golite__struct_1 t$7, int key$8, string data$9) {
-	int cur$10 = 0;
+__golite_builtin__slice___golite__struct_1 __golite__trie_insert(__golite_builtin__slice___golite__struct_1 __golite__var_t_7_7, int __golite__var_key_8_8, string __golite__var_data_9_9) {
+	int __golite__var_cur_10_10 = 0;
 	{
-		__golite__arr_int_9 key$11 = __golite__unpack(key$8);
+		__golite__arr_int_9 __golite__var_key_11_11 = __golite__unpack(__golite__var_key_8_8);
 		{
-			int i$12 = 0;
-			while ((i$12 < 9)) {
-				int key$13 =  __arr_index_int(key$11.data, i$12, 9)[i$12];
+			int __golite__var_i_12_12 = 0;
+			while ((__golite__var_i_12_12 < 9)) {
+				int __golite__var_key_13_13 =  __arr_index_int(__golite__var_key_11_11.data, __golite__var_i_12_12, 9)[__golite__var_i_12_12];
 				{
-					if (( __arr_index_int((__golite_builtin__slice___golite__struct_1_index(t$7,cur$10)[cur$10]).chld.data, key$13, 10)[key$13] == 0)) {
-						__golite__struct_1 nent$14;
-__golite__struct_1_init(&nent$14);
-						int slot$15 = __golite_builtin__slice___golite__struct_1_len(t$7);
-						__golite_builtin__slice___golite__struct_1 __golite__tmp_19 = __golite_builtin__slice___golite__struct_1_append(&t$7, nent$14);
-						t$7 = __golite__tmp_19;
-						int __golite__tmp_17 = slot$15;
-						 __arr_index_int((__golite_builtin__slice___golite__struct_1_index(t$7,cur$10)[cur$10]).chld.data, key$13, 10)[key$13] = __golite__tmp_17;
+					if (( __arr_index_int((__golite_builtin__slice___golite__struct_1_index(__golite__var_t_7_7,__golite__var_cur_10_10)[__golite__var_cur_10_10]).chld.data, __golite__var_key_13_13, 10)[__golite__var_key_13_13] == 0)) {
+						__golite__struct_1 __golite__var_nent_14_14;
+__golite__struct_1_init(&__golite__var_nent_14_14);
+						int __golite__var_slot_15_15 = __golite_builtin__slice___golite__struct_1_len(__golite__var_t_7_7);
+						__golite_builtin__slice___golite__struct_1 __golite__tmp_19 = __golite_builtin__slice___golite__struct_1_append(&__golite__var_t_7_7, __golite__var_nent_14_14);
+						__golite__var_t_7_7 = __golite__tmp_19;
+						int __golite__tmp_17 = __golite__var_slot_15_15;
+						 __arr_index_int((__golite_builtin__slice___golite__struct_1_index(__golite__var_t_7_7,__golite__var_cur_10_10)[__golite__var_cur_10_10]).chld.data, __golite__var_key_13_13, 10)[__golite__var_key_13_13] = __golite__tmp_17;
 					}
 				}
-				int __golite__tmp_21 =  __arr_index_int((__golite_builtin__slice___golite__struct_1_index(t$7,cur$10)[cur$10]).chld.data, key$13, 10)[key$13];
-				cur$10 = __golite__tmp_21;
+				int __golite__tmp_21 =  __arr_index_int((__golite_builtin__slice___golite__struct_1_index(__golite__var_t_7_7,__golite__var_cur_10_10)[__golite__var_cur_10_10]).chld.data, __golite__var_key_13_13, 10)[__golite__var_key_13_13];
+				__golite__var_cur_10_10 = __golite__tmp_21;
 			__continue_lbl5:;
-				i$12++;
+				__golite__var_i_12_12++;
 			}
 		}
-		string __golite__tmp_15 = data$9;
-		(__golite_builtin__slice___golite__struct_1_index(t$7,cur$10)[cur$10]).data = __golite__tmp_15;
+		string __golite__tmp_15 = __golite__var_data_9_9;
+		(__golite_builtin__slice___golite__struct_1_index(__golite__var_t_7_7,__golite__var_cur_10_10)[__golite__var_cur_10_10]).data = __golite__tmp_15;
 	}
-	return t$7;
+	return __golite__var_t_7_7;
 }
 
-string __golite__trie_search(__golite_builtin__slice___golite__struct_1 t$16, int key$17) {
-	int cur$18 = 0;
+string __golite__trie_search(__golite_builtin__slice___golite__struct_1 __golite__var_t_16_16, int __golite__var_key_17_17) {
+	int __golite__var_cur_18_18 = 0;
 	{
-		__golite__arr_int_9 key$19 = __golite__unpack(key$17);
+		__golite__arr_int_9 __golite__var_key_19_19 = __golite__unpack(__golite__var_key_17_17);
 		{
-			int i$20 = 0;
-			while ((i$20 < 9)) {
-				int key$21 =  __arr_index_int(key$19.data, i$20, 9)[i$20];
+			int __golite__var_i_20_20 = 0;
+			while ((__golite__var_i_20_20 < 9)) {
+				int __golite__var_key_21_21 =  __arr_index_int(__golite__var_key_19_19.data, __golite__var_i_20_20, 9)[__golite__var_i_20_20];
 				{
-					if (( __arr_index_int((__golite_builtin__slice___golite__struct_1_index(t$16,cur$18)[cur$18]).chld.data, key$21, 10)[key$21] == 0)) {
+					if (( __arr_index_int((__golite_builtin__slice___golite__struct_1_index(__golite__var_t_16_16,__golite__var_cur_18_18)[__golite__var_cur_18_18]).chld.data, __golite__var_key_21_21, 10)[__golite__var_key_21_21] == 0)) {
 						return "NOTFOUND";
 					}
 				}
-				int __golite__tmp_13 =  __arr_index_int((__golite_builtin__slice___golite__struct_1_index(t$16,cur$18)[cur$18]).chld.data, key$21, 10)[key$21];
-				cur$18 = __golite__tmp_13;
+				int __golite__tmp_13 =  __arr_index_int((__golite_builtin__slice___golite__struct_1_index(__golite__var_t_16_16,__golite__var_cur_18_18)[__golite__var_cur_18_18]).chld.data, __golite__var_key_21_21, 10)[__golite__var_key_21_21];
+				__golite__var_cur_18_18 = __golite__tmp_13;
 			__continue_lbl4:;
-				i$20++;
+				__golite__var_i_20_20++;
 			}
 		}
-		return (__golite_builtin__slice___golite__struct_1_index(t$16,cur$18)[cur$18]).data;
+		return (__golite_builtin__slice___golite__struct_1_index(__golite__var_t_16_16,__golite__var_cur_18_18)[__golite__var_cur_18_18]).data;
 	}
 }
 
 void __golite__bench() {
-	__golite_builtin__slice___golite__struct_1 t$22;
-__golite_builtin__slice___golite__struct_1_init(&t$22);
-	__golite__struct_1 root$23;
-__golite__struct_1_init(&root$23);
-	__golite_builtin__slice___golite__struct_1 __golite__tmp_11 = __golite_builtin__slice___golite__struct_1_append(&t$22, root$23);
-	t$22 = __golite__tmp_11;
+	__golite_builtin__slice___golite__struct_1 __golite__var_t_22_22;
+__golite_builtin__slice___golite__struct_1_init(&__golite__var_t_22_22);
+	__golite__struct_1 __golite__var_root_23_23;
+__golite__struct_1_init(&__golite__var_root_23_23);
+	__golite_builtin__slice___golite__struct_1 __golite__tmp_11 = __golite_builtin__slice___golite__struct_1_append(&__golite__var_t_22_22, __golite__var_root_23_23);
+	__golite__var_t_22_22 = __golite__tmp_11;
 	{
-		int i$24 = 0;
-		while ((i$24 < KEYS$0)) {
+		int __golite__var_i_24_24 = 0;
+		while ((__golite__var_i_24_24 < __golite__var_KEYS_0_1)) {
 			{
-				if (0 || ((i$24 % 3) == 0)) {
-					__golite_builtin__slice___golite__struct_1 __golite__tmp_5 = __golite__trie_insert(t$22, i$24, "elephant");
-					t$22 = __golite__tmp_5;
+				if (0 || ((__golite__var_i_24_24 % 3) == 0)) {
+					__golite_builtin__slice___golite__struct_1 __golite__tmp_5 = __golite__trie_insert(__golite__var_t_22_22, __golite__var_i_24_24, "elephant");
+					__golite__var_t_22_22 = __golite__tmp_5;
 				}
 				else {
-					if (0 || ((i$24 % 3) == 1)) {
-						__golite_builtin__slice___golite__struct_1 __golite__tmp_7 = __golite__trie_insert(t$22, i$24, "marmot");
-						t$22 = __golite__tmp_7;
+					if (0 || ((__golite__var_i_24_24 % 3) == 1)) {
+						__golite_builtin__slice___golite__struct_1 __golite__tmp_7 = __golite__trie_insert(__golite__var_t_22_22, __golite__var_i_24_24, "marmot");
+						__golite__var_t_22_22 = __golite__tmp_7;
 					}
 					else {
-						if (0 || ((i$24 % 3) == 2)) {
-							__golite_builtin__slice___golite__struct_1 __golite__tmp_9 = __golite__trie_insert(t$22, i$24, "panther");
-							t$22 = __golite__tmp_9;
+						if (0 || ((__golite__var_i_24_24 % 3) == 2)) {
+							__golite_builtin__slice___golite__struct_1 __golite__tmp_9 = __golite__trie_insert(__golite__var_t_22_22, __golite__var_i_24_24, "panther");
+							__golite__var_t_22_22 = __golite__tmp_9;
 						}
 						else {
 						}
@@ -219,40 +220,40 @@ __golite__struct_1_init(&root$23);
 				}
 			}
 		__continue_lbl3:;
-			i$24++;
+			__golite__var_i_24_24++;
 		}
 	}
 	{
-		int i$25 = 0;
-		int k$26 = 0;
-		while ((i$25 < SEARCHES$1)) {
-			printf("%s\n",__golite__trie_search(t$22, i$25));
+		int __golite__var_i_25_25 = 0;
+		int __golite__var_k_26_26 = 0;
+		while ((__golite__var_i_25_25 < __golite__var_SEARCHES_1_2)) {
+			printf("%s\n",__golite__trie_search(__golite__var_t_22_22, __golite__var_i_25_25));
 		__continue_lbl2:;
-			int __golite__tmp_2 = (i$25 + 1);
-			int __golite__tmp_3 = (k$26 * 11);
-			i$25 = __golite__tmp_2;
-			k$26 = __golite__tmp_3;
+			int __golite__tmp_2 = (__golite__var_i_25_25 + 1);
+			int __golite__tmp_3 = (__golite__var_k_26_26 * 11);
+			__golite__var_i_25_25 = __golite__tmp_2;
+			__golite__var_k_26_26 = __golite__tmp_3;
 		}
 	}
 }
 
 void __golite__main() {
 	{
-		int i$27 = 0;
-		while ((i$27 < ROUNDS$2)) {
+		int __golite__var_i_27_27 = 0;
+		while ((__golite__var_i_27_27 < __golite__var_ROUNDS_2_3)) {
 			printf("%s\n","-------------------------");
 			__golite__bench();
 			printf("%s\n","");
 		__continue_lbl1:;
-			i$27++;
+			__golite__var_i_27_27++;
 		}
 	}
 }
 
 void init_globals() {
-	KEYS$0 = 500000;
-	SEARCHES$1 = 10;
-	ROUNDS$2 = 15;
+	__golite__var_KEYS_0_1 = 500000;
+	__golite__var_SEARCHES_1_2 = 10;
+	__golite__var_ROUNDS_2_3 = 15;
 }
 
 void init_funcs() {

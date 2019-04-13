@@ -1,3 +1,12 @@
+// This is a test of array and slice behaviour
+//~Before any changes:
+//~true
+//~After changes:
+//~false
+//~Indexing slice:  1
+//~Indexing person slice:  bob
+//~2.150000e+01
+
 package main
 
 type person struct {

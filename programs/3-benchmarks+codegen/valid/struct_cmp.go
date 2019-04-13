@@ -1,3 +1,9 @@
+// This is a test of structure comparison behaviour
+//~Before assign:
+//~false
+//~After assign:
+//~true
+
 package main
 
 type person struct {

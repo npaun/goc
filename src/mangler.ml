@@ -11,7 +11,7 @@ let sym = ref (-1)
 
 let mangled_name ident = 
 	incr sym;
-	sprintf "%s$%d" ident !sym
+	sprintf "%s_%d" ident !sym
 
 
 

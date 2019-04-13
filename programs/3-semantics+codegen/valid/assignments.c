@@ -37,9 +37,10 @@ void __golite_builtin__slice_double_init(__golite_builtin__slice_double* x) {
 __golite_builtin__slice_double __golite_builtin__slice_double_append(__golite_builtin__slice_double* _s, double el) {
 	__golite_builtin__slice_double s = *_s;
 	if(s.__size == s.__capacity) {
-		double* new_arr = malloc(s.__size * sizeof(double));
-		memcpy(new_arr, s.__contents, s.__size * sizeof(double));
-		s.__capacity *= 2;
+		if (s.__capacity == 0) s.__capacity = 1;
+		else s.__capacity *= 2;
+		double* new_arr = (double*)malloc((s.__capacity) * sizeof(double));
+		if (s.__contents != NULL) memcpy(new_arr, s.__contents, s.__size * sizeof(double));
 		s.__contents = new_arr;
 	}
 	s.__contents[s.__size++] = el;
@@ -59,46 +60,46 @@ int __golite_builtin__slice_double_cap(__golite_builtin__slice_double s) {
 	return s.__capacity;
 }
 
-int global$0;
+int __golite__var_global_0_1;
 int __golite__sideEffect() {
 	int __golite__tmp_11 = 69;
-	global$0 = __golite__tmp_11;
+	__golite__var_global_0_1 = __golite__tmp_11;
 	return 5;
 }
 
 __golite_builtin__slice_double __golite__addressableSlice() {
-	__golite_builtin__slice_double a$1;
-__golite_builtin__slice_double_init(&a$1);
-	__golite_builtin__slice_double __golite__tmp_9 = __golite_builtin__slice_double_append(&a$1, 42.);
-	a$1 = __golite__tmp_9;
-	return a$1;
+	__golite_builtin__slice_double __golite__var_a_1_2;
+__golite_builtin__slice_double_init(&__golite__var_a_1_2);
+	__golite_builtin__slice_double __golite__tmp_9 = __golite_builtin__slice_double_append(&__golite__var_a_1_2, 42.);
+	__golite__var_a_1_2 = __golite__tmp_9;
+	return __golite__var_a_1_2;
 }
 
 void __golite__main() {
-	int a$2 = 5;
-	int b$3 = 5;
-	a$2+=b$3;
-	printf("%d\n",a$2);
-	int c$4;
-int_init(&c$4);
-	int d$5;
-int_init(&d$5);
+	int __golite__var_a_2_3 = 5;
+	int __golite__var_b_3_4 = 5;
+	__golite__var_a_2_3+=__golite__var_b_3_4;
+	printf("%d\n",__golite__var_a_2_3);
+	int __golite__var_c_4_5;
+int_init(&__golite__var_c_4_5);
+	int __golite__var_d_5_6;
+int_init(&__golite__var_d_5_6);
 	int __golite__tmp_6 = 10;
 	int __golite__tmp_7 = 15;
-	c$4 = __golite__tmp_6;
-	d$5 = __golite__tmp_7;
-	printf("%d\n",c$4);
-	printf("%d\n",d$5);
-	printf("%d\n",global$0);
+	__golite__var_c_4_5 = __golite__tmp_6;
+	__golite__var_d_5_6 = __golite__tmp_7;
+	printf("%d\n",__golite__var_c_4_5);
+	printf("%d\n",__golite__var_d_5_6);
+	printf("%d\n",__golite__var_global_0_1);
 	int __golite__tmp_4 = __golite__sideEffect();
 ;
-	printf("%d\n",global$0);
+	printf("%d\n",__golite__var_global_0_1);
 	double __golite__tmp_2 = 42.1;
 	(__golite_builtin__slice_double_index(__golite__addressableSlice(),0)[0]) = __golite__tmp_2;
 }
 
 void init_globals() {
-	global$0 = 10;
+	__golite__var_global_0_1 = 10;
 }
 
 void init_funcs() {

@@ -1,3 +1,5 @@
+// Tests whether anonymous structs become correctly typedefed in C
+//~yellow
 package main
 
 func color(clr struct {

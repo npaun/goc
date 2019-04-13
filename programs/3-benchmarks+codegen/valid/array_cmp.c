@@ -67,9 +67,10 @@ void __golite_builtin__slice_int_init(__golite_builtin__slice_int* x) {
 __golite_builtin__slice_int __golite_builtin__slice_int_append(__golite_builtin__slice_int* _s, int el) {
 	__golite_builtin__slice_int s = *_s;
 	if(s.__size == s.__capacity) {
-		int* new_arr = malloc(s.__size * sizeof(int));
-		memcpy(new_arr, s.__contents, s.__size * sizeof(int));
-		s.__capacity *= 2;
+		if (s.__capacity == 0) s.__capacity = 1;
+		else s.__capacity *= 2;
+		int* new_arr = (int*)malloc((s.__capacity) * sizeof(int));
+		if (s.__contents != NULL) memcpy(new_arr, s.__contents, s.__size * sizeof(int));
 		s.__contents = new_arr;
 	}
 	s.__contents[s.__size++] = el;
@@ -104,9 +105,10 @@ void __golite_builtin__slice___golite__struct_1_init(__golite_builtin__slice___g
 __golite_builtin__slice___golite__struct_1 __golite_builtin__slice___golite__struct_1_append(__golite_builtin__slice___golite__struct_1* _s, __golite__struct_1 el) {
 	__golite_builtin__slice___golite__struct_1 s = *_s;
 	if(s.__size == s.__capacity) {
-		__golite__struct_1* new_arr = malloc(s.__size * sizeof(__golite__struct_1));
-		memcpy(new_arr, s.__contents, s.__size * sizeof(__golite__struct_1));
-		s.__capacity *= 2;
+		if (s.__capacity == 0) s.__capacity = 1;
+		else s.__capacity *= 2;
+		__golite__struct_1* new_arr = (__golite__struct_1*)malloc((s.__capacity) * sizeof(__golite__struct_1));
+		if (s.__contents != NULL) memcpy(new_arr, s.__contents, s.__size * sizeof(__golite__struct_1));
 		s.__contents = new_arr;
 	}
 	s.__contents[s.__size++] = el;
@@ -136,49 +138,49 @@ __golite__struct_1*  __arr_index___golite__struct_1(__golite__struct_1* arr, int
 }
 
 ;
-string __golite__f(int x$1, double f$2) {
-	int z$3;
-int_init(&z$3);
-	int y$4 = x$1;
+string __golite__f(int __golite__var_x_1_1, double __golite__var_f_2_2) {
+	int __golite__var_z_3_3;
+int_init(&__golite__var_z_3_3);
+	int __golite__var_y_4_4 = __golite__var_x_1_1;
 	return "wow";
 }
 
 void __golite__main() {
-	int x$5;
-int_init(&x$5);
-	int y$6;
-int_init(&y$6);
+	int __golite__var_x_5_5;
+int_init(&__golite__var_x_5_5);
+	int __golite__var_y_6_6;
+int_init(&__golite__var_y_6_6);
 	int __golite__tmp_10 = 10;
 	int __golite__tmp_11 = 20;
 	int __golite__tmp_12 = 30;
-	x$5 = __golite__tmp_10;
+	__golite__var_x_5_5 = __golite__tmp_10;
 ;
-	y$6 = __golite__tmp_12;
-	__golite__arr___golite__struct_1_20 parr1$7;
-__golite__arr___golite__struct_1_20_init(&parr1$7);
-	__golite__arr___golite__struct_1_20 parr2$8;
-__golite__arr___golite__struct_1_20_init(&parr2$8);
+	__golite__var_y_6_6 = __golite__tmp_12;
+	__golite__arr___golite__struct_1_20 __golite__var_parr1_7_7;
+__golite__arr___golite__struct_1_20_init(&__golite__var_parr1_7_7);
+	__golite__arr___golite__struct_1_20 __golite__var_parr2_8_8;
+__golite__arr___golite__struct_1_20_init(&__golite__var_parr2_8_8);
 	printf("%s\n","Before any changes:");
-	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1$7,&parr2$8) ? "true" : "false");
+	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&__golite__var_parr1_7_7,&__golite__var_parr2_8_8) ? "true" : "false");
 	string __golite__tmp_8 = "bob";
-	 __arr_index___golite__struct_1(parr1$7.data, 2, 20)[2].name = __golite__tmp_8;
+	 __arr_index___golite__struct_1(__golite__var_parr1_7_7.data, 2, 20)[2].name = __golite__tmp_8;
 	printf("%s\n","After changes:");
-	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&parr1$7,&parr2$8) ? "true" : "false");
-	__golite_builtin__slice_int s$9;
-__golite_builtin__slice_int_init(&s$9);
-	__golite_builtin__slice_int __golite__tmp_6 = __golite_builtin__slice_int_append(&s$9, 1);
-	s$9 = __golite__tmp_6;
-	printf("%s %d\n","Indexing slice: ",(__golite_builtin__slice_int_index(s$9,0)[0]));
-	__golite_builtin__slice___golite__struct_1 s2$10;
-__golite_builtin__slice___golite__struct_1_init(&s2$10);
-	__golite_builtin__slice___golite__struct_1 __golite__tmp_4 = __golite_builtin__slice___golite__struct_1_append(&s2$10,  __arr_index___golite__struct_1(parr1$7.data, 2, 20)[2]);
-	s2$10 = __golite__tmp_4;
-	printf("%s %s\n","Indexing person slice: ",(__golite_builtin__slice___golite__struct_1_index(s2$10,0)[0]).name);
-	double f$11;
-double_init(&f$11);
+	printf("%s\n",__golite__arr___golite__struct_1_20_cmp(&__golite__var_parr1_7_7,&__golite__var_parr2_8_8) ? "true" : "false");
+	__golite_builtin__slice_int __golite__var_s_9_9;
+__golite_builtin__slice_int_init(&__golite__var_s_9_9);
+	__golite_builtin__slice_int __golite__tmp_6 = __golite_builtin__slice_int_append(&__golite__var_s_9_9, 1);
+	__golite__var_s_9_9 = __golite__tmp_6;
+	printf("%s %d\n","Indexing slice: ",(__golite_builtin__slice_int_index(__golite__var_s_9_9,0)[0]));
+	__golite_builtin__slice___golite__struct_1 __golite__var_s2_10_10;
+__golite_builtin__slice___golite__struct_1_init(&__golite__var_s2_10_10);
+	__golite_builtin__slice___golite__struct_1 __golite__tmp_4 = __golite_builtin__slice___golite__struct_1_append(&__golite__var_s2_10_10,  __arr_index___golite__struct_1(__golite__var_parr1_7_7.data, 2, 20)[2]);
+	__golite__var_s2_10_10 = __golite__tmp_4;
+	printf("%s %s\n","Indexing person slice: ",(__golite_builtin__slice___golite__struct_1_index(__golite__var_s2_10_10,0)[0]).name);
+	double __golite__var_f_11_11;
+double_init(&__golite__var_f_11_11);
 	double __golite__tmp_2 = 21.5;
-	f$11 = __golite__tmp_2;
-	printf("%.6e\n",f$11);
+	__golite__var_f_11_11 = __golite__tmp_2;
+	printf("%.6e\n",__golite__var_f_11_11);
 }
 
 void init_globals() {

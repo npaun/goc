@@ -23,17 +23,17 @@ void char_init(char* c) { *c = 0; }
 void string_init(char** s) { *s = ""; }
 
 void __golite__main() {
-	int a$0 = 5;
-	int b$1 = 6;
-	int c$2 = 7;
-	printf("%d\n",a$0);
-	printf("%d\n",b$1);
-	printf("%d\n",c$2);
-	int a$0 = 8;
-	int c$2 = 9;
-	int d$3 = 10;
-	printf("%d\n",a$0);
-	printf("%d\n",c$2);
+	int __golite__var_a_0_1 = 5;
+	int __golite__var_b_1_2 = 6;
+	int __golite__var_c_2_3 = 7;
+	printf("%d\n",__golite__var_a_0_1);
+	printf("%d\n",__golite__var_b_1_2);
+	printf("%d\n",__golite__var_c_2_3);
+	int __golite__var_a_0_4 = 8;
+	int __golite__var_c_2_5 = 9;
+	int __golite__var_d_3_6 = 10;
+	printf("%d\n",__golite__var_a_0_4);
+	printf("%d\n",__golite__var_c_2_5);
 }
 
 void init_globals() {

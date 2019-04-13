@@ -71,13 +71,13 @@ void __golite__arr___golite__struct_1_5_init(__golite__arr___golite__struct_1_5*
 typedef struct {
 	__golite__arr___golite__struct_1_5 family;
 	string address;
-} __golite__struct_3;
+} __golite__struct_5;
 
-bool __golite__struct_3_cmp(__golite__struct_3* p, __golite__struct_3* q) { 
+bool __golite__struct_5_cmp(__golite__struct_5* p, __golite__struct_5* q) { 
 	return __golite__arr___golite__struct_1_5_cmp(&p->family,&q->family) && (p->address == q->address);
 }
 
-void __golite__struct_3_init(__golite__struct_3* x) {
+void __golite__struct_5_init(__golite__struct_5* x) {
 	__golite__arr___golite__struct_1_5_init(&x->family);
 	string_init(&x->address);
 }
@@ -102,30 +102,30 @@ void __golite__arr_int_100_init(__golite__arr_int_100* x) {
 ;
 ;
 void __golite__main() {
-	__golite__struct_1 bob$3;
-__golite__struct_1_init(&bob$3);
-	__golite__struct_1 jack$4;
-__golite__struct_1_init(&jack$4);
+	__golite__struct_1 __golite__var_bob_3_1;
+__golite__struct_1_init(&__golite__var_bob_3_1);
+	__golite__struct_1 __golite__var_jack_4_2;
+__golite__struct_1_init(&__golite__var_jack_4_2);
 	string __golite__tmp_12 = "Bob";
-	bob$3.name = __golite__tmp_12;
+	__golite__var_bob_3_1.name = __golite__tmp_12;
 	int __golite__tmp_10 = 20;
-	bob$3.age = __golite__tmp_10;
+	__golite__var_bob_3_1.age = __golite__tmp_10;
 	string __golite__tmp_8 = "Jack";
-	jack$4.name = __golite__tmp_8;
+	__golite__var_jack_4_2.name = __golite__tmp_8;
 	int __golite__tmp_6 = 21;
-	jack$4.age = __golite__tmp_6;
+	__golite__var_jack_4_2.age = __golite__tmp_6;
 	printf("%s\n","Before assign:");
-	printf("%s\n",__golite__struct_1_cmp(&bob$3,&jack$4) ? "true" : "false");
-	__golite__struct_1 __golite__tmp_4 = bob$3;
-	jack$4 = __golite__tmp_4;
+	printf("%s\n",__golite__struct_1_cmp(&__golite__var_bob_3_1,&__golite__var_jack_4_2) ? "true" : "false");
+	__golite__struct_1 __golite__tmp_4 = __golite__var_bob_3_1;
+	__golite__var_jack_4_2 = __golite__tmp_4;
 	printf("%s\n","After assign:");
-	printf("%s\n",__golite__struct_1_cmp(&bob$3,&jack$4) ? "true" : "false");
-	__golite__arr_int_100 x$5;
-__golite__arr_int_100_init(&x$5);
-	__golite__arr_int_100 y$6;
-__golite__arr_int_100_init(&y$6);
-	__golite__arr_int_100 __golite__tmp_2 = y$6;
-	x$5 = __golite__tmp_2;
+	printf("%s\n",__golite__struct_1_cmp(&__golite__var_bob_3_1,&__golite__var_jack_4_2) ? "true" : "false");
+	__golite__arr_int_100 __golite__var_x_5_3;
+__golite__arr_int_100_init(&__golite__var_x_5_3);
+	__golite__arr_int_100 __golite__var_y_6_4;
+__golite__arr_int_100_init(&__golite__var_y_6_4);
+	__golite__arr_int_100 __golite__tmp_2 = __golite__var_y_6_4;
+	__golite__var_x_5_3 = __golite__tmp_2;
 }
 
 void init_globals() {

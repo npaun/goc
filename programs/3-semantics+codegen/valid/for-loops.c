@@ -24,13 +24,13 @@ void string_init(char** s) { *s = ""; }
 
 void __golite__main() {
 	{
-		int i$0 = 0;
-		int a$1 = 0;
-		while ((i$0 < 10)) {
-			printf("%d\n",a$1);
-			a$1+=1;
+		int __golite__var_i_0_1 = 0;
+		int __golite__var_a_1_2 = 0;
+		while ((__golite__var_i_0_1 < 10)) {
+			printf("%d\n",__golite__var_a_1_2);
+			__golite__var_a_1_2+=1;
 		__continue_lbl2:;
-			i$0++;
+			__golite__var_i_0_1++;
 		}
 	}
 	{

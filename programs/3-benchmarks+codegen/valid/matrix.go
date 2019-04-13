@@ -1,3 +1,14 @@
+// This benchmark just multiplies matrices uselessly
+//~+
+//~+
+//~+
+//~+
+//~+
+//~+
+//~+
+//~+
+//~+
+//~+
 package main
 
 
@@ -21,7 +32,7 @@ func mmult(A mat, B mat) mat {
 
 var seed = 0xdeadbeef
 func rand() int {
-	seed = (seed * 1103515245 + 12345) & ((1 << 31) - 1)
+	seed = (seed * 1140671485 + 1140671485) & ((1 << 24))
 	return seed
 }
 
