@@ -148,9 +148,8 @@ let gen_slice_app typ_s =
   let slice_name = "__golite_builtin__slice_" ^ typ_s in
   (Printf.sprintf "%s %s_append(%s* _s, %s el) {\n" slice_name slice_name slice_name typ_s) ^
   (Printf.sprintf "\t%s s = *_s;\n" slice_name) ^ 
-  "\tif(s.__size == s.__capacity) {\n" ^
-  "\t\tif (s.__capacity == 0) s.__capacity = 1;\n" ^
-  "\t\telse s.__capacity *= 2;\n" ^
+  "\tif( s.__contents == NULL || s.__size + 1 > s.__capacity) {\n" ^
+  "\t\ts.__capacity = (s.__capacity + 1) * 2;\n" ^
   (Printf.sprintf "\t\t%s* new_arr = (%s*)malloc((s.__capacity) * sizeof(%s));\n" typ_s typ_s typ_s) ^
   (Printf.sprintf "\t\tif (s.__contents != NULL) memcpy(new_arr, s.__contents, s.__size * sizeof(%s));\n" typ_s) ^
   "\t\ts.__contents = new_arr;\n" ^
