@@ -13,7 +13,7 @@ package main
 
 
 var CYCLES  = 100
-type mat [256][256]float64
+type mat [128][128]float64
 
 func mmult(A mat, B mat) mat {
 	n, m := len(A),len(A[0])

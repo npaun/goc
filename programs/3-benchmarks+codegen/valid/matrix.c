@@ -23,35 +23,35 @@ void char_init(char* c) { *c = 0; }
 void string_init(char** s) { *s = ""; }
 
 typedef struct {
-	double data[256];
-} __golite__arr_double_256;
+	double data[128];
+} __golite__arr_double_128;
 
-bool __golite__arr_double_256_cmp(__golite__arr_double_256* p, __golite__arr_double_256* q) { 
-	for(int i = 0; i < 256; i++) {
+bool __golite__arr_double_128_cmp(__golite__arr_double_128* p, __golite__arr_double_128* q) { 
+	for(int i = 0; i < 128; i++) {
 		if(!(p->data[i] == q->data[i])) return false;
 	}
 	return true;
 }
 
-void __golite__arr_double_256_init(__golite__arr_double_256* x) {
-	for(int i = 0; i < 256; i++) {
+void __golite__arr_double_128_init(__golite__arr_double_128* x) {
+	for(int i = 0; i < 128; i++) {
 		double_init(&x->data[i]);
 	}
 }
 typedef struct {
-	__golite__arr_double_256 data[256];
-} __golite__arr___golite__arr_double_256_256;
+	__golite__arr_double_128 data[128];
+} __golite__arr___golite__arr_double_128_128;
 
-bool __golite__arr___golite__arr_double_256_256_cmp(__golite__arr___golite__arr_double_256_256* p, __golite__arr___golite__arr_double_256_256* q) { 
-	for(int i = 0; i < 256; i++) {
-		if(!__golite__arr_double_256_cmp(&p->data[i],&q->data[i])) return false;
+bool __golite__arr___golite__arr_double_128_128_cmp(__golite__arr___golite__arr_double_128_128* p, __golite__arr___golite__arr_double_128_128* q) { 
+	for(int i = 0; i < 128; i++) {
+		if(!__golite__arr_double_128_cmp(&p->data[i],&q->data[i])) return false;
 	}
 	return true;
 }
 
-void __golite__arr___golite__arr_double_256_256_init(__golite__arr___golite__arr_double_256_256* x) {
-	for(int i = 0; i < 256; i++) {
-		__golite__arr_double_256_init(&x->data[i]);
+void __golite__arr___golite__arr_double_128_128_init(__golite__arr___golite__arr_double_128_128* x) {
+	for(int i = 0; i < 128; i++) {
+		__golite__arr_double_128_init(&x->data[i]);
 	}
 }
 
@@ -63,22 +63,22 @@ double*  __arr_index_double(double* arr, int i, int len) {
 	else {fprintf(stderr, "Out of Bounds\n"); exit(-1);}
 }
 
-// Type: __golite__arr_double_256
+// Type: __golite__arr_double_128
 static inline __attribute__((always_inline))
-__golite__arr_double_256*  __arr_index___golite__arr_double_256(__golite__arr_double_256* arr, int i, int len) {
+__golite__arr_double_128*  __arr_index___golite__arr_double_128(__golite__arr_double_128* arr, int i, int len) {
 	if (i >= 0 && i < len) return arr;
 	else {fprintf(stderr, "Out of Bounds\n"); exit(-1);}
 }
 
 int __golite__var_CYCLES_0_1;
 ;
-__golite__arr___golite__arr_double_256_256 __golite__mmult(__golite__arr___golite__arr_double_256_256 __golite__var_A_2_2, __golite__arr___golite__arr_double_256_256 __golite__var_B_3_3) {
-	int __golite__var_n_4_4 = 256;
-	int __golite__var_m_5_5 = 256;
-	256;
-	int __golite__var_p_6_6 = 256;
-	__golite__arr___golite__arr_double_256_256 __golite__var_C_7_7;
-__golite__arr___golite__arr_double_256_256_init(&__golite__var_C_7_7);
+__golite__arr___golite__arr_double_128_128 __golite__mmult(__golite__arr___golite__arr_double_128_128 __golite__var_A_2_2, __golite__arr___golite__arr_double_128_128 __golite__var_B_3_3) {
+	int __golite__var_n_4_4 = 128;
+	int __golite__var_m_5_5 = 128;
+	128;
+	int __golite__var_p_6_6 = 128;
+	__golite__arr___golite__arr_double_128_128 __golite__var_C_7_7;
+__golite__arr___golite__arr_double_128_128_init(&__golite__var_C_7_7);
 	{
 		int __golite__var_i_8_8 = 0;
 		while ((__golite__var_i_8_8 < __golite__var_n_4_4)) {
@@ -88,7 +88,7 @@ __golite__arr___golite__arr_double_256_256_init(&__golite__var_C_7_7);
 					{
 						int __golite__var_k_10_10 = 0;
 						while ((__golite__var_k_10_10 < __golite__var_m_5_5)) {
-							 __arr_index_double( __arr_index___golite__arr_double_256(__golite__var_C_7_7.data, __golite__var_i_8_8, 256)[__golite__var_i_8_8].data, __golite__var_j_9_9, 256)[__golite__var_j_9_9]+=( __arr_index_double( __arr_index___golite__arr_double_256(__golite__var_A_2_2.data, __golite__var_i_8_8, 256)[__golite__var_i_8_8].data, __golite__var_k_10_10, 256)[__golite__var_k_10_10] *  __arr_index_double( __arr_index___golite__arr_double_256(__golite__var_B_3_3.data, __golite__var_k_10_10, 256)[__golite__var_k_10_10].data, __golite__var_j_9_9, 256)[__golite__var_j_9_9]);
+							 __arr_index_double( __arr_index___golite__arr_double_128(__golite__var_C_7_7.data, __golite__var_i_8_8, 128)[__golite__var_i_8_8].data, __golite__var_j_9_9, 128)[__golite__var_j_9_9]+=( __arr_index_double( __arr_index___golite__arr_double_128(__golite__var_A_2_2.data, __golite__var_i_8_8, 128)[__golite__var_i_8_8].data, __golite__var_k_10_10, 128)[__golite__var_k_10_10] *  __arr_index_double( __arr_index___golite__arr_double_128(__golite__var_B_3_3.data, __golite__var_k_10_10, 128)[__golite__var_k_10_10].data, __golite__var_j_9_9, 128)[__golite__var_j_9_9]);
 						__continue_lbl6:;
 							__golite__var_k_10_10++;
 						}
@@ -111,10 +111,10 @@ int __golite__rand() {
 	return __golite__var_seed_11_11;
 }
 
-__golite__arr___golite__arr_double_256_256 __golite__rand_matrix() {
-	__golite__arr___golite__arr_double_256_256 __golite__var_M_12_12;
-__golite__arr___golite__arr_double_256_256_init(&__golite__var_M_12_12);
-	int __golite__var_n_13_13 = 256;
+__golite__arr___golite__arr_double_128_128 __golite__rand_matrix() {
+	__golite__arr___golite__arr_double_128_128 __golite__var_M_12_12;
+__golite__arr___golite__arr_double_128_128_init(&__golite__var_M_12_12);
+	int __golite__var_n_13_13 = 128;
 	{
 		int __golite__var_i_14_14 = 0;
 		while ((__golite__var_i_14_14 < __golite__var_n_13_13)) {
@@ -122,7 +122,7 @@ __golite__arr___golite__arr_double_256_256_init(&__golite__var_M_12_12);
 				int __golite__var_j_15_15 = 0;
 				while ((__golite__var_j_15_15 < __golite__var_n_13_13)) {
 					double __golite__tmp_2 = ((double)__golite__rand() + (1e-06 * (double)__golite__rand()));
-					 __arr_index_double( __arr_index___golite__arr_double_256(__golite__var_M_12_12.data, __golite__var_i_14_14, 256)[__golite__var_i_14_14].data, __golite__var_j_15_15, 256)[__golite__var_j_15_15] = __golite__tmp_2;
+					 __arr_index_double( __arr_index___golite__arr_double_128(__golite__var_M_12_12.data, __golite__var_i_14_14, 128)[__golite__var_i_14_14].data, __golite__var_j_15_15, 128)[__golite__var_j_15_15] = __golite__tmp_2;
 				__continue_lbl3:;
 					__golite__var_j_15_15++;
 				}
