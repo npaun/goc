@@ -168,8 +168,10 @@ and gen_expr expr = match expr.v with
   | `Op2(op2, exp, exp2) -> (
       let exptyp = List.hd exp._derived in
       match exptyp, op2 with
-        | `TypeLit(Array(size,typ)),_ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
-        | `TypeLit(Struct(fields)),_ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Array(size,typ)), `EQ-> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Struct(fields)), `EQ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Array(size,typ)), `NEQ -> Printf.sprintf "!%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Struct(fields)), `NEQ -> Printf.sprintf "!%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
         | `STRING, `EQ -> Printf.sprintf "(strcmp(%s,%s) == 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `NEQ -> Printf.sprintf "(strcmp(%s,%s) != 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `GT -> Printf.sprintf "(strcmp(%s,%s) > 0)" (gen_expr exp) (gen_expr exp2)
