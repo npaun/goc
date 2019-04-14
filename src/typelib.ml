@@ -125,11 +125,11 @@ type resolve_fn = symtbl -> typesig -> typesig
 		Try not to call it multiple times in a row though this is harmless. *) 
 let resolve_basic (symt:symtbl) (typs:typesig):typesig = 
 	let basic_type_of_ident = function
-	| "int" -> Some `INT
-	| "float64" -> Some `FLOAT64
-	| "rune" -> Some `RUNE
-	| "string" -> Some `STRING
-	| "bool" -> Some `BOOL
+	| "int$real" -> Some `INT
+	| "float64$real" -> Some `FLOAT64
+	| "rune$real" -> Some `RUNE
+	| "string$real" -> Some `STRING
+	| "bool$real" -> Some `BOOL
 	| _ -> None
 	in let replace_basic symt id =
 		match basic_type_of_ident id with
