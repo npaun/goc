@@ -14,6 +14,13 @@ let cont_label_count () =
 let goto_cont_label inc =
     "__continue_lbl" ^ (if inc then cont_label_count () else string_of_int !continue_label_count)
     
+let break_label_count = ref 0
+let br_label_count () =
+    incr break_label_count;
+    string_of_int !break_label_count
+let goto_break_label inc =
+    "__break_lbl" ^ (if inc then br_label_count () else string_of_int !break_label_count)
+    
 let array_index_helpers = ref []
 let array_index_helper_funname type_str = " __arr_index_" ^ type_str
 let record_array_indexing_helper typ = 
@@ -166,7 +173,7 @@ and gen_stmt d stmt = match stmt.v with
   | If(clist) -> gen_if_stmt d clist
   | Switch(stmtn, expr_opt, fclist) -> gen_switch_stmt d stmtn expr_opt fclist
   | For(stmt_opt, expr_opt, stmt_opt2, block) -> gen_for_stmt d stmt_opt expr_opt stmt_opt2 block
-  | Break -> Pretty.crt_tab d true ^ "break;\n"
+  | Break -> Pretty.crt_tab d true ^ "goto " ^ goto_break_label false ^ ";\n"
   | Continue -> Pretty.crt_tab d true ^ "goto " ^ goto_cont_label false ^ ";\n"
   | Empty -> ""
 and gen_expr expr = match expr.v with
@@ -241,7 +248,7 @@ and gen_len exprlst =
 and gen_cap exprlst =
     match (List.hd (List.hd exprlst)._derived) with
     | `TypeLit Array (n, _) -> string_of_int n
-    | _ -> ( (* the only other option is slice *)
+    | _ -> ( (* the only other option is goto_break_label false slice *)
       let hd = List.hd exprlst in
       let id = gen_expr hd in
       let slice_name = gen_type (List.hd hd._derived) in
@@ -326,14 +333,18 @@ and gen_switch_stmt d stmtopt expropt fclist =
     ^ gen ^ close_scopes (!tab - (if !has_default then 1 else 0)) ((List.length fclist) + (if !has_default then 0 else 1))
 and gen_for_stmt d initopt expropt stmtopt block =
     let continue_label = goto_cont_label true in
+    let break_label = goto_break_label true in
     Pretty.crt_tab d true ^ "{\n"
     ^ gen_stmt_opt (d+1) initopt 
     ^ Pretty.crt_tab (d+1) true ^ "while (" ^ gen_cond_expr expropt ^ ") {\n"
-    ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt (d+2) stmt) (List.rev block) "" 
+    ^ Pretty.crt_tab (d+2) true ^ "{\n"
+    ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt (d+3) stmt) (List.rev block) "" 
     (* the ";" is so that it doesn't go crazy if there is no statement after the label *)
+    ^ Pretty.crt_tab (d+2) true ^ "}\n"
     ^ Pretty.crt_tab (d+1) true ^ continue_label ^ ":;\n"
     ^ gen_stmt_opt (d+2) stmtopt
     ^ Pretty.crt_tab (d+1) true ^ "}\n"
+    ^ Pretty.crt_tab (d) true ^ break_label ^ ":;\n"
     ^ Pretty.crt_tab (d) true ^ "}\n"
 and gen_cond_expr expropt = match expropt with
     | Some expr -> gen_expr expr
