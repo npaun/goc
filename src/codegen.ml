@@ -139,10 +139,16 @@ and gen_print ln exprlist =
       | `FLOAT64 -> let exp_s = gen_expr exp in Printf.sprintf "__golite_builtin__is_positive(%s), %s" exp_s exp_s
       | _ -> gen_expr exp
     in
-    if ln then
+    if ln then (
       let str = Pretty.string_of_lst exprlist " " symbol in
-      "printf(\"" ^ str ^ "\\n\"," ^ Pretty.string_of_lst exprlist "," expr_arg ^ ");\n"
-    else let str = Pretty.string_of_lst exprlist "" symbol in       "printf(\"" ^ str ^ "\"," ^ Pretty.string_of_lst exprlist "," expr_arg ^ ");\n"
+      if (List.length exprlist > 0 ) then "printf(\"" ^ str ^ "\\n\"," ^ Pretty.string_of_lst exprlist "," expr_arg ^ ");\n"
+      else "printf(\"\\n\");\n"
+    )
+    else (
+      let str = Pretty.string_of_lst exprlist "" symbol in 
+      if (List.length exprlist > 0) then "printf(\"" ^ str ^ "\"," ^ Pretty.string_of_lst exprlist "," expr_arg ^ ");\n"
+      else "\n"
+    )
 and gen_lvalue' e = match e.v with
   | `Blank -> "__golite__tmp" ^ tmp_count ()
   |  #operand as x ->  gen_expr (Pretty.crt_stmt x)
