@@ -59,6 +59,10 @@ let builtin_header =
   "\ts.__size++;\n" ^
   "\treturn s;\n}\n\n"
 
+let is_positive = 
+  "string __golite_builtin__is_positive(float f) {\n" ^
+  "\treturn f >= 0 ? \"+\" : \"\";\n}\n\n"
+
 let string_conv =
   "string __golite_num_to_string(int x) {\n" ^
   "\tstring s = malloc(1);\n\t*s = x;\n}\n\n"
@@ -127,11 +131,12 @@ and gen_print ln exprlist =
       | `RUNE -> "%d"
       | `BOOL
       | `STRING -> "%s"
-      | `FLOAT64 -> "%.6e"
+      | `FLOAT64 -> "%s%.6e"
       | _ -> "-not base type-"
     in
     let expr_arg exp = match List.hd exp._derived with
       | `BOOL -> gen_expr exp ^ " ? \"true\" : \"false\""
+      | `FLOAT64 -> let exp_s = gen_expr exp in Printf.sprintf "__golite_builtin__is_positive(%s), %s" exp_s exp_s
       | _ -> gen_expr exp
     in
     if ln then
@@ -167,6 +172,10 @@ and gen_expr expr = match expr.v with
         | `TypeLit(Struct(fields)),_ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
         | `STRING, `EQ -> Printf.sprintf "(strcmp(%s,%s) == 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `NEQ -> Printf.sprintf "(strcmp(%s,%s) != 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `GT -> Printf.sprintf "(strcmp(%s,%s) > 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `LT -> Printf.sprintf "(strcmp(%s,%s) < 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `GEQ -> Printf.sprintf "(strcmp(%s,%s) >= 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `LEQ -> Printf.sprintf "(strcmp(%s,%s) <= 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `ADD -> Printf.sprintf "str_add(%s,%s)" (gen_expr exp) (gen_expr exp2)
         | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   )
@@ -382,7 +391,7 @@ let gen_c_code filename ast =
     let init_funcs = gen_init_funcs () in
     let arr_helps = generate_array_indexing_helpers () in
     let code = 
-        gen_file_header ^ str_add ^ string_conv ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
+        gen_file_header ^ is_positive ^ str_add ^ string_conv ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
     let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
     Printf.fprintf oc "%s" code; close_out oc
 
