@@ -195,23 +195,38 @@ let rec resolve_reduce (symt:symtbl) (typs:typesig):typesig =
 		sprintf "Probable bug in Typecheck: Signature %s contains illegal type %s"
 		(string_of_typesig typs)
 		ctx
-	in let rec aux = function
+	in let cycle_error parent original = 
+		sprintf "The definition of %s in terms of %s constitutes a prohibited cycle"
+		(string_of_typesig [parent])
+		(string_of_typesig [original])
+	in let prohibit_cycle parent original def1 = 
+		if parent = def1 then
+			raise (TypeError (cycle_error parent original))
+	(* parent stores the most recently substituted identifier, to search for cycles *)
+	in let rec aux parent original = match original with
 	| `Type id -> (* replace type identifier with definition, recurse *)
+		prohibit_cycle parent original original;
 		typeof_symbol symt id (* find definition of type *)
 		|> List.hd (* only first element is relevant *)
-		|> aux (* Attempt to reduce further *)
-	| `TypeLit Slice(typ) -> `TypeLit (Slice(aux typ))
-	| `TypeLit Array(sz,typ) -> `TypeLit (Array(sz, aux typ))
-	| `TypeLit Struct(members) ->  
-		let members' = List.map (fun (field, typ) -> (field, aux typ)) members in
-			`TypeLit (Struct(members'))
-
+		|> aux (`Type id) (* Attempt to reduce further *)
+	| `TypeLit Slice(typ) -> 
+		if parent = typ 
+			then original
+			else `TypeLit (Slice(aux parent typ))
+	| `TypeLit Array(sz,typ) -> 
+		prohibit_cycle parent original typ;
+		`TypeLit (Array(sz, aux parent typ))
+	| `TypeLit Struct(members) ->
+		let reduce_member (field,typ) = 
+			prohibit_cycle parent original typ;
+			(field, aux parent typ)
+		in `TypeLit(Struct(List.map reduce_member members))
 	| `AUTO -> raise (TypeError (illegal_type_error "AUTO (type inference never finished?)"))
 	| basic -> basic (* Basic types may not be further reduced *)
 	in match typs with
 	(*| [`VOID] -> raise (TypeError (illegal_type_error "VOID as value")) *)
 	| [] -> raise (TypeError (illegal_type_error "<NOTYPE> (this node was never typechecked?)"))
-	| _ ->  List.map aux typs
+	| _ ->  List.map (aux (`Type "MELTDOWN")) typs
 
 let reduce (symt:symtbl) (node:'n annotated):('n annotated) =
 	{node with _derived = (resolve_reduce symt node._derived)}
