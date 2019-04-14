@@ -167,6 +167,10 @@ and gen_expr expr = match expr.v with
         | `TypeLit(Struct(fields)),_ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
         | `STRING, `EQ -> Printf.sprintf "(strcmp(%s,%s) == 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `NEQ -> Printf.sprintf "(strcmp(%s,%s) != 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `GT -> Printf.sprintf "(strcmp(%s,%s) > 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `LT -> Printf.sprintf "(strcmp(%s,%s) < 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `GEQ -> Printf.sprintf "(strcmp(%s,%s) >= 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `LEQ -> Printf.sprintf "(strcmp(%s,%s) <= 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `ADD -> Printf.sprintf "str_add(%s,%s)" (gen_expr exp) (gen_expr exp2)
         | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   )
