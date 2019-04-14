@@ -171,9 +171,9 @@ let assert_no_dup pos lst =
   let hash = Hashtbl.create (List.length lst) in
   try
     begin
-      List.iter (function (x, _) ->
+      List.iter (fun (x, _) ->
                   if (Hashtbl.mem hash x)
-                  then (raise Found)
+                  then (if x <> `Blank then raise Found)
                   else (Hashtbl.add hash x true))
                 lst;
     end
