@@ -177,6 +177,7 @@ and gen_expr expr = match expr.v with
         | `STRING, `GEQ -> Printf.sprintf "(strcmp(%s,%s) >= 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `LEQ -> Printf.sprintf "(strcmp(%s,%s) <= 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `ADD -> Printf.sprintf "str_add(%s,%s)" (gen_expr exp) (gen_expr exp2)
+	| _, `BANDNOT -> Printf.sprintf "(%s & ~(%s))" (gen_expr exp) (gen_expr exp2)
         | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   )
   | `Call(exp, explist)  -> (
@@ -219,7 +220,11 @@ and gen_expr expr = match expr.v with
 and gen_len exprlst =
     match (List.hd (List.hd exprlst)._derived) with
     | `TypeLit Array (n, _) -> string_of_int n
-    | _ -> ( (* the only other option is slice *)
+    | `STRING -> 
+	let hd = List.hd exprlst in
+	let id = gen_expr hd in
+	Printf.sprintf "((int) strlen(%s))" id
+    | _ -> ( (* Slices *)
       let hd = List.hd exprlst in
       let id = gen_expr hd in
       let slice_name = gen_type (List.hd hd._derived) in
