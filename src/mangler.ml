@@ -58,15 +58,18 @@ let rec nameof symt id =
 				end
 
 let set_type' symt id typ multiple = 
-	let set_once sym = 
-		if sym.typ = [] || multiple then
-			sym.typ <- typ
+	let set_once id sym = 
+		if sym.typ = [] || multiple then (
+			(* printf "ATTENTION: The type of %s has become %s\n"
+				id
+				(string_of_typesig typ); *)
+			sym.typ <- typ)
 		else
 			() (* Already mangled *)
 	in match id with
 	| `V id ->
 		begin match Symtbl.get_symbol symt id true with
-		| Some sym -> set_once sym
+		| Some sym -> set_once id sym
 		| None -> failwith ("Cannot set type of nonexistent symbol" ^ id)
 		end
 	| `Blank -> ()
@@ -95,7 +98,7 @@ let mangled_type symt typs =
 let rec pass_ast symt = function
 	| Program (pkg, tops) ->
 		let p' = Program(pkg, traverse pass_toplevel (List.hd (descend symt)) tops) in
-		(* printf "%s\n" (Dumpast.dump p'); *)
+	(*	printf "%s\n" (Dumpast.dump p'); *)
 		p'
 and pass_toplevel this_symt node = function
 	| Global(decl) -> same (fun () -> {node with v = Global(pass_decl this_symt decl)})

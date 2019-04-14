@@ -63,7 +63,7 @@ let tup_fields fields = List.map split_field fields
 let gen_struct struct_string struct_name =
   let fields = tup_fields (get_fields struct_string) in
   "typedef struct {\n" ^
-  String.concat ";\n" (List.map (fun (typ,id) -> "\t" ^ typ ^ " " ^ id) fields) ^
+  String.concat ";\n" (List.map (fun (typ,id) -> "\t" ^ typ ^ " __" ^ id) fields) ^
   ";\n} " ^ struct_name ^ ";\n\n"
 
 let gen_array struct_string struct_name =
@@ -95,11 +95,11 @@ let gen_slice typ_s =
 *)
 let get_struct_cmp_string (typ,id) =
   let len = String.length typ in
-  if len >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
-  else if len >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->%s,&q->%s)" typ id id
+  if len >= 13 && String.equal (String.sub typ 0 13) "__golite__arr" then Printf.sprintf "%s_cmp(&p->__%s,&q->__%s)" typ id id
+  else if len >= 16 && String.equal (String.sub typ 0 16) "__golite__struct" then Printf.sprintf "%s_cmp(&p->__%s,&q->__%s)" typ id id
   else if len >= 23 && String.equal (String.sub typ 0 23) "__golite_builtin__slice" then "false" (* slices have no comparison so this doesnt matter*)
-  else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->%s,q->%s) == 0)" id id
-  else Printf.sprintf "(p->%s == q->%s)" id id
+  else if String.equal typ "char*" then Printf.sprintf "(strcmp(p->__%s,q->__%s) == 0)" id id
+  else Printf.sprintf "(p->__%s == q->__%s)" id id
 
 let get_arr_cmp_string (typ,id) =
   let len = String.length typ in
@@ -111,8 +111,9 @@ let get_arr_cmp_string (typ,id) =
 
 let gen_struct_cmp struct_string struct_name =
   let fields = tup_fields (get_fields struct_string) in
+  let comps = String.concat " && " (List.map get_struct_cmp_string fields) in
   (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^ 
-  "\treturn " ^ String.concat " && " (List.map get_struct_cmp_string fields) ^
+  "\treturn " ^ (if comps <> "" then comps else "true") ^
   ";\n}\n\n"
 
 let gen_arr_cmp struct_string struct_name = 
@@ -126,7 +127,7 @@ let get_init_string typ =
   else typ ^ "_init"
 
 let gen_struct_init struct_string struct_name =
-  let gen_field_init (typ,id) = Printf.sprintf "\t%s(&x->%s);\n" (get_init_string typ) id in
+  let gen_field_init (typ,id) = Printf.sprintf "\t%s(&x->__%s);\n" (get_init_string typ) id in
   let fields = tup_fields (get_fields struct_string) in
   (Printf.sprintf "void %s_init(%s* x) {\n" struct_name struct_name) ^
   (String.concat "" (List.map gen_field_init fields)) ^ "}\n\n"

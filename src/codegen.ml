@@ -66,6 +66,10 @@ let builtin_header =
   "\ts.__size++;\n" ^
   "\treturn s;\n}\n\n"
 
+let is_positive = 
+  "string __golite_builtin__is_positive(float f) {\n" ^
+  "\treturn f >= 0 ? \"+\" : \"\";\n}\n\n"
+
 let string_conv =
   "string __golite_num_to_string(int x) {\n" ^
   "\tstring s = malloc(1);\n\t*s = x;\n}\n\n"
@@ -134,11 +138,12 @@ and gen_print ln exprlist =
       | `RUNE -> "%d"
       | `BOOL
       | `STRING -> "%s"
-      | `FLOAT64 -> "%.6e"
+      | `FLOAT64 -> "%s%.6e"
       | _ -> "-not base type-"
     in
     let expr_arg exp = match List.hd exp._derived with
       | `BOOL -> gen_expr exp ^ " ? \"true\" : \"false\""
+      | `FLOAT64 -> let exp_s = gen_expr exp in Printf.sprintf "__golite_builtin__is_positive(%s), %s" exp_s exp_s
       | _ -> gen_expr exp
     in
     if ln then
@@ -170,11 +175,18 @@ and gen_expr expr = match expr.v with
   | `Op2(op2, exp, exp2) -> (
       let exptyp = List.hd exp._derived in
       match exptyp, op2 with
-        | `TypeLit(Array(size,typ)),_ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
-        | `TypeLit(Struct(fields)),_ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Array(size,typ)), `EQ-> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Struct(fields)), `EQ -> Printf.sprintf "%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Array(size,typ)), `NEQ -> Printf.sprintf "!%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
+        | `TypeLit(Struct(fields)), `NEQ -> Printf.sprintf "!%s_cmp(&%s,&%s)" (gen_type exptyp) (gen_expr exp) (gen_expr exp2)
         | `STRING, `EQ -> Printf.sprintf "(strcmp(%s,%s) == 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `NEQ -> Printf.sprintf "(strcmp(%s,%s) != 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `GT -> Printf.sprintf "(strcmp(%s,%s) > 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `LT -> Printf.sprintf "(strcmp(%s,%s) < 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `GEQ -> Printf.sprintf "(strcmp(%s,%s) >= 0)" (gen_expr exp) (gen_expr exp2)
+        | `STRING, `LEQ -> Printf.sprintf "(strcmp(%s,%s) <= 0)" (gen_expr exp) (gen_expr exp2)
         | `STRING, `ADD -> Printf.sprintf "str_add(%s,%s)" (gen_expr exp) (gen_expr exp2)
+	| _, `BANDNOT -> Printf.sprintf "(%s & ~(%s))" (gen_expr exp) (gen_expr exp2)
         | _ -> "(" ^ gen_expr exp ^ " " ^ Pretty.string_of_op2 op2 ^ " " ^ gen_expr exp2 ^ ")"
   )
   | `Call(exp, explist)  -> (
@@ -198,7 +210,7 @@ and gen_expr expr = match expr.v with
     | `STRING, `RUNE -> Printf.sprintf "__golite_num_to_string(%s)" (gen_expr exp)
     | _,_ ->  "(" ^ gen_type typ ^ ")" ^ gen_expr exp
   )
-  | `Selector(exp, id)   -> gen_expr exp ^ "." ^ id
+  | `Selector(exp, id)   -> gen_expr exp ^ ".__" ^ id
   | `L(lit)              -> (match lit with
     | Bool(b) -> if b then "1" else "0"
     | Rune(r) -> r
@@ -217,7 +229,11 @@ and gen_expr expr = match expr.v with
 and gen_len exprlst =
     match (List.hd (List.hd exprlst)._derived) with
     | `TypeLit Array (n, _) -> string_of_int n
-    | _ -> ( (* the only other option is slice *)
+    | `STRING -> 
+	let hd = List.hd exprlst in
+	let id = gen_expr hd in
+	Printf.sprintf "((int) strlen(%s))" id
+    | _ -> ( (* Slices *)
       let hd = List.hd exprlst in
       let id = gen_expr hd in
       let slice_name = gen_type (List.hd hd._derived) in
@@ -393,7 +409,7 @@ let gen_c_code filename ast =
     let init_funcs = gen_init_funcs () in
     let arr_helps = generate_array_indexing_helpers () in
     let code = 
-        gen_file_header ^ str_add ^ string_conv ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
+        gen_file_header ^ is_positive ^ str_add ^ string_conv ^ prim_inits ^ gend_structs ^ arr_helps ^ ast_code ^ init_globals ^ init_funcs ^ "int main() {\n\tinit_globals();\n\tinit_funcs();\n\t__golite__main();\n}\n" in
     let oc = open_out ((Filename.remove_extension filename) ^ ".c") in 
     Printf.fprintf oc "%s" code; close_out oc
 
