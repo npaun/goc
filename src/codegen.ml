@@ -201,7 +201,7 @@ and gen_expr expr = match expr.v with
     | `STRING, `RUNE -> Printf.sprintf "__golite_num_to_string(%s)" (gen_expr exp)
     | _,_ ->  "(" ^ gen_type typ ^ ")" ^ gen_expr exp
   )
-  | `Selector(exp, id)   -> gen_expr exp ^ "." ^ id
+  | `Selector(exp, id)   -> gen_expr exp ^ ".__" ^ id
   | `L(lit)              -> (match lit with
     | Bool(b) -> if b then "1" else "0"
     | Rune(r) -> r
