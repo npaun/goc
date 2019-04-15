@@ -22,6 +22,13 @@ let cont_label_count () =
 let goto_cont_label inc =
     "__continue_lbl" ^ (if inc then cont_label_count () else string_of_int !continue_label_count)
     
+let break_label_count = ref 0
+let br_label_count () =
+    incr break_label_count;
+    string_of_int !break_label_count
+let goto_break_label inc =
+    "__break_lbl" ^ (if inc then br_label_count () else string_of_int !break_label_count)
+    
 let array_index_helpers = ref []
 let array_index_helper_funname type_str = " __arr_index_" ^ type_str
 let record_array_indexing_helper typ = 
@@ -73,7 +80,7 @@ let is_positive =
 
 let string_conv =
   "string __golite_num_to_string(int x) {\n" ^
-  "\tstring s = malloc(1);\n\t*s = x;\n}\n\n"
+  "\tstring s = malloc(1);\n\t*s = x;\n\treturn s;\n}\n\n"
 
 
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\ntypedef char* string;\n\n"  
@@ -81,7 +88,7 @@ let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdboo
 let rec gen_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
-  | Global(decl) -> gen_decl true decl ^ ";\n"
+  | Global(decl) -> gen_decl_global decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
       | `V id -> if not (String.equal id "init") then gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist (List.rev siglst) ^ ")" ^ " " ^ gen_block 0 block ^ "\n" else ""
@@ -113,8 +120,40 @@ and gen_decl isglobal decl =
       | `Blank, true -> ""
     )
     | Type(iden', typ) -> "" (* I don't think we need to typedef type decls, so we can probably just ignore them *)
+and gen_decl_global decl = match decl with
+    | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v with
+      | `V id -> gen_type typ ^ " " ^ id
+      | `Blank -> ""
+    )
+    | Type(iden', typ) -> ""
+and gen_decllist tab decllist = 
+  let counter = ref 0 in
+  let tmp_list = ref [] in
+  let gen_tmps decl = match decl with
+    | Var(lhs, typ, expr_opt, isshort) -> (match expr_opt with
+      | Some exp ->
+        let tmp = get_tmp () in
+        tmp_list := !tmp_list@[tmp];
+        Printf.sprintf "%s %s = %s" (gen_type (List.hd exp._derived)) tmp (gen_expr exp)
+      | None -> ""
+    )
+    | Type(iden', typ) -> ""
+  in
+  let gen_decl decl = match decl with
+    | Var(lhs, typ, expr_opt, isshort) ->(match expr_opt, lhs.v with
+      | Some exp, `V id ->
+        let tmp = (List.nth !tmp_list !counter) in
+        incr counter;
+        Printf.sprintf "%s %s = %s" (gen_type typ) id tmp
+      | Some exp, `Blank -> ""
+      | None, `V id -> Printf.sprintf "%s %s" (gen_type typ) id
+      | None, `Blank -> ""
+    )
+    | Type(iden', typ) -> "" (* we do nothing for ordinary user defined types *)
+  in
+  let tmps = String.concat (Printf.sprintf ";\n%s" tab) (List.map gen_tmps decllist) in
+  tmps ^ ";\n"  ^ tab  ^ String.concat (Printf.sprintf ";\n%s" tab) (List.map gen_decl decllist)
 and gen_assignlist d alist =
-  let start_val = int_of_string(tmp_count ()) in
   let counter = ref 0 in
   let tmp_list = ref [] in
   let gen_tmps assign = 
@@ -160,22 +199,25 @@ and gen_print ln exprlist =
 and gen_lvalue' e = match e.v with
   | `Blank -> "__golite__tmp" ^ tmp_count ()
   |  #operand as x ->  gen_expr (Pretty.crt_stmt x)
-and gen_block d block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt (d + 1) stmt) ^ acc) block "") ^ Pretty.crt_tab (d) true ^ "}\n"
+and gen_block d block = gen_block_with_labels "" "" d block
+and gen_block_with_labels breaklbl contlbl d block = 
+    "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt_with_labels breaklbl contlbl (d + 1) stmt) ^ acc) block "") ^ Pretty.crt_tab (d) true ^ "}\n"
 and gen_type typ = Codegenpre.typ_string typ
-and gen_stmt d stmt = match stmt.v with
+and gen_stmt d stmt = gen_stmt_with_labels "" "" d stmt
+and gen_stmt_with_labels breaklbl contlbl d stmt = match stmt.v with
   | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map (gen_decl false) decllst) ^ ";\n"
   | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
-  | Block(block) -> Pretty.crt_tab d true ^ gen_block (d) block
+  | Block(block) -> Pretty.crt_tab d true ^ gen_block_with_labels breaklbl contlbl (d) block
   | Assign(alist) -> gen_assignlist d alist ^ ";\n"
   | OpAssign(lvalue, op, expr) -> Pretty.crt_tab d true ^ gen_expr lvalue ^ Pretty.string_of_op_assign op ^ gen_expr expr ^ ";\n"
   | IncDec(expr, op) -> Pretty.crt_tab d true ^ gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--") ^ ";\n"
   | Print(ln, exprlist) -> Pretty.crt_tab d true ^ gen_print ln exprlist
   | Return (expr_opt) -> Pretty.crt_tab d true ^ "return " ^ gen_expr_opt expr_opt ^ ";\n"
-  | If(clist) -> gen_if_stmt d clist
-  | Switch(stmtn, expr_opt, fclist) -> gen_switch_stmt d stmtn expr_opt fclist
+  | If(clist) -> gen_if_stmt breaklbl contlbl d clist
+  | Switch(stmtn, expr_opt, fclist) -> gen_switch_stmt "switch has its own break" contlbl d stmtn expr_opt fclist
   | For(stmt_opt, expr_opt, stmt_opt2, block) -> gen_for_stmt d stmt_opt expr_opt stmt_opt2 block
-  | Break -> Pretty.crt_tab d true ^ "break;\n"
-  | Continue -> Pretty.crt_tab d true ^ "goto " ^ goto_cont_label false ^ ";\n"
+  | Break -> Pretty.crt_tab d true ^ "goto " ^ breaklbl ^ ";\n"
+  | Continue -> Pretty.crt_tab d true ^ "goto " ^ contlbl ^ ";\n"
   | Empty -> ""
 and gen_expr expr = match expr.v with
   | `Op1(`BNOT,exp) -> Printf.sprintf "((-1) ^ %s)" (gen_expr exp)
@@ -254,7 +296,7 @@ and gen_len exprlst =
 and gen_cap exprlst =
     match (List.hd (List.hd exprlst)._derived) with
     | `TypeLit Array (n, _) -> string_of_int n
-    | _ -> ( (* the only other option is slice *)
+    | _ -> ( (* the only other option is goto_break_label false slice *)
       let hd = List.hd exprlst in
       let id = gen_expr hd in
       let slice_name = gen_type (List.hd hd._derived) in
@@ -290,13 +332,13 @@ and close_scopes d n =
         | _ -> c_s_rec (d-1) (n-1) (acc ^ (Pretty.crt_tab (if d >= 0 then d else 0) true) ^ "}\n")
     in
     c_s_rec d n ""
-and gen_if_stmt d clist =
+and gen_if_stmt breaklbl contlbl d clist =
     let tab = ref (d) in
     let gen_case case = match case with
         | Case(stmt_opt, exprlst, block) -> 
             gen_stmt_opt (!tab) stmt_opt ^ Pretty.crt_tab !tab true ^ "if (" 
-            ^ gen_expr (List.hd exprlst) ^ ") " ^ gen_block (!tab) block  
-        | Default(block) -> Pretty.crt_tab !tab true ^ gen_block (!tab) block
+            ^ gen_expr (List.hd exprlst) ^ ") " ^ gen_block_with_labels breaklbl contlbl (!tab) block  
+        | Default(block) -> Pretty.crt_tab !tab true ^ gen_block_with_labels breaklbl contlbl (!tab) block
     in
     let fold_if clist =
         let rec rec_fold_if clist acc = 
@@ -313,40 +355,54 @@ and gen_if_stmt d clist =
         rec_fold_if clist (Pretty.crt_tab !tab true ^ "{\n")
     in
     let gen = fold_if (clist) in gen ^ (close_scopes (!tab-1) (List.length clist))
-and gen_switch_stmt d stmtopt expropt fclist =
+and gen_switch_stmt breaklbl contlbl d stmtopt expropt fclist =
+    let break_label = goto_break_label true in
     let has_default = ref false in
     let tab = ref (d) in
-    let make_annot oper = 
-        {v = oper; _debug = "hack :)"; _start = (-1,-1); _end = (-1,-1); _derived = [`BOOL]} 
+    let make_annot oper deriv = 
+        {v = oper; _debug = "hack :)"; _start = (-1,-1); _end = (-1,-1); _derived = [deriv]} 
     in
-    let gen_switch_cond expropt expr =
-        match expropt with
-        | None -> gen_expr expr
-        | Some e -> gen_expr (make_annot (`Op2(`EQ, e, expr))) (* silly hack :) *)
+    let expropt_typ = (match expropt with None -> `INT | Some e -> (List.hd e._derived)) in
+    let expropt_temp = get_tmp () in
+    let expropt_temp_decl = 
+        Printf.sprintf "%s %s = %s;\n" 
+            (gen_type expropt_typ)
+            expropt_temp 
+            (gen_cond_expr expropt) 
+    in
+    let gen_switch_cond expropt_t expr =
+        gen_expr (make_annot (`Op2(`EQ, make_annot (`V expropt_t) expropt_typ, expr)) `BOOL) (* silly hack :) *)
     in
     let gen_case case acc = match case with
         | (Case(stmt_opt, exprlst, block), _) -> 
             acc ^ Pretty.crt_tab !tab true ^ "if (" 
             ^ (List.fold_right 
-              (fun expr acc -> acc ^ " || " ^ gen_switch_cond expropt expr) exprlst "0") 
-            ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
-        | (Default(block), _) -> has_default := true; acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
+              (fun expr acc -> acc ^ " || " ^ gen_switch_cond expropt_temp expr) exprlst "0") 
+            ^ ") " ^ gen_block_with_labels break_label contlbl (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
+        | (Default(block), _) -> has_default := true; acc ^ Pretty.crt_tab !tab true ^ gen_block_with_labels break_label contlbl (!tab) block
     in
     let gen =(List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
     in
     Pretty.crt_tab d true ^ "{\n" 
     ^ gen_stmt_opt (d+1) stmtopt 
-    ^ gen ^ close_scopes (!tab - (if !has_default then 1 else 0)) ((List.length fclist) + (if !has_default then 0 else 1))
+    ^ Pretty.crt_tab (d+1) true ^ expropt_temp_decl
+    ^ gen ^ close_scopes (!tab - (if !has_default then 1 else 0)) ((List.length fclist) + (if !has_default then 0 else 1) - 1)
+    ^ Pretty.crt_tab (d) true ^ break_label ^ ":;\n"
+    ^ Pretty.crt_tab (d) true ^ "}\n"
 and gen_for_stmt d initopt expropt stmtopt block =
     let continue_label = goto_cont_label true in
+    let break_label = goto_break_label true in
     Pretty.crt_tab d true ^ "{\n"
     ^ gen_stmt_opt (d+1) initopt 
     ^ Pretty.crt_tab (d+1) true ^ "while (" ^ gen_cond_expr expropt ^ ") {\n"
-    ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt (d+2) stmt) (List.rev block) "" 
+    ^ Pretty.crt_tab (d+2) true ^ "{\n"
+    ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt_with_labels break_label continue_label (d+3) stmt) (List.rev block) "" 
     (* the ";" is so that it doesn't go crazy if there is no statement after the label *)
+    ^ Pretty.crt_tab (d+2) true ^ "}\n"
     ^ Pretty.crt_tab (d+1) true ^ continue_label ^ ":;\n"
     ^ gen_stmt_opt (d+2) stmtopt
     ^ Pretty.crt_tab (d+1) true ^ "}\n"
+    ^ Pretty.crt_tab (d) true ^ break_label ^ ":;\n"
     ^ Pretty.crt_tab (d) true ^ "}\n"
 and gen_cond_expr expropt = match expropt with
     | Some expr -> gen_expr expr
