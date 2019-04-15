@@ -159,22 +159,25 @@ and gen_print ln exprlist =
 and gen_lvalue' e = match e.v with
   | `Blank -> "__golite__tmp" ^ tmp_count ()
   |  #operand as x ->  gen_expr (Pretty.crt_stmt x)
-and gen_block d block = "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt (d + 1) stmt) ^ acc) block "") ^ Pretty.crt_tab (d) true ^ "}\n"
+and gen_block d block = gen_block_with_labels "" "" d block
+and gen_block_with_labels breaklbl contlbl d block = 
+    "{\n" ^ (List.fold_right (fun stmt acc -> (gen_stmt_with_labels breaklbl contlbl (d + 1) stmt) ^ acc) block "") ^ Pretty.crt_tab (d) true ^ "}\n"
 and gen_type typ = Codegenpre.typ_string typ
-and gen_stmt d stmt = match stmt.v with
+and gen_stmt d stmt = gen_stmt_with_labels "" "" d stmt
+and gen_stmt_with_labels breaklbl contlbl d stmt = match stmt.v with
   | Decl(decllst) -> Pretty.crt_tab d true ^ String.concat (";\n" ^ Pretty.crt_tab d true) (List.map (gen_decl false) decllst) ^ ";\n"
   | Expr(expr) -> Pretty.crt_tab d true ^ gen_expr expr ^ ";\n"
-  | Block(block) -> Pretty.crt_tab d true ^ gen_block (d) block
+  | Block(block) -> Pretty.crt_tab d true ^ gen_block_with_labels breaklbl contlbl (d) block
   | Assign(alist) -> gen_assignlist d alist ^ ";\n"
   | OpAssign(lvalue, op, expr) -> Pretty.crt_tab d true ^ gen_expr lvalue ^ Pretty.string_of_op_assign op ^ gen_expr expr ^ ";\n"
   | IncDec(expr, op) -> Pretty.crt_tab d true ^ gen_expr expr ^ (match op with `INC -> "++" | `DEC -> "--") ^ ";\n"
   | Print(ln, exprlist) -> Pretty.crt_tab d true ^ gen_print ln exprlist
   | Return (expr_opt) -> Pretty.crt_tab d true ^ "return " ^ gen_expr_opt expr_opt ^ ";\n"
-  | If(clist) -> gen_if_stmt d clist
-  | Switch(stmtn, expr_opt, fclist) -> gen_switch_stmt d stmtn expr_opt fclist
+  | If(clist) -> gen_if_stmt breaklbl contlbl d clist
+  | Switch(stmtn, expr_opt, fclist) -> gen_switch_stmt "switch has its own break" contlbl d stmtn expr_opt fclist
   | For(stmt_opt, expr_opt, stmt_opt2, block) -> gen_for_stmt d stmt_opt expr_opt stmt_opt2 block
-  | Break -> Pretty.crt_tab d true ^ "goto " ^ goto_break_label false ^ ";\n"
-  | Continue -> Pretty.crt_tab d true ^ "goto " ^ goto_cont_label false ^ ";\n"
+  | Break -> Pretty.crt_tab d true ^ "goto " ^ breaklbl ^ ";\n"
+  | Continue -> Pretty.crt_tab d true ^ "goto " ^ contlbl ^ ";\n"
   | Empty -> ""
 and gen_expr expr = match expr.v with
   | `Op1(op1,exp)        -> "(" ^ Pretty.string_of_op1 op1 ^ gen_expr exp ^ ")"
@@ -284,13 +287,13 @@ and close_scopes d n =
         | _ -> c_s_rec (d-1) (n-1) (acc ^ (Pretty.crt_tab (if d >= 0 then d else 0) true) ^ "}\n")
     in
     c_s_rec d n ""
-and gen_if_stmt d clist =
+and gen_if_stmt breaklbl contlbl d clist =
     let tab = ref (d) in
     let gen_case case = match case with
         | Case(stmt_opt, exprlst, block) -> 
             gen_stmt_opt (!tab) stmt_opt ^ Pretty.crt_tab !tab true ^ "if (" 
-            ^ gen_expr (List.hd exprlst) ^ ") " ^ gen_block (!tab) block  
-        | Default(block) -> Pretty.crt_tab !tab true ^ gen_block (!tab) block
+            ^ gen_expr (List.hd exprlst) ^ ") " ^ gen_block_with_labels breaklbl contlbl (!tab) block  
+        | Default(block) -> Pretty.crt_tab !tab true ^ gen_block_with_labels breaklbl contlbl (!tab) block
     in
     let fold_if clist =
         let rec rec_fold_if clist acc = 
@@ -307,7 +310,8 @@ and gen_if_stmt d clist =
         rec_fold_if clist (Pretty.crt_tab !tab true ^ "{\n")
     in
     let gen = fold_if (clist) in gen ^ (close_scopes (!tab-1) (List.length clist))
-and gen_switch_stmt d stmtopt expropt fclist =
+and gen_switch_stmt breaklbl contlbl d stmtopt expropt fclist =
+    let break_label = goto_break_label true in
     let has_default = ref false in
     let tab = ref (d) in
     let make_annot oper = 
@@ -323,14 +327,16 @@ and gen_switch_stmt d stmtopt expropt fclist =
             acc ^ Pretty.crt_tab !tab true ^ "if (" 
             ^ (List.fold_right 
               (fun expr acc -> acc ^ " || " ^ gen_switch_cond expropt expr) exprlst "0") 
-            ^ ") " ^ gen_block (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
-        | (Default(block), _) -> has_default := true; acc ^ Pretty.crt_tab !tab true ^ gen_block (!tab) block
+            ^ ") " ^ gen_block_with_labels break_label contlbl (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
+        | (Default(block), _) -> has_default := true; acc ^ Pretty.crt_tab !tab true ^ gen_block_with_labels break_label contlbl (!tab) block
     in
     let gen =(List.fold_right (fun c acc -> incr tab; gen_case c acc) (List.rev fclist) "")
     in
     Pretty.crt_tab d true ^ "{\n" 
     ^ gen_stmt_opt (d+1) stmtopt 
-    ^ gen ^ close_scopes (!tab - (if !has_default then 1 else 0)) ((List.length fclist) + (if !has_default then 0 else 1))
+    ^ gen ^ close_scopes (!tab - (if !has_default then 1 else 0)) ((List.length fclist) + (if !has_default then 0 else 1) - 1)
+    ^ Pretty.crt_tab (d) true ^ break_label ^ ":;\n"
+    ^ Pretty.crt_tab (d) true ^ "}\n"
 and gen_for_stmt d initopt expropt stmtopt block =
     let continue_label = goto_cont_label true in
     let break_label = goto_break_label true in
@@ -338,7 +344,7 @@ and gen_for_stmt d initopt expropt stmtopt block =
     ^ gen_stmt_opt (d+1) initopt 
     ^ Pretty.crt_tab (d+1) true ^ "while (" ^ gen_cond_expr expropt ^ ") {\n"
     ^ Pretty.crt_tab (d+2) true ^ "{\n"
-    ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt (d+3) stmt) (List.rev block) "" 
+    ^ List.fold_right (fun stmt acc -> acc ^ gen_stmt_with_labels break_label continue_label (d+3) stmt) (List.rev block) "" 
     (* the ";" is so that it doesn't go crazy if there is no statement after the label *)
     ^ Pretty.crt_tab (d+2) true ^ "}\n"
     ^ Pretty.crt_tab (d+1) true ^ continue_label ^ ":;\n"
