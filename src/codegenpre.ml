@@ -111,8 +111,9 @@ let get_arr_cmp_string (typ,id) =
 
 let gen_struct_cmp struct_string struct_name =
   let fields = tup_fields (get_fields struct_string) in
+  let comps = String.concat " && " (List.map get_struct_cmp_string fields) in
   (Printf.sprintf "bool %s_cmp(%s* p, %s* q) { \n" struct_name struct_name struct_name) ^ 
-  "\treturn " ^ String.concat " && " (List.map get_struct_cmp_string fields) ^
+  "\treturn " ^ (if comps <> "" then comps else "true") ^
   ";\n}\n\n"
 
 let gen_arr_cmp struct_string struct_name = 
