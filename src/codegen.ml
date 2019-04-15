@@ -88,7 +88,7 @@ let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdboo
 let rec gen_ast ast = match ast with
   | Program(pkg, toplvllist) -> List.fold_right (fun toplvl acc -> (gen_toplvl toplvl) ^ acc) toplvllist ""
 and gen_toplvl toplvl = match toplvl.v with
-  | Global(decl) -> gen_decl true decl ^ ";\n"
+  | Global(decl) -> gen_decl_global decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
       | `V id -> if not (String.equal id "init") then gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 0 block ^ "\n" else ""
@@ -120,8 +120,40 @@ and gen_decl isglobal decl =
       | `Blank, true -> ""
     )
     | Type(iden', typ) -> "" (* I don't think we need to typedef type decls, so we can probably just ignore them *)
+and gen_decl_global decl = match decl with
+    | Var(lhs, typ, expr_opt, isshort) -> (match lhs.v with
+      | `V id -> gen_type typ ^ " " ^ id
+      | `Blank -> ""
+    )
+    | Type(iden', typ) -> ""
+and gen_decllist tab decllist = 
+  let counter = ref 0 in
+  let tmp_list = ref [] in
+  let gen_tmps decl = match decl with
+    | Var(lhs, typ, expr_opt, isshort) -> (match expr_opt with
+      | Some exp ->
+        let tmp = get_tmp () in
+        tmp_list := !tmp_list@[tmp];
+        Printf.sprintf "%s %s = %s" (gen_type (List.hd exp._derived)) tmp (gen_expr exp)
+      | None -> ""
+    )
+    | Type(iden', typ) -> ""
+  in
+  let gen_decl decl = match decl with
+    | Var(lhs, typ, expr_opt, isshort) ->(match expr_opt, lhs.v with
+      | Some exp, `V id ->
+        let tmp = (List.nth !tmp_list !counter) in
+        incr counter;
+        Printf.sprintf "%s %s = %s" (gen_type typ) id tmp
+      | Some exp, `Blank -> ""
+      | None, `V id -> Printf.sprintf "%s %s" (gen_type typ) id
+      | None, `Blank -> ""
+    )
+    | Type(iden', typ) -> "" (* we do nothing for ordinary user defined types *)
+  in
+  let tmps = String.concat (Printf.sprintf ";\n%s" tab) (List.map gen_tmps decllist) in
+  tmps ^ ";\n"  ^ tab  ^ String.concat (Printf.sprintf ";\n%s" tab) (List.map gen_decl decllist)
 and gen_assignlist d alist =
-  let start_val = int_of_string(tmp_count ()) in
   let counter = ref 0 in
   let tmp_list = ref [] in
   let gen_tmps assign = 
