@@ -84,7 +84,7 @@ and gen_toplvl toplvl = match toplvl.v with
   | Global(decl) -> gen_decl true decl ^ ";\n"
   | Func(iden', siglst, typ, block) -> (
     match iden' with
-      | `V id -> if not (String.equal id "init") then gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist siglst ^ ")" ^ " " ^ gen_block 0 block ^ "\n" else ""
+      | `V id -> if not (String.equal id "init") then gen_type typ ^ " " ^ "__golite__" ^ id ^ "(" ^ gen_siglist (List.rev siglst) ^ ")" ^ " " ^ gen_block 0 block ^ "\n" else ""
       | `Blank -> ""
   )
 and gen_siglist siglst = 
@@ -208,7 +208,7 @@ and gen_expr expr = match expr.v with
       Printf.sprintf "%s_append(&%s, %s)" slice_name id el)
     | "len" -> gen_len explist
     | "cap" -> gen_cap explist
-    | _ -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst explist ", " gen_expr) ^ ")"
+    | _ -> "__golite__" ^ gen_expr exp ^ "(" ^ (Pretty.string_of_lst (List.rev explist) ", " gen_expr) ^ ")"
   )
   (* TODO make this smarter:
    * - If both types resolve to same basic type, remove cast completely (as we'll be using the basic type anyway
