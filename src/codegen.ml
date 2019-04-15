@@ -1,5 +1,13 @@
 open Golite
 
+let unfuck_raw_string s = 
+	s 
+	|> Str.global_replace (Str.regexp "\r") "" (* Notwithstanding other rules, carriage returns must be stripped *)
+	|> Str.global_replace (Str.regexp "\\") "\\\\\\\\" (* C must not interpret escapes *)
+	|> Str.global_replace (Str.regexp "\"") "\\\"" (* Escape quote against C *)
+	|> Str.global_replace (Str.regexp "^`") "\"" (* Delim is quote mark *)
+	|> Str.global_replace (Str.regexp "`$")  "\"" (* Delim is  quote mark *)
+
 let temp_var_count = ref 0
 let tmp_count () =
   incr temp_var_count;
@@ -180,6 +188,7 @@ and gen_stmt_with_labels breaklbl contlbl d stmt = match stmt.v with
   | Continue -> Pretty.crt_tab d true ^ "goto " ^ contlbl ^ ";\n"
   | Empty -> ""
 and gen_expr expr = match expr.v with
+  | `Op1(`BNOT,exp) -> Printf.sprintf "((-1) ^ %s)" (gen_expr exp)
   | `Op1(op1,exp)        -> "(" ^ Pretty.string_of_op1 op1 ^ gen_expr exp ^ ")"
   | `Op2(op2, exp, exp2) -> (
       let exptyp = List.hd exp._derived in
@@ -225,7 +234,11 @@ and gen_expr expr = match expr.v with
     | Rune(r) -> r
     | Int(i)  -> string_of_int i
     | Float64(f) -> string_of_float f
-    | String(s) -> s
+    | String(s) -> 
+	if s.[0] = '`' then
+		unfuck_raw_string s
+	else 
+		s
     )
   | `Indexing(id,exp)  -> 
       (* TODO
