@@ -178,6 +178,7 @@ and gen_stmt d stmt = match stmt.v with
   | Continue -> Pretty.crt_tab d true ^ "goto " ^ goto_cont_label false ^ ";\n"
   | Empty -> ""
 and gen_expr expr = match expr.v with
+  | `Op1(`BNOT,exp) -> Printf.sprintf "((-1) ^ %s)" (gen_expr exp)
   | `Op1(op1,exp)        -> "(" ^ Pretty.string_of_op1 op1 ^ gen_expr exp ^ ")"
   | `Op2(op2, exp, exp2) -> (
       let exptyp = List.hd exp._derived in
