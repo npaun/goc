@@ -80,7 +80,7 @@ let is_positive =
 
 let string_conv =
   "string __golite_num_to_string(int x) {\n" ^
-  "\tstring s = malloc(1);\n\t*s = x;\n}\n\n"
+  "\tstring s = malloc(1);\n\t*s = x;\n\treturn s;\n}\n\n"
 
 
 let gen_file_header = "#include <stdlib.h>\n#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n\ntypedef char* string;\n\n"  
