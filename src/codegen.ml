@@ -327,19 +327,25 @@ and gen_switch_stmt breaklbl contlbl d stmtopt expropt fclist =
     let break_label = goto_break_label true in
     let has_default = ref false in
     let tab = ref (d) in
-    let make_annot oper = 
-        {v = oper; _debug = "hack :)"; _start = (-1,-1); _end = (-1,-1); _derived = [`BOOL]} 
+    let make_annot oper deriv = 
+        {v = oper; _debug = "hack :)"; _start = (-1,-1); _end = (-1,-1); _derived = [deriv]} 
     in
-    let gen_switch_cond expropt expr =
-        match expropt with
-        | None -> gen_expr expr
-        | Some e -> gen_expr (make_annot (`Op2(`EQ, e, expr))) (* silly hack :) *)
+    let expropt_typ = (match expropt with None -> `INT | Some e -> (List.hd e._derived)) in
+    let expropt_temp = get_tmp () in
+    let expropt_temp_decl = 
+        Printf.sprintf "%s %s = %s;\n" 
+            (gen_type expropt_typ)
+            expropt_temp 
+            (gen_cond_expr expropt) 
+    in
+    let gen_switch_cond expropt_t expr =
+        gen_expr (make_annot (`Op2(`EQ, make_annot (`V expropt_t) expropt_typ, expr)) `BOOL) (* silly hack :) *)
     in
     let gen_case case acc = match case with
         | (Case(stmt_opt, exprlst, block), _) -> 
             acc ^ Pretty.crt_tab !tab true ^ "if (" 
             ^ (List.fold_right 
-              (fun expr acc -> acc ^ " || " ^ gen_switch_cond expropt expr) exprlst "0") 
+              (fun expr acc -> acc ^ " || " ^ gen_switch_cond expropt_temp expr) exprlst "0") 
             ^ ") " ^ gen_block_with_labels break_label contlbl (!tab) block ^ Pretty.crt_tab (!tab) true ^ "else {\n"
         | (Default(block), _) -> has_default := true; acc ^ Pretty.crt_tab !tab true ^ gen_block_with_labels break_label contlbl (!tab) block
     in
@@ -347,6 +353,7 @@ and gen_switch_stmt breaklbl contlbl d stmtopt expropt fclist =
     in
     Pretty.crt_tab d true ^ "{\n" 
     ^ gen_stmt_opt (d+1) stmtopt 
+    ^ Pretty.crt_tab (d+1) true ^ expropt_temp_decl
     ^ gen ^ close_scopes (!tab - (if !has_default then 1 else 0)) ((List.length fclist) + (if !has_default then 0 else 1) - 1)
     ^ Pretty.crt_tab (d) true ^ break_label ^ ":;\n"
     ^ Pretty.crt_tab (d) true ^ "}\n"
