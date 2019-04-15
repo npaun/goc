@@ -49,7 +49,7 @@ let _ = List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
 }
 
 let eol = '\n' | "\r\n"
-let not_eol = [^ '\n' '\r']
+let not_eol = [^ '\n']
 let decimal_digit = ['0'-'9']
 let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
 
@@ -59,6 +59,7 @@ let char = ['a'-'z' 'A'-'Z' '0'-'9'
 
 let escaped_char = '\\' ['a' 'b' 'f' 'n' 'r' 't' 'v' '\\' '"' ''' '`']
 
+let char_except_backtick = [^ '`']
 
 rule lex = parse
     | [' ' '\t'] { lex lexbuf }
@@ -140,7 +141,7 @@ rule lex = parse
     | decimal_digit*'.'decimal_digit* as lxm                  { insert_semi_up(); FLOATLIT(float_of_string lxm) } 
     | ''' (char | escaped_char) '''                           { insert_semi_up(); RUNELIT (Lexing.lexeme lexbuf) }
     | '"' (char | escaped_char)* '"'                          { insert_semi_up(); STRINGLIT(Lexing.lexeme lexbuf) }    
-    | '`' (char | escaped_char )* '`'                                  { insert_semi_up(); STRINGLIT(Lexing.lexeme lexbuf) }
+    | '`' (char_except_backtick)* '`'                                  { insert_semi_up(); STRINGLIT(Lexing.lexeme lexbuf) }
     | ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '_' '0'-'9']* as tok
      {
          try
